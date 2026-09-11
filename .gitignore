@@ -17,3 +17,4 @@ autopilot/logs/
 autopilot/status.json
 data/bronze/*.csv
 .guardian/
+*.egg-info/
