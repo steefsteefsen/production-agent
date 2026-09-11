@@ -1,0 +1,66 @@
+# decisions.yaml – DEINE Denkarbeit. Alles andere leitet sich hieraus ab.
+# Vorbelegt mit vertretbaren Werten, damit der Autopilot sofort laufen kann. Ändere, was du anders siehst.
+
+ereignis:
+  definition: >
+    Ein Störungsereignis beginnt mit dem ersten Alarm der Priorität 1–2, bei dem ein Betriebsmittel
+    nach Stopped, Held, Suspended oder Aborted wechselt, und endet mit der Rückkehr nach Execute.
+    Alarme innerhalb der Zusammenfassungslücke gehören zum selben Ereignis.
+  zusammenfassungs_luecke_min: 5
+  alarmflut_alarme: 10          # ISA-18.2 / EEMUA 191
+  alarmflut_fenster_min: 10
+
+linie:
+  line_id: L1
+  name: Verpackungslinie 1
+  plant: Werk Nord
+  design_rate_per_hour: 3600
+  cost_per_downtime_minute_eur: 120
+  stationen: [Zuführung, Folienwickler, Schneidstation, Siegelstation, Kartonierer, Palettierer]
+
+# Stillstandsgründe: code, kategorie, beschreibung, OEE-Verlusttyp
+reason_codes:
+  - [STO-FOLIE,  Störung,      Folienriss / Folienrolle,          availability]
+  - [STO-SENSOR, Störung,      Sensorfehler / verschmutzt,        availability]
+  - [STO-ANTRIEB,Störung,      Antrieb / Lager,                   availability]
+  - [STO-ELEK,   Störung,      Elektrik / Steuerung,              availability]
+  - [MAT-LEER,   Material,     Zuführung leer,                    availability]
+  - [MAT-STAU,   Material,     Produktstau,                       performance]
+  - [SETUP,      Rüsten,       Formatwechsel,                     availability]
+  - [QUAL-HOLD,  Qualität,     Qualitätshalt,                     quality]
+  - [EXT-UP,     Extern,       Vorgelagerte Anlage steht,         availability]
+  - [ORG,        Organisation, Personal / Pause,                  availability]
+
+konfidenz:
+  schwelle_empfehlung: 0.70
+  begruendung: >
+    Unter 0,70 ist die Wahrscheinlichkeit eines unnötigen Eingriffs (Technikerzeit, Wiederanlaufrisiko)
+    höher als der erwartete Zeitgewinn. Der Wert ist eine Geschäftsentscheidung des Werks, kein Modellparameter.
+  formel: "0.5 * regeltreffer + 0.3 * beste_fallaehnlichkeit + 0.2 * ursachenanteil_gleiche_faelle"
+
+simulation:
+  seed: 42
+  tage_historie: 90
+  ereignisse_pro_tag: 4
+  demo_ereignis_index_von_hinten: 0      # das jüngste Ereignis ist die Demo
+  demo_alarm_code: E-4711                # Folienriss Station Folienwickler → PackML Held
+  replay_uhr_offset_min: 5               # Agent "lebt" 5 min nach Störungsbeginn
+  replay_testfaelle: 10
+
+llm:
+  model: claude-sonnet-5
+  model_fast: claude-haiku-4-5-20251001
+  systemprompt_kern: >
+    Du bist Assistenzsystem eines Produktionsleiters. Du empfiehlst, du führst nichts aus.
+    Du nennst zu jeder Aussage die Evidenz (Alarmcode, Vorfall-ID, Regel). Du erhöhst die berechnete
+    Konfidenz nie, du darfst sie mit Begründung senken. Sicherheitsfunktionen sind tabu.
+
+routing:
+  bei_alarmflut: retrieve_knowledge      # zuerst Wissen abrufen
+  bei_held_bedienerinitiiert: retrieve_knowledge
+  sonst: narrow_cause
+  wiederholung_bei_konfidenz_unter_schwelle: true   # einmal mit 60-min-Fenster statt 30
+
+ui:
+  kopfzeile: [Linie & PackML-Zustand, Stillstand seit (min), Kosten bisher (€), Beste Hypothese (Konfidenz)]
+  panels_pflicht: [1, 2, 6, 7]           # was bleibt, wenn Zeit knapp wird

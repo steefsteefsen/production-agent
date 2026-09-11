@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [{"matcher": "Edit|Write", "hooks": [{"type": "command", "command": "ruff check --fix -q . || true"}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "pytest -q -x 2>&1 | tail -3"}]}]
+  },
+  "permissions": {
+    "allow": [
+      "Read", "Edit", "Write", "Grep", "Glob",
+      "Bash(pytest:*)", "Bash(python:*)", "Bash(python3:*)", "Bash(ruff:*)", "Bash(bandit:*)",
+      "Bash(pip install:*)", "Bash(npm:*)", "Bash(npx:*)", "Bash(git add:*)", "Bash(git commit:*)",
+      "Bash(git status:*)", "Bash(git diff:*)", "Bash(ls:*)", "Bash(cat:*)", "Bash(mkdir:*)", "Bash(make:*)"
+    ],
+    "deny": ["Bash(git push:*)", "Bash(rm -rf:*)", "Bash(curl:*)", "Read(.env)", "Edit(.env)", "Edit(decisions.yaml)", "Edit(LICENSE)"]
+  }
+}

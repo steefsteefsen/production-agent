@@ -1,0 +1,25 @@
+stages: [lint, test, security]
+
+default:
+  image: python:3.11-slim
+  before_script:
+    - pip install -e ".[dev]"
+
+lint:
+  stage: lint
+  script:
+    - ruff check .
+    - ruff format --check .
+
+test:
+  stage: test
+  script:
+    - pytest --cov=production_agent --cov-report=term-missing
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+
+security:
+  stage: security
+  script:
+    - bandit -c pyproject.toml -r src
+    - pip install pip-audit && pip-audit
+  allow_failure: false

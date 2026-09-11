@@ -1,0 +1,29 @@
+repos:
+  - repo: local
+    hooks:
+      - id: guardian
+        name: guardian (Sicherheit, Konsistenz, Doku-Aktualität)
+        entry: python autopilot/guardian.py
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: commit-msg-check
+        name: commit-msg (Konvention K3)
+        entry: python autopilot/commit_check.py
+        language: system
+        stages: [commit-msg]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+      - id: end-of-file-fixer
