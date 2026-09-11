@@ -18,3 +18,6 @@ autopilot/status.json
 data/bronze/*.csv
 .guardian/
 *.egg-info/
+coverage.json
+.coverage
+.idea/

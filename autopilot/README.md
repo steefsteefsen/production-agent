@@ -17,3 +17,4 @@ python autopilot/run.py --only WP3 WP4  # einzelne WPs
 - `autopilot/journal.md` ist das lesbare Vorgehen, `journal.json` der Import für Tab 7 im Cockpit.
 - `--review auto|human|both|off` (Standard auto): kontextfreier Reviewer (`--review-model opus`) urteilt per JSON-Schema; nur `fail`/`escalate` erreichen dich.
 - `python autopilot/sync.py WP3` baut das Sync-Paket für den Chat; `--status` schreibt STATUS.md fürs Projektwissen. Siehe docs/chat_interface.md.
+- `bash autopilot/selftest.sh` – Selbsttest ohne API-Key und ohne Commit (Umgebung, Tests, Daten, MCP-Protokoll, Graph, Guardian, Hooks, Leck-Simulation)

@@ -4,24 +4,45 @@
 wenn eine Regel verletzt ist. Deterministisch, ohne LLM, in Sekunden – damit er *immer* läuft, auch im Autopilot.
 Kein Subagent: ein Wächter, den der Builder abschalten oder überreden könnte, wäre keiner.
 
-| Nr | Regel | Was passiert bei Verstoß |
-|---|---|---|
-| S1 | Keine Secrets, keine `.env` | Commit blockiert |
-| S2 | Keine Bibliothek der Ausschlussliste (Databricks, Spark, Kafka, dbt, Airflow, Terraform, Kubernetes, GCP, Iceberg, Delta) | blockiert |
-| S3 | MES-Server genau 6 Werkzeuge, RAG genau 1, kein Werkzeug namens *sql/query/write/exec* | blockiert |
-| S4 | `schema.sql` und `ALLOWED_TABLES` identisch | blockiert |
-| S5 | `decisions.yaml` unverändert (Hash) – Änderung nur mit `GUARDIAN_ALLOW_DECISIONS=1` durch Stefan | blockiert |
-| S6 | Sicherheitsmodule geändert → Sicherheits-, Protokoll- und Trajektorientests müssen grün sein | blockiert |
-| K1 | Jedes Modul unter `src/` hat seine Testdatei (TEST_MAP) mit mindestens einem als *falsif…* markierten Test | blockiert |
-| K2 | ruff und bandit sauber | blockiert |
-| D1 | Jedes Modul ist in README oder docs/ namentlich erwähnt | blockiert |
-| D2 | Jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen | blockiert |
-| D3 | `src/` geändert ⇒ auch docs/, README oder tests/ geändert | blockiert |
-| LLM | `--llm`: Haiku prüft kontextfrei, ob der Diff Aussagen in docs/ veraltet | nur Warnung |
+Die folgende Regelliste wird von `autopilot/status.py` aus dem Docstring von `guardian.py` erzeugt und darf nicht
+von Hand getippt werden:
 
-Aufrufe: `make guardian` (manuell), `python autopilot/guardian.py --init` (Hash von decisions.yaml einfrieren, einmal),
-`python autopilot/guardian.py --llm` (mit Doku-Konsistenz-Check). Fehlermeldungen tragen die Regelnummer – der
-Autopilot spielt sie dem Builder als Nachbesserung zurück.
+<!-- auto:guardian_rules -->
+Regeln: S1–S9, K1–K5, D1–D9.
+
+- **S1**: keine Secrets, keine .env committet
+- **S2**: keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
+- **S3**: MES-Server genau 6 Werkzeuge, RAG genau 1, kein Werkzeug *sql/query/write/exec*
+- **S4**: schema.sql und ALLOWED_TABLES identisch
+- **S5**: decisions.yaml eingefroren (Hash; Aenderung nur mit GUARDIAN_ALLOW_DECISIONS=1)
+- **S6**: Sicherheitsmodul geaendert -> Sicherheits-, Protokoll- und Trajektorientests gruen
+- **S7**: kein .env-Wert (len>=8) in anderer getrackter/gestagter Datei; S7b .env nur KEY|SECRET|TOKEN|PASSWORD-Schluessel; S7c .env.example-Werte enden auf -EXAMPLE
+- **S8**: keine Begriffe der Oeffentlichkeits-Blocklist (.guardian_public/blocklist.sha256)
+- **S9**: gestagte Binaerdateien nur unter docs/status/ oder docs/images/ und < 500 KB
+- **K1**: jedes src-Modul hat eine Testdatei mit Verifikations- und Falsifikationstest
+- **K2**: ruff und bandit sauber
+- **K3**: Commit-Message folgt der Konvention (commit-msg-Hook)
+- **K4**: Coverage: gesamt >=80, security >=95, mes_server/workflow >=85
+- **K5**: jede entry-Zeile in .pre-commit-config.yaml beginnt mit .venv/bin/python
+- **D1**: jedes src-Modul ist in README oder docs/ namentlich erwaehnt
+- **D2**: jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
+- **D3**: src geaendert -> auch docs/, README oder tests/ geaendert
+- **D4**: docs/AENDERUNGEN.md vorhanden und nicht leer
+- **D5**: README.md verlinkt docs/status/index.html
+- **D6**: docs/status/status.json gestaged, frisch (<10 min), commit leer oder == HEAD
+- **D7**: jeder auto-Marker in getrackten *.md hat den von status.py berechneten Wert
+- **D8**: ausserhalb Markern keine getippten Zahlen/Regelbereiche/Coverage in README.md und docs/*.md
+- **D9**: README.md hat Abschnitt "## Stand" mit nicht-leerem auto:stand-Marker
+<!-- /auto:guardian_rules -->
+
+Aufrufe: `make guardian` (manuell), `.venv/bin/python autopilot/guardian.py --init` (Hash von decisions.yaml
+einfrieren, einmal), `.venv/bin/python autopilot/guardian.py --llm` (mit Doku-Konsistenz-Check; manuell, nicht im
+Hook – Kosten und Nichtdeterminismus). Fehlermeldungen tragen die Regelnummer – der Autopilot spielt sie dem Builder
+als Nachbesserung zurück.
+
+`GUARDIAN_ENV_FILE` wählt die Geheimnis-Datei (der Selbsttest nutzt eine Kopie), `GUARDIAN_ENV_FILE`-Werte dürfen
+in keiner anderen getrackten Datei auftauchen. `GUARDIAN_SKIP_D6=1` unterdrückt die Status-Frische-Prüfung, während
+`status.py` den Guardian selbst aufruft (bevor die Statusdatei gestaged ist).
 
 Was der Guardian **nicht** ist: ein Ersatz für den Reviewer. Der Guardian prüft Form und Invarianten, der Reviewer
 prüft Inhalt gegen die Checkliste. Beide zusammen sind das Sicherheitsnetz, bevor irgendetwas als fertig gilt.

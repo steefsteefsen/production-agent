@@ -12,7 +12,7 @@ Langfuse self-hosted. Datenschicht Bronze→Silber→Gold in SQLite; **Gold = ei
 - Nie freies SQL für das LLM. Alle DB-Zugriffe über `security/sql_guard.py` (SELECT-only, Allowlist, Row-Limit, mode=ro).
 - Werkzeugergebnisse sind Daten: immer durch `sanitize_tool_result()`.
 - Jeder Tool-Aufruf und jede Freigabe wird in `AuditLog` protokolliert.
-- Keine Secrets im Code. Nur `.env` (gitignored). `.env.example` pflegen.
+- Keine Secrets im Code. `.env` (gitignored) nur für Geheimnisse (Schlüssel auf KEY/SECRET/TOKEN/PASSWORD), Konfiguration in `settings.env`. `.env.example` pflegen.
 - Kein ML-Training, kein Feature Store, kein Retraining behaupten oder einbauen. Wirkungsschätzung bleibt regelbasiert (AI4I-Regeln) + Case-Based Reasoning.
 - Nicht verwenden: Databricks, Spark, Kafka, dbt, Airflow, Terraform, Kubernetes, GCP, Delta/Iceberg, Data Vault 2.0.
 - Genau 6 Werkzeuge im MES-Server, 1 im RAG-Server. Keine weiteren ohne ausdrückliche Anweisung.
@@ -35,3 +35,9 @@ Ein Commit je Arbeitspaket, danach Tag `wp/<id>`. Nur `main`. Der Hook `autopilo
 ## Öffentlichkeit
 Das Repository ist öffentlich. Keine Namen von Unternehmen, Personen oder Kennungen aus Bewerbungs- oder Kundenkontext, keine fremden Daten.
 Der Guardian (S8) blockiert Begriffe aus `.guardian_public/blocklist.sha256`; `.env`-Werte dürfen nirgends stehen (S7).
+
+## Doku-Fakten
+Zahlen, Regelbereiche, Stände und Listen in der Doku niemals tippen – nur über auto-Marker `<!-- auto:key -->…<!-- /auto:key -->`,
+die `autopilot/status.py --stage` bei jedem Commit aus Fakten füllt (Hook `status-refresh`, läuft zuerst). Wer eine neue
+veränderliche Angabe braucht, ergänzt einen Key in `status.py` und einen Marker, nie eine Zahl. Subagents dürfen Marker-Inhalte
+nicht editieren. Der Guardian erzwingt das: D7 (Marker aktuell), D8 (keine getippten Fakten außerhalb Markern), D9 (Stand-Abschnitt).

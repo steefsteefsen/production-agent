@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -110,6 +111,7 @@ def commit(wp_id: str, e: dict) -> None:
     title = f"{_commit_type(e['files'])}({wp_id}): {first[:60] or 'Arbeitspaket abgeschlossen'}"
     review = (e.get("review") or {}).get("verdict", "human")
     footer = f"Gate: {'grün' if e['ok'] else 'rot'} | Review: {review} | Guardian: ok"
+    subprocess.run([sys.executable, str(ROOT / "autopilot" / "status.py"), "--stage"], cwd=ROOT)
     _git("add", "-A")
     _git("commit", "-q", "-m", title, "-m", e["agent_summary"] or "-", "-m", footer)
     _git("tag", "-f", f"wp/{wp_id}")

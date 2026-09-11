@@ -1,7 +1,7 @@
 # Testfälle je Phase – Verifikation (V), Falsifikation (F), Review (R)
 
-Stand des Basisprojekts: **32 Tests grün.** Neue Fälle je Arbeitspaket sind Pflicht (Guardian K1) und in
-`autopilot/tasks.yaml` je Prompt gefordert.
+Stand des Basisprojekts: **Basis-Testsuite grün** (aktuelle Anzahl siehe README/Statusseite). Neue Fälle je
+Arbeitspaket sind Pflicht (Guardian K1) und in `autopilot/tasks.yaml` je Prompt gefordert.
 
 ## Phase P/A – Planung, Architektur
 | | Test | Datei |
@@ -26,7 +26,7 @@ Stand des Basisprojekts: **32 Tests grün.** Neue Fälle je Arbeitspaket sind Pf
 ## Phase WP2a/WP2b – MCP-Server
 | | Test | Datei |
 |---|---|---|
-| V | Über Protokoll: genau 6 Werkzeuge, jede Antwort in `<tool_data trusted="false">` | test_mcp_protocol.py ✅ |
+| V | Über Protokoll: genau sechs Werkzeuge, jede Antwort in `<tool_data trusted="false">` | test_mcp_protocol.py ✅ |
 | F | Kein Werkzeug *sql/query/write*; laufende Störung leckt nicht; Zeilenlimit hält und JSON bleibt gültig | test_mcp_protocol.py ✅ (fand den Kürzungs-Bug) |
 | V | SQL-Guard: SELECT auf Allowlist geht durch | test_security.py ✅ |
 | F | DELETE/DROP/PRAGMA/ATTACH/fremde Tabelle/zweites Statement ⇒ SqlGuardError | test_security.py ✅ |

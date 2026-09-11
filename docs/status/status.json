@@ -1,0 +1,532 @@
+{
+  "generated_at": "2026-09-11T15:03:44",
+  "commit": "adc6b6a51bc4805bf1d6e84bb701a905e2738af9",
+  "branch": "main",
+  "packages": [
+    {
+      "id": "P",
+      "name": "Planung",
+      "agent": "—",
+      "deps": [],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    },
+    {
+      "id": "A",
+      "name": "Architektur",
+      "agent": "—",
+      "deps": [
+        "P"
+      ],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": [
+        {
+          "sha": "adc6b6a",
+          "title": "chore(A): egg-info nicht mehr tracken, gitignore ergänzt",
+          "at": "2026-09-11T12:29:13+02:00"
+        },
+        {
+          "sha": "31eda13",
+          "title": "chore(A): Basisprojekt – Sicherheitsfundament, Simulator, MCP, Graph, Autopilot",
+          "at": "2026-09-11T12:19:14+02:00"
+        }
+      ]
+    },
+    {
+      "id": "WP0",
+      "name": "Entscheidungsbasis",
+      "agent": "—",
+      "deps": [
+        "A"
+      ],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    },
+    {
+      "id": "WP1",
+      "name": "WP1",
+      "agent": "data-agent",
+      "deps": [],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    },
+    {
+      "id": "WP2a",
+      "name": "WP2a",
+      "agent": "mcp-agent",
+      "deps": [],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    },
+    {
+      "id": "WP2b",
+      "name": "WP2b",
+      "agent": "mcp-agent",
+      "deps": [
+        "WP1",
+        "WP2a"
+      ],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    },
+    {
+      "id": "WP3",
+      "name": "WP3",
+      "agent": "graph-agent",
+      "deps": [
+        "WP1",
+        "WP2a"
+      ],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    },
+    {
+      "id": "WP4",
+      "name": "WP4",
+      "agent": "graph-agent",
+      "deps": [
+        "WP2b",
+        "WP3"
+      ],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    },
+    {
+      "id": "WP5",
+      "name": "WP5",
+      "agent": "ui-agent",
+      "deps": [
+        "WP2b",
+        "WP3"
+      ],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    },
+    {
+      "id": "WP6",
+      "name": "WP6",
+      "agent": "qa-agent",
+      "deps": [
+        "WP4",
+        "WP5"
+      ],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    },
+    {
+      "id": "WP7",
+      "name": "WP7",
+      "agent": "qa-agent",
+      "deps": [
+        "WP6"
+      ],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
+    }
+  ],
+  "totals": {
+    "percent": 0,
+    "hours_agent": 0.0,
+    "cost_usd": 0,
+    "tests": 49,
+    "coverage_total": 92,
+    "coverage_security": 100
+  },
+  "timeline": [
+    {
+      "at": "2026-09-11T12:29:13+02:00",
+      "kind": "commit",
+      "ref": "adc6b6a",
+      "text": "chore(A): egg-info nicht mehr tracken, gitignore ergänzt"
+    },
+    {
+      "at": "2026-09-11T12:19:14+02:00",
+      "kind": "commit",
+      "ref": "31eda13",
+      "text": "chore(A): Basisprojekt – Sicherheitsfundament, Simulator, MCP, Graph, Autopilot"
+    }
+  ],
+  "guardian": {
+    "ok": true,
+    "errors": []
+  },
+  "structure": [
+    {
+      "path": "src/production_agent/",
+      "files": 1,
+      "tests": 23,
+      "coverage": 100
+    },
+    {
+      "path": "src/production_agent/api/",
+      "files": 1,
+      "tests": 2,
+      "coverage": 83
+    },
+    {
+      "path": "src/production_agent/data/",
+      "files": 2,
+      "tests": 6,
+      "coverage": 89
+    },
+    {
+      "path": "src/production_agent/graph/",
+      "files": 2,
+      "tests": 5,
+      "coverage": 100
+    },
+    {
+      "path": "src/production_agent/mcp/",
+      "files": 2,
+      "tests": 2,
+      "coverage": 86
+    },
+    {
+      "path": "src/production_agent/security/",
+      "files": 4,
+      "tests": 8,
+      "coverage": 100
+    }
+  ]
+}

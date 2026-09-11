@@ -65,33 +65,43 @@ def packet(wp_id: str) -> Path:
 
 
 def status() -> Path:
-    st = (
-        json.loads((ROOT / "autopilot/status.json").read_text())
-        if (ROOT / "autopilot/status.json").exists()
-        else {"wp": {}, "hours": 0}
-    )
-    tasks = yaml.safe_load((ROOT / "autopilot/tasks.yaml").read_text(encoding="utf-8"))
+    """STATUS.md aus docs/status/status.json erzeugen (eine Quelle der Wahrheit)."""
+    sj = ROOT / "docs/status/status.json"
+    if not sj.exists():
+        subprocess.run([sys.executable, str(ROOT / "autopilot" / "status.py")], cwd=ROOT)
+    data = json.loads(sj.read_text(encoding="utf-8"))
+    t = data["totals"]
     rows = "\n".join(
-        f"| {t['id']} | {t['agent']} | {'✅' if st['wp'].get(t['id']) else '⬜'} |" for t in tasks
+        f"| {p['id']} | {p.get('agent', '')} | {p['percent']} % | {p['state']} |"
+        for p in data["packages"]
     )
+    timeline = "\n".join(f"- {e['at']} · {e['kind']}: {e['text']}" for e in data["timeline"][:15])
     md = (
-        f"# STATUS – Production Agent PoC\nStand: {time.strftime('%Y-%m-%d %H:%M')} · Agentenzeit bisher {st.get('hours', 0)} h\n\n"
-        "## Arbeitspakete\n| WP | Agent | Status |\n|---|---|---|\n" + rows + "\n\n"
-        "## Letzte Journal-Einträge\n"
-        + (
-            (ROOT / "autopilot/journal.md").read_text(encoding="utf-8")[-3000:]
-            if (ROOT / "autopilot/journal.md").exists()
-            else "_noch keine_"
-        )
-        + "\n\n## Offene Entscheidungen\n- \n\n## Nächste Schritte\n- \n"
+        "# STATUS – Production Agent PoC\n"
+        f"Stand: {data['generated_at']} · Commit {data['commit'][:7] or '—'} · "
+        f"Fortschritt {t['percent']} % · Agentenzeit {t['hours_agent']} h · "
+        f"Kosten {t['cost_usd']} USD · Tests {t['tests']} · "
+        f"Coverage {t['coverage_total']} % (security {t['coverage_security']} %)\n\n"
+        "## Arbeitspakete\n| WP | Agent | Fortschritt | Status |\n|---|---|---|---|\n"
+        + rows
+        + "\n\n"
+        "## Zeitleiste (neueste zuerst)\n" + timeline + "\n\n"
+        "## Offene Entscheidungen\n- \n\n## Nächste Schritte\n- \n"
     )
     p = ROOT / "STATUS.md"
     p.write_text(md, encoding="utf-8")
     return p
 
 
+def journal_array() -> str:
+    jf = ROOT / "autopilot/journal.json"
+    return jf.read_text(encoding="utf-8") if jf.exists() else "[]"
+
+
 if __name__ == "__main__":
     if "--status" in sys.argv:
         print(status())
+    elif "--journal" in sys.argv:
+        print(journal_array())
     else:
         print(packet(sys.argv[1]))

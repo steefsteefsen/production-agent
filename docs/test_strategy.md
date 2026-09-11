@@ -10,7 +10,7 @@ Ein Gate ist erst grün, wenn beide Arten grün sind. Danach folgt das **Review-
 |---|---|---|---|---|
 | Unit | Guards, Regeln, Formeln | pytest | SELECT auf Allowlist geht durch | DELETE, PRAGMA, fremde Tabelle → SqlGuardError |
 | Daten | Medallion, Replay | pytest + kleine Simulator-DB (Seed 7) | Gold ≥ 100 Ereignisse, jede Zeile mit Herkunft | Ereignis ohne Bronze-Herkunft, PackML-Zustand außerhalb der vier Stopp-Zustände |
-| MCP-Protokoll | Werkzeuge über das Protokoll | fastmcp `Client(server)` in-memory, kein Subprozess | 6 Werkzeuge, jede Antwort in `<tool_data trusted="false">` | Schreib-/SQL-Werkzeug existiert; laufende Störung leckt in die Historie; Ergebnis ist kein gültiges JSON |
+| MCP-Protokoll | Werkzeuge über das Protokoll | fastmcp `Client(server)` in-memory, kein Subprozess | sechs Werkzeuge, jede Antwort in `<tool_data trusted="false">` | Schreib-/SQL-Werkzeug existiert; laufende Störung leckt in die Historie; Ergebnis ist kein gültiges JSON |
 | Trajektorie | Reihenfolge Knoten/Werkzeuge | LangGraph `stream(stream_mode="updates")` + **agentevals** Trajectory-Match (strict / unordered / subset / superset) | Alarmflut-Lauf entspricht Referenz strikt | ruhige Linie nimmt den RAG-Zweig; verbotene Maßnahme erreicht die Freigabe; Freigabe wird übersprungen |
 | Ergebnis | Vorhersage gegen Wahrheit | Replay-Eval (`replay.score`) | Ursachentrefferquote, Dauerfehler | Konfidenz über Formel; Empfehlung unter Schwelle |
 | LLM-Knoten | Struktur der Ausgabe | pytest mit gemocktem Modell; optional agentevals LLM-as-Judge | Hypothesis validiert gegen Pydantic-Schema | Modell erhöht Konfidenz → Nachbedingung schlägt an |
@@ -23,6 +23,17 @@ fastmcp testet den Server wie ein echter Client, nur ohne Prozessstart.
 ## Was ein Falsifikationstest schon gefunden hat
 `max_tool_result_chars` schnitt auf Zeichenebene und erzeugte ungültiges JSON. Der Test `test_row_limit_is_hard`
 wurde rot; die Kürzung läuft jetzt auf Zeilenebene. Diese Geschichte gehört in die Präsentation.
+
+## Coverage-Grenzen
+Coverage ist ein Mindestmaß, kein Qualitätsbeweis – ein Test, der nichts prüft, zählt trotzdem. Die Grenzen (Regel K4)
+sind: gesamt mindestens achtzig Prozent, jede Datei unter `security/` mindestens fünfundneunzig Prozent,
+`mcp/mes_server.py` und `graph/workflow.py` je mindestens fünfundachtzig Prozent. Der aktuelle Stand wird automatisch
+gefüllt (nicht von Hand tippen):
+
+- gesamt: <!-- auto:coverage_total -->92 %<!-- /auto:coverage_total -->
+- security: <!-- auto:coverage_security -->100 %<!-- /auto:coverage_security -->
+
+Die Werte stammen aus `coverage.json` (pytest-cov). CI hebt den Bericht als Artefakt; der GitLab-Coverage-Regex bleibt.
 
 ## Wächter vor dem Commit
 Siehe `docs/guardian.md` – Sicherheit, Konsistenz und Doku-Aktualität werden vor jedem Commit deterministisch geprüft.
