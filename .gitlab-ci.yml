@@ -1,4 +1,4 @@
-stages: [lint, test, security]
+stages: [lint, test, security, e2e]
 
 default:
   image: python:3.11-slim
@@ -23,3 +23,31 @@ security:
     - bandit -c pyproject.toml -r src
     - pip install pip-audit && pip-audit
   allow_failure: false
+
+e2e-live:
+  stage: e2e
+  before_script:
+    - pip install -e ".[dev,e2e]"
+    - playwright install chromium --with-deps
+  variables:
+    LLM_MODE: live
+    ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
+    LANGFUSE_HOST: $LANGFUSE_HOST
+    LANGFUSE_PUBLIC_KEY: $LANGFUSE_PUBLIC_KEY
+    LANGFUSE_SECRET_KEY: $LANGFUSE_SECRET_KEY
+  script:
+    - python -m production_agent.data.simulator
+    - uvicorn production_agent.api.server:app --host 0.0.0.0 --port 8000 &
+    - timeout 30 bash -c 'until curl -sf http://localhost:8000/docs; do sleep 1; done'
+    - python evals/run_evals.py --live
+    - BASE_URL=http://localhost:8000 pytest -q -m e2e tests/e2e
+  artifacts:
+    when: always
+    paths:
+      - playwright-traces/
+    expire_in: 7 days
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^wp\//'
+      when: on_success
+    - when: manual
+      allow_failure: true

@@ -1,6 +1,7 @@
 import sqlite3
+from datetime import datetime
 
-from production_agent.data.replay import score, select_replay_cases
+from production_agent.data.replay import latest_replay_ts, score, select_replay_cases
 
 
 def test_replay_cases_hide_truth_and_shift_clock():
@@ -52,3 +53,40 @@ def test_replay_needs_history_falsification():
             (i, "L1", f"2026-01-0{i + 1} 10:00:00", f"2026-01-0{i + 1} 10:30:00", 30, "X", "x", 1),
         )
     assert select_replay_cases(conn, n=3, min_history=20) == []
+
+
+def test_latest_replay_ts_format():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        "CREATE TABLE downtime_events_gold (event_id INTEGER, line_id TEXT, start_ts TEXT, "
+        "end_ts TEXT, duration_min REAL, reason_code TEXT, resolution_action TEXT, cost_eur REAL)"
+    )
+    for i in range(5):
+        conn.execute(
+            "INSERT INTO downtime_events_gold VALUES (?,?,?,?,?,?,?,?)",
+            (
+                i,
+                "L1",
+                f"2026-03-{i + 1:02d} 10:00:00",
+                f"2026-03-{i + 1:02d} 10:30:00",
+                30,
+                "X",
+                "x",
+                1,
+            ),
+        )
+    ts = latest_replay_ts(conn)
+    assert ts is not None
+    datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")  # Format YYYY-MM-DD HH:MM:SS
+    assert ts == "2026-03-05 10:05:00"
+
+
+def test_latest_replay_ts_leer():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        "CREATE TABLE downtime_events_gold (event_id INTEGER, line_id TEXT, start_ts TEXT, "
+        "end_ts TEXT, duration_min REAL, reason_code TEXT, resolution_action TEXT, cost_eur REAL)"
+    )
+    assert latest_replay_ts(conn) is None

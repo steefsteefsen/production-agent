@@ -57,3 +57,37 @@ def score(prediction: dict[str, Any], truth: dict[str, Any]) -> dict[str, Any]:
     pred_min = float(prediction.get("expected_downtime_min") or 0)
     abs_err = abs(pred_min - float(truth.get("duration_min") or 0))
     return {"reason_hit": reason_hit, "duration_abs_err_min": round(abs_err, 1)}
+
+
+def latest_replay_ts(conn: sqlite3.Connection, offset_min: int = 5) -> str | None:
+    """Replay-Uhr des jüngsten abgeschlossenen Ereignisses (Format: YYYY-MM-DD HH:MM:SS)."""
+    row = conn.execute(
+        "SELECT start_ts FROM downtime_events_gold WHERE end_ts IS NOT NULL "
+        "ORDER BY start_ts DESC LIMIT 1"
+    ).fetchone()
+    if row is None:
+        return None
+    ts = datetime.fromisoformat(row[0]) + timedelta(minutes=offset_min)
+    return ts.strftime(FMT)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    import argparse
+    import os
+    import sys
+    from pathlib import Path
+
+    parser = argparse.ArgumentParser(description="Replay-CLI")
+    parser.add_argument("--latest", action="store_true", help="Replay-Uhr des jüngsten Falls")
+    cli_args = parser.parse_args()
+
+    if cli_args.latest:
+        db_path = Path(os.getenv("DB_PATH", "data/gold/mes.sqlite"))
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        ts = latest_replay_ts(conn)
+        if ts is not None:
+            print(ts)
+        else:
+            print("Keine abgeschlossenen Ereignisse in der Datenbank.", file=sys.stderr)
+            sys.exit(1)
