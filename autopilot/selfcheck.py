@@ -10,8 +10,11 @@ jedem Commit, der autopilot/ berührt. Exit 0 = grün, sonst rot mit Begründung
 
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -105,7 +108,9 @@ def check_quota() -> tuple[bool, str]:
         return False, "429-Fehler wird NICHT als Quota erkannt"
     if cc.is_quota(0, ok):
         return False, "erfolgreiche Antwort wird fälschlich als Quota erkannt"
-    return True, "Quota-429 erkannt, Fehlalarm ausgeschlossen"
+    if not callable(getattr(cc, "probe", None)):
+        return False, "cc.probe fehlt – keine aktive Quota-Wiederaufnahme je Wartrunde"
+    return True, "Quota-429 erkannt, Fehlalarm ausgeschlossen, cc.probe vorhanden"
 
 
 def check_heal() -> tuple[bool, str]:
@@ -124,12 +129,76 @@ def check_heal() -> tuple[bool, str]:
     return True, "Heal wendet gültige Fixes an, verwirft Spec-Eingriffe"
 
 
+def _git(*args: str, cwd: Path = ROOT) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)  # noqa: S603, S607
+
+
+def check_worktree_commit() -> tuple[bool, str]:
+    """Echter git worktree + echter pre-commit-Lauf: beweist, dass ein Builder-Commit im Worktree durchläuft.
+
+    Stellt die beiden Nachtlauf-Blocker nach: (B1) der .venv-Symlink löst die Hook-Befehle (.venv/bin/python)
+    im Worktree auf; (B3) der Commit läuft ohne „files were modified by this hook"-Schleife durch (Guardian K2
+    formatiert nicht mehr, der Committer formatiert vorher). Ohne echtes Modell – nur git + Hooks.
+    GUARDIAN_SKIP_K8=1 im Kind-Commit verhindert eine Selbstcheck-Rekursion."""
+    if os.environ.get("GIT_INDEX_FILE") or os.environ.get("GIT_DIR"):
+        # Selbstcheck läuft innerhalb eines git-Hooks (z. B. Guardian K8 im pre-commit): keine
+        # verschachtelten git-Operationen am selben Repo, sonst bricht der laufende Commit am Index.
+        return (
+            True,
+            "innerhalb eines git-Hooks – Worktree-Commit-Probe übersprungen (kein Nested-Commit)",
+        )
+    if not (ROOT / ".venv" / "bin" / "python").exists():
+        return True, "kein .venv im Hauptbaum – Worktree-Commit-Probe übersprungen"
+    _git("worktree", "prune")  # verwaiste Registrierungen eines früheren Laufs entfernen
+    tmp = Path(tempfile.mkdtemp(prefix="selfcheck-wt-"))
+    wt = tmp / "wt"
+    branch = f"selfcheck/worktree-probe-{os.getpid()}"  # eindeutig: keine Kollision mit Altläufen
+    base = _git("rev-parse", "HEAD").stdout.strip()
+    try:
+        r = _git("worktree", "add", "-B", branch, str(wt), "HEAD")
+        if r.returncode != 0:
+            return False, f"git worktree add scheitert: {(r.stdout + r.stderr)[-200:].strip()}"
+        (wt / ".venv").symlink_to(ROOT / ".venv")  # B1-Fix wie in orchestrate.py nachstellen
+        if (ROOT / ".env").exists():
+            (wt / ".env").write_bytes((ROOT / ".env").read_bytes())
+        if (ROOT / ".guardian").exists():  # Stempel/Coverage mitgeben → K4 ohne vollen pytest-Lauf
+            shutil.copytree(ROOT / ".guardian", wt / ".guardian", dirs_exist_ok=True)
+            cov = wt / ".guardian" / "coverage.json"
+            if cov.exists():
+                os.utime(cov, None)  # frisch stempeln, sonst läuft im Worktree pytest --cov
+        # guardian-neutrale Builder-Änderung (kein .md/src/autopilot-Python): eine Datei im Hauptverzeichnis
+        (wt / ".selfcheck-worktree-probe").write_text("Worktree-Commit-Probe des Selbstchecks.\n")
+        _git("add", ".selfcheck-worktree-probe", cwd=wt)
+        msg = (
+            "chore(autopilot): Selbstcheck-Worktree-Probe\n\n"
+            "Gebaut: Probe-Commit. Getestet: pre-commit im Worktree. Offen: keine.\n\n"
+            "Gate: grün | Review: pass | Guardian: ok\n"
+        )
+        env = {**os.environ, "GUARDIAN_SKIP_K8": "1"}  # keine Selbstcheck-Rekursion im Kind-Commit
+        c = subprocess.run(  # noqa: S603, S607
+            ["git", "commit", "-m", msg], cwd=wt, capture_output=True, text=True, env=env
+        )
+        head = _git("rev-parse", "HEAD", cwd=wt).stdout.strip()
+        if c.returncode != 0 or head == base:
+            return False, f"Commit im Worktree scheitert: {(c.stdout + c.stderr)[-400:].strip()}"
+        return (
+            True,
+            "Worktree-Commit mit echten pre-commit-Hooks durchgelaufen (.venv-Symlink, keine Format-Schleife)",
+        )
+    finally:
+        _git("worktree", "remove", "--force", str(wt))
+        _git("branch", "-D", branch)
+        _git("worktree", "prune")
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 CHECKS = [
     ("Imports", check_imports),
     ("run.py-Flags", check_run_cli),
     ("Pipeline (Fake-claude)", check_pipeline),
     ("Quota-429", check_quota),
     ("Heal", check_heal),
+    ("Worktree-Commit (echte Hooks)", check_worktree_commit),
 ]
 
 

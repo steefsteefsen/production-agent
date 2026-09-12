@@ -122,6 +122,38 @@ def is_quota(returncode: int, output: str) -> bool:
     return bool(re.search(r"\b(429|402)\b", low)) and any(s in low for s in _QUOTA_TEXT)
 
 
+def probe(api_billing: bool = False, timeout: int = 120) -> bool:
+    """Aktive Quota-Probe: ein winziger claude-Aufruf. True = Abo nimmt wieder an, False = noch erschöpft.
+
+    Dient der Wiederaufnahme nach einer Quota-Pause (orchestrate.py) – statt blind zu warten, wird je
+    Wartrunde geprüft, ob das Abo wieder Anfragen annimmt. Fehler/Timeout → False (vorsichtshalber weiter warten)."""
+    try:
+        r = subprocess.run(
+            [
+                "claude",
+                "-p",
+                "ping",
+                "--model",
+                model("builder"),
+                "--max-turns",
+                "1",
+                "--output-format",
+                "json",
+                "--permission-mode",
+                "dontAsk",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=timeout,
+            env=env(api_billing),
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return not is_quota(r.returncode, r.stdout + r.stderr)
+
+
 def preflight(api_billing: bool = False) -> tuple[bool, str]:
     """Vor dem Start: ist Claude Code über das Abo angemeldet? Sonst klarer Abbruch statt Kosten/Hänger."""
     try:

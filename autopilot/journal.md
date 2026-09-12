@@ -122,3 +122,13 @@
 ## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
 
 ## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)

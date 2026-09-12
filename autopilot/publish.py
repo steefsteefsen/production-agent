@@ -48,6 +48,10 @@ def main(argv: list[str] | None = None) -> int:
 
     sh(sys.executable, "autopilot/status.py", "--stage")  # Marker/Status frisch (D6/D7)
     sh(sys.executable, "autopilot/present.py", "--stage")  # Präsentation frisch
+    sh(
+        sys.executable, "-m", "ruff", "format", "."
+    )  # formatieren VOR git add (Guardian K2 prüft nur)
+    sh(sys.executable, "-m", "ruff", "check", "--fix", "-q", ".")
     sh("git", "add", "-A")
     if sh(sys.executable, "autopilot/guardian.py").returncode != 0:
         print("Guardian rot – Abbruch (nichts committet).")

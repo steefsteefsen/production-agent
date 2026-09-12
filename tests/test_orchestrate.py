@@ -90,6 +90,36 @@ def test_quota_pauses_then_resumes_without_loop_consumption(tmp_path, monkeypatc
     assert st["wp"]["WP1"]["loops"] == 1  # Quota hat keinen Loop verbraucht
 
 
+def test_quota_probe_resumes_without_full_wait(tmp_path, monkeypatch):
+    """Mit aktiver Probe wird nach der Quota-Pause geprüft, ob das Abo wieder annimmt – und sofort fortgesetzt."""
+    monkeypatch.setattr(orchestrate, "STATE_PATH", tmp_path / "o.json")
+    runner = QuotaRunner({"WP1": 1})  # WP1 einmal Quota
+    calls = {"probe": 0}
+
+    def probe():
+        calls["probe"] += 1
+        return True  # Abo nimmt sofort wieder an
+
+    slept = []
+    rc = orchestrate.orchestrate(
+        PLAN, _state(), runner, sleep=lambda s: slept.append(s), probe=probe
+    )
+    assert rc == 0 and "WP1" in runner.merged
+    assert calls["probe"] >= 1 and slept == []  # Probe statt blindem Schlaf
+
+
+def test_quota_status_not_persistent_after_restart(tmp_path, monkeypatch):
+    """Status 'quota' überlebt keinen Neustart: load_state setzt ihn auf pending, _quota wird gelöscht."""
+    monkeypatch.setattr(orchestrate, "STATE_PATH", tmp_path / "o.json")
+    st = _state()
+    st["_quota"] = True
+    st["wp"]["WP1"]["status"] = "quota"
+    orchestrate.save_state(st)
+    reloaded = orchestrate.load_state(PLAN, 40.0, "test")
+    assert reloaded.get("_quota") is None
+    assert reloaded["wp"]["WP1"]["status"] == "pending"
+
+
 def test_persistent_quota_exits_3_falsification(tmp_path, monkeypatch):
     monkeypatch.setattr(orchestrate, "STATE_PATH", tmp_path / "o.json")
     runner = QuotaRunner(persist=True)

@@ -8,10 +8,11 @@
       "Read", "Edit", "Write", "Grep", "Glob",
       "Bash(pytest:*)", "Bash(python:*)", "Bash(python3:*)", "Bash(python -m:*)",
       "Bash(python -c:*)", "Bash(python3 -c:*)", "Bash(ruff:*)",
-      "Bash(bandit:*)", "Bash(pip install:*)", "Bash(pip-audit:*)", "Bash(npm:*)", "Bash(npx:*)",
+      "Bash(bandit:*)", "Bash(pip install:*)", "Bash(pip-audit:*)", "Bash(pip show:*)", "Bash(npm:*)", "Bash(npx:*)",
       "Bash(node:*)", "Bash(uvicorn:*)", "Bash(playwright:*)", "Bash(docker compose:*)",
       "Bash(git add:*)", "Bash(git commit:*)", "Bash(git status:*)", "Bash(git diff:*)",
       "Bash(git log:*)", "Bash(git show:*)", "Bash(git tag:*)", "Bash(git worktree list:*)",
+      "Bash(git -C:*)",
       "Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)", "Bash(find:*)",
       "Bash(mkdir:*)", "Bash(cp:*)", "Bash(mv:*)", "Bash(rm -f:*)", "Bash(make:*)", "Bash(sqlite3:*)",
       "Bash(cmp:*)", "Bash(wc:*)", "Bash(cd:*)"

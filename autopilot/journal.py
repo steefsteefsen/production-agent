@@ -101,7 +101,20 @@ def entry(
     return e
 
 
+def _sanitize_paths(v):
+    """Absolute Pfade aus Journal-Einträgen entfernen (Ordnernamen sind privat, S8)."""
+    parent = str(ROOT.parent)
+    if isinstance(v, str):
+        return v.replace(parent, "~")
+    if isinstance(v, list):
+        return [_sanitize_paths(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _sanitize_paths(x) for k, x in v.items()}
+    return v
+
+
 def write(e: dict) -> None:
+    e = _sanitize_paths(e)
     # eine Datei je WP (parallele Lanes überschreiben sich nicht), Sammel-md bleibt Append
     JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
     wp_file = JOURNAL_DIR / f"{e['wp']}.json"
@@ -142,5 +155,7 @@ def commit(wp_id: str, e: dict) -> None:
     review = (e.get("review") or {}).get("verdict", "human")
     footer = f"Gate: {'grün' if e['ok'] else 'rot'} | Review: {review} | Guardian: ok"
     subprocess.run([sys.executable, str(ROOT / "autopilot" / "status.py"), "--stage"], cwd=ROOT)
+    subprocess.run([sys.executable, "-m", "ruff", "format", "."], cwd=ROOT)  # ruff_pre_commit
+    subprocess.run([sys.executable, "-m", "ruff", "check", "--fix", "-q", "."], cwd=ROOT)
     _git("add", "-A")
     _git("commit", "-q", "-m", title, "-m", e["agent_summary"] or "-", "-m", footer)

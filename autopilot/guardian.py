@@ -421,19 +421,9 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
                     f"K1 {cands[0].name}: kein Falsifikationstest markiert (Wort 'falsif')"
                 )
 
-    # K2 Lint / Bandit – zuerst gestagte Python-Dateien formatieren und autofixen, dann neu stagen,
-    # damit der nachgelagerte ruff-format-Hook nicht mehr blockiert; danach erst prüfen.
-    py_staged = [f for f in files if f.endswith(".py") and (ROOT / f).exists()]
-    if py_staged:
-        subprocess.run(
-            [sys.executable, "-m", "ruff", "format", *py_staged], cwd=ROOT, capture_output=True
-        )
-        subprocess.run(
-            [sys.executable, "-m", "ruff", "check", "--fix", *py_staged],
-            cwd=ROOT,
-            capture_output=True,
-        )
-        subprocess.run(["git", "add", "-A"], cwd=ROOT)  # alle geänderten Dateien, nicht nur Python
+    # K2 Lint / Bandit – nur PRÜFEN, nicht formatieren. Das Formatieren/Autofixen erledigt der Committer
+    # (journal.commit, publish.py) VOR dem git add; würde der Guardian hier Dateien ändern und neu stagen,
+    # meldete pre-commit „files were modified by this hook" und jeder Commit scheiterte einmal.
     for tool, cmd in (
         ("ruff", [sys.executable, "-m", "ruff", "check", "."]),
         ("bandit", [sys.executable, "-m", "bandit", "-q", "-c", "pyproject.toml", "-r", "src"]),

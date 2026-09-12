@@ -182,6 +182,12 @@ def load_state(plan: dict, budget_total: float, run_id: str) -> dict:
         state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
         for pid in (p["id"] for p in plan["packages"]):  # neue Pakete ergänzen
             state["wp"].setdefault(pid, init_state(plan, budget_total, run_id)["wp"][pid])
+        # Quota ist nie persistent: nach einem Neustart wird aktiv per cc.probe() neu geprüft,
+        # nicht blind aus dem alten Zustand weitergewartet (Blocker: „Status quota ohne Prüfung").
+        state.pop("_quota", None)
+        for w in state["wp"].values():
+            if w.get("status") == "quota":
+                w["status"] = "pending"
         return state
     return init_state(plan, budget_total, run_id)
 
@@ -210,30 +216,39 @@ def orchestrate(
     quota_wait_hours: float = 8.0,
     quota_interval: int = 900,
     sleep=None,
+    probe=None,
 ) -> int:
     """Rundenbasiert: startbereite WPs (max_parallel, eine je freie Lane) starten, dann fertige mergen.
-    Quota (429) pausiert ALLE Lanes: alle quota_interval Sekunden erneut versuchen, bis quota_wait_hours
-    erreicht sind → Exit 3. Exit 0 = alles merged, 2 = mindestens ein WP wartet."""
+    Quota (429) pausiert ALLE Lanes: je Wartrunde (höchstens 300 s) aktiv per probe() prüfen, ob das Abo
+    wieder annimmt; ohne probe blind alle quota_interval Sekunden erneut versuchen. Nach quota_wait_hours
+    ohne Erfolg → Exit 3. Exit 0 = alles merged, 2 = mindestens ein WP wartet."""
     import time as _time
 
     sleep = sleep or _time.sleep
     waited = 0
     while True:
         if state.get("_quota"):  # Abo-Quote erschöpft → alle Lanes pausiert
+            if probe is not None and probe():  # Abo nimmt wieder an → sofort fortsetzen
+                _resume_quota(state, plan)
+                save_state(state)
+                waited = 0
+                continue
             if waited >= quota_wait_hours * 3600:
                 _resume_quota(state, plan)
                 save_state(state)
                 return 3
+            wait = min(quota_interval, 300) if probe is not None else quota_interval
             msg = (
-                f"quota – warte {quota_interval // 60} min, dann erneut "
+                f"quota – {'Probe' if probe is not None else 'warte'} in {max(wait // 60, 1)} min "
                 f"(bisher {waited // 60}/{int(quota_wait_hours * 60)} min)"
             )
             print(msg, flush=True)
             with (ROOT / "autopilot" / "journal.md").open("a", encoding="utf-8") as fh:
                 fh.write(f"\n## quota-Pause: {msg}\n")
-            sleep(quota_interval)
-            waited += quota_interval
-            _resume_quota(state, plan)
+            sleep(wait)
+            waited += wait
+            if probe is None:  # ohne aktive Probe: blind entsperren und erneut versuchen
+                _resume_quota(state, plan)
             continue
         if not runner.budget_ok(state):
             break
@@ -284,6 +299,9 @@ class Runner:
         worktree = ROOT.parent / f"orch-{wp}"
         branch = f"wp/{wp}"
         self._sh("git", "worktree", "add", "-B", branch, str(worktree), "main")
+        (worktree / ".venv").symlink_to(ROOT / ".venv") if not (
+            worktree / ".venv"
+        ).exists() else None  # orch_venv
         (worktree / ".env").write_bytes((ROOT / ".env").read_bytes()) if (
             ROOT / ".env"
         ).exists() else None
@@ -391,7 +409,7 @@ class Runner:
     def merge_wp(self, wp: str, state: dict) -> None:
         w = state["wp"][wp]
         merge = self._sh(
-            "git", "merge", "--no-ff", f"wp/{wp}", "-m", f"merge({wp}): {wp} übernommen"
+            "git", "merge", "--no-ff", f"wp/{wp}", "-m", f"Merge wp/{wp}: {wp} übernommen (--no-ff)"
         )
         if merge.returncode != 0:
             self._sh("git", "merge", "--abort")
@@ -635,6 +653,8 @@ def main(argv: list[str] | None = None) -> int:
         heal=args.heal,
         max_heal_rounds=args.heal_rounds,
     )
+    import cc  # noqa: PLC0415  – Quota-Probe je Wartrunde (max. 300 s), nie blind weiterwarten
+
     return orchestrate(
         plan,
         state,
@@ -642,6 +662,7 @@ def main(argv: list[str] | None = None) -> int:
         push=args.push,
         max_parallel=args.max_parallel,
         quota_wait_hours=args.quota_wait_hours,
+        probe=cc.probe,
     )
 
 
