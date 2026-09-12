@@ -17,6 +17,23 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 JOURNAL_MD = ROOT / "autopilot" / "journal.md"
 JOURNAL_JSON = ROOT / "autopilot" / "journal.json"
+JOURNAL_DIR = (
+    ROOT / "autopilot" / "journal"
+)  # eine Datei je WP – worktree-sicher (merge=union in journal.md)
+
+
+def load_all() -> list[dict]:
+    """Alle Journal-Einträge aus autopilot/journal/*.json (+ Alt-journal.json), sortiert nach 'at'.
+    Wirft bei kaputtem JSON (kein stilles Überspringen)."""
+    entries: list[dict] = []
+    if JOURNAL_JSON.exists():
+        data = json.loads(JOURNAL_JSON.read_text(encoding="utf-8"))
+        entries.extend(data if isinstance(data, list) else [data])
+    if JOURNAL_DIR.exists():
+        for p in sorted(JOURNAL_DIR.glob("*.json")):
+            data = json.loads(p.read_text(encoding="utf-8"))
+            entries.extend(data if isinstance(data, list) else [data])
+    return sorted(entries, key=lambda e: e.get("at", ""))
 
 
 def _git(*args: str) -> str:
@@ -76,9 +93,12 @@ def entry(
 
 
 def write(e: dict) -> None:
-    data = json.loads(JOURNAL_JSON.read_text()) if JOURNAL_JSON.exists() else []
+    # eine Datei je WP (parallele Lanes überschreiben sich nicht), Sammel-md bleibt Append
+    JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
+    wp_file = JOURNAL_DIR / f"{e['wp']}.json"
+    data = json.loads(wp_file.read_text(encoding="utf-8")) if wp_file.exists() else []
     data.append(e)
-    JOURNAL_JSON.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    wp_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     status = "✅" if e["ok"] else "❌"
     block = (
         f"\n## {e['at']} · {e['wp']} · {e['agent']} · {status} (Versuche {e['attempts']}, "
@@ -106,7 +126,8 @@ def _commit_type(files: list[str]) -> str:
 
 
 def commit(wp_id: str, e: dict) -> None:
-    """Commit nach Konvention (CLAUDE.md): <typ>(<WP>): <Titel> · Body · Footer. Danach Tag wp/<id>."""
+    """Commit nach Konvention (CLAUDE.md) auf dem aktuellen Branch. Tag wp/<id> setzt der
+    Orchestrator erst nach dem Merge auf main (Block 7)."""
     first = (e["agent_summary"].splitlines() or [""])[0].strip().rstrip(".")
     title = f"{_commit_type(e['files'])}({wp_id}): {first[:60] or 'Arbeitspaket abgeschlossen'}"
     review = (e.get("review") or {}).get("verdict", "human")
@@ -114,4 +135,3 @@ def commit(wp_id: str, e: dict) -> None:
     subprocess.run([sys.executable, str(ROOT / "autopilot" / "status.py"), "--stage"], cwd=ROOT)
     _git("add", "-A")
     _git("commit", "-q", "-m", title, "-m", e["agent_summary"] or "-", "-m", footer)
-    _git("tag", "-f", f"wp/{wp_id}")

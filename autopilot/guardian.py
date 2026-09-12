@@ -3,7 +3,7 @@
 Dokumentationsaktualität verletzt sind. Deterministisch, ohne LLM, in Sekunden. Mit --llm zusätzlich
 ein kontextfreier Doku-Konsistenz-Check über claude -p (manuell, nicht im Hook – Kosten/Nichtdeterminismus).
 
-Regeln (S1–S9, K1–K5, D1–D9), je eine Zeile – hieraus erzeugt status.py den Marker auto:guardian_rules:
+Regeln (S1–S9, K1–K6, D1–D11), je eine Zeile – hieraus erzeugt status.py den Marker auto:guardian_rules:
  S1  keine Secrets, keine .env committet
  S2  keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
  S3  MES-Server genau 6 Werkzeuge, RAG genau 1, kein Werkzeug *sql/query/write/exec*
@@ -18,6 +18,7 @@ Regeln (S1–S9, K1–K5, D1–D9), je eine Zeile – hieraus erzeugt status.py 
  K3  Commit-Message folgt der Konvention (commit-msg-Hook)
  K4  Coverage: gesamt >=80, security >=95, mes_server/workflow >=85
  K5  jede entry-Zeile in .pre-commit-config.yaml beginnt mit .venv/bin/python
+ K6  tasks.yaml-WPs stehen in plan.yaml, Abhaengigkeiten sind aufloesbar und azyklisch
  D1  jedes src-Modul ist in README oder docs/ namentlich erwaehnt
  D2  jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
  D3  src geaendert -> auch docs/, README oder tests/ geaendert
@@ -27,6 +28,7 @@ Regeln (S1–S9, K1–K5, D1–D9), je eine Zeile – hieraus erzeugt status.py 
  D7  jeder auto-Marker in getrackten *.md hat den von status.py berechneten Wert
  D8  ausserhalb Markern keine getippten Zahlen/Regelbereiche/Coverage in README.md und docs/*.md
  D9  README.md hat Abschnitt "## Stand" mit nicht-leerem auto:stand-Marker
+ D11 jede Datei unter docs/ steht in docs/index.md
 
 GUARDIAN_ENV_FILE (Standard .env) waehlt die Geheimnis-Datei (Selbsttest nutzt eine Kopie).
 GUARDIAN_SKIP_D6=1 unterdrueckt D6 (status.py ruft den Guardian, bevor status.json gestaged ist).
@@ -456,6 +458,16 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
     if pc.exists():
         errors += check_precommit_entries(pc.read_text(encoding="utf-8"))
 
+    # K6 plan.yaml ⇔ tasks.yaml, azyklisch
+    if (ROOT / "autopilot" / "plan.yaml").exists():
+        try:
+            import orchestrate  # noqa: PLC0415
+
+            tids = {t["id"] for t in orchestrate.load_tasks()}
+            errors += orchestrate.check_plan(tids, orchestrate.load_plan())
+        except Exception as exc:  # noqa: BLE001
+            warn.append(f"K6 plan.yaml nicht auswertbar: {exc}")
+
     # D1 Modul in Doku erwähnt
     doc_text = (ROOT / "README.md").read_text(encoding="utf-8") + "".join(
         p.read_text(encoding="utf-8") for p in (ROOT / "docs").rglob("*.md")
@@ -541,6 +553,17 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
         errors.append("D9 README.md ohne Abschnitt '## Stand' mit auto:stand-Marker")
     elif not m.group(1).strip():
         errors.append("D9 auto:stand-Marker ist leer")
+
+    # D11 jede Datei unter docs/ steht in docs/index.md
+    index_md = ROOT / "docs" / "index.md"
+    if not index_md.exists():
+        errors.append("D11 docs/index.md fehlt")
+    else:
+        idx = index_md.read_text(encoding="utf-8")
+        for p in sorted((ROOT / "docs").rglob("*.md")):
+            rel = p.relative_to(ROOT / "docs").as_posix()
+            if p.name != "index.md" and rel not in idx:
+                errors.append(f"D11 docs/{rel} fehlt in docs/index.md")
 
     # optional LLM-Konsistenz (manuell)
     if use_llm and src_changed and not errors:

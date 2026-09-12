@@ -1,0 +1,29 @@
+# plan.yaml – Bauplan für den Orchestrator (autopilot/orchestrate.py).
+# Lanes laufen parallel (max. ein laufendes WP je Lane). Abhängigkeiten steuern die Reihenfolge.
+# tasks.yaml liefert Prompt, Gate und Review-Gate je WP (spec.prompt_ref); Guardian K6 hält beide konsistent.
+
+lanes:
+  steef: {agent: stefan}       # P / A / WP0 – von Stefan, nicht vom Autopilot gebaut
+  data: {agent: data-agent}
+  mcp: {agent: mcp-agent}
+  graph: {agent: graph-agent}
+  ui: {agent: ui-agent}
+  qa: {agent: qa-agent}
+  infra: {agent: qa-agent}     # CI/CD, Änderungsprotokoll, Backlog – unabhängig von den Bau-Lanes
+
+packages:
+  - {id: P,    lane: steef, deps: [],          effort_h: 0.5, spec: {prompt_ref: manuell}}
+  - {id: A,    lane: steef, deps: [P],         effort_h: 1.0, spec: {prompt_ref: manuell}}
+  - {id: WP0,  lane: steef, deps: [A],         effort_h: 0.5, spec: {prompt_ref: manuell}}
+  - {id: WP1,  lane: data,  deps: [WP0],       effort_h: 2.0, spec: {prompt_ref: "tasks.yaml#WP1"}}
+  - {id: WP2a, lane: mcp,   deps: [WP0],       effort_h: 2.0, spec: {prompt_ref: "tasks.yaml#WP2a"}}
+  - {id: WP-B, lane: ui,    deps: [WP0],       effort_h: 3.0, spec: {prompt_ref: "tasks.yaml#WP-B"}}
+  - {id: WP2b, lane: mcp,   deps: [WP2a],      effort_h: 2.0, spec: {prompt_ref: "tasks.yaml#WP2b"}}
+  - {id: WP3,  lane: graph, deps: [WP2a],      effort_h: 3.0, spec: {prompt_ref: "tasks.yaml#WP3"}}
+  - {id: WP4,  lane: graph, deps: [WP1, WP3],  effort_h: 2.0, spec: {prompt_ref: "tasks.yaml#WP4"}}
+  - {id: WP5,  lane: ui,    deps: [WP3, WP-B], effort_h: 3.0, spec: {prompt_ref: "tasks.yaml#WP5"}}
+  - {id: WP6,  lane: qa,    deps: [WP3, WP4],  effort_h: 2.0, spec: {prompt_ref: "tasks.yaml#WP6"}}
+  - {id: WP7,  lane: qa,    deps: [WP5, WP6],  effort_h: 2.0, spec: {prompt_ref: "tasks.yaml#WP7"}}
+  - {id: INF-3, lane: infra, deps: [WP0], effort_h: 1.0, spec: {prompt_ref: "tasks.yaml#INF-3"}}
+  - {id: INF-4, lane: infra, deps: [WP0], effort_h: 2.0, spec: {prompt_ref: "tasks.yaml#INF-4"}}
+  - {id: INF-9, lane: infra, deps: [WP0], effort_h: 0.5, spec: {prompt_ref: "tasks.yaml#INF-9"}}

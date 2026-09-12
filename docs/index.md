@@ -1,0 +1,31 @@
+# Doku-Index
+
+Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
+
+## Entscheidungen (ADRs)
+- [adr/0000-template.md](adr/0000-template.md) – ADR-NNNN: Titel: Datum: YYYY-MM-DD · Status: vorgeschlagen | akzeptiert | ersetzt
+- [adr/0001-ereignisdefinition.md](adr/0001-ereignisdefinition.md) – ADR-0001: Störungsereignis – Beginn, Ende, Zusammenfassung: Datum: 2026-09-11 · Status: akzeptiert
+- [adr/0002-entscheidungsbasis-replay.md](adr/0002-entscheidungsbasis-replay.md) – ADR-0002: Entscheidungsbasis durch Replay, nicht durch Erfindung: Datum: 2026-09-10 · Status: akzeptiert
+- [adr/0003-orchestrierung.md](adr/0003-orchestrierung.md) – ADR-0003: Orchestrierung mit LangGraph: Datum: 2026-09-11 · Status: akzeptiert
+- [adr/0005-mcp-werkzeuge.md](adr/0005-mcp-werkzeuge.md) – ADR-0005: Sechs fachliche MCP-Werkzeuge statt generischem SQL: Datum: 2026-09-11 · Status: akzeptiert
+- [adr/0008-modell-und-kontext.md](adr/0008-modell-und-kontext.md) – ADR-0008: Claude Sonnet 5 über langchain-anthropic, Context Engineering je Knoten: Datum: 2026-09-11 · Status: akzeptiert
+- [adr/0009-frontend.md](adr/0009-frontend.md) – ADR-0009: Vite + React + shadcn/ui + Recharts, FastAPI/SSE: Datum: 2026-09-11 · Status: akzeptiert
+
+## Betrieb
+- [betriebsanweisung/BA-01-stoerungsmeldung.md](betriebsanweisung/BA-01-stoerungsmeldung.md) – Betriebsanweisung BA-01 · Störungsmeldung, Freigabe und Wiederanlauf – Verpackungslinie 1: Gültig ab: 2026-09-11 · Version 1.0 · Verantwortlich: Produktionsleitung Werk Nord · Geltungsbereich: Zuführung, Folienwickler,
+- [chat_interface.md](chat_interface.md) – Schnittstelle Chat ↔ Projekt (manuell, drei Dateien): | Wann | Was ins Projektwissen / in den Chat | Befehl |
+- [guardian.md](guardian.md) – Guardian – der Wächter vor jedem Commit: `autopilot/guardian.py` läuft als `pre-commit`-Hook (installiert durch `make install`) und blockiert den Commit,
+- [orchestrator.md](orchestrator.md) – Orchestrator – Lane-Scheduler mit dauerhaftem Zustand: `autopilot/orchestrate.py` baut alle Pakete aus `autopilot/plan.yaml` spezifikationsbasiert, parallel je Lane,
+
+## Tests
+- [test_cases.md](test_cases.md) – Testfälle je Phase – Verifikation (V), Falsifikation (F), Review (R): Stand des Basisprojekts: **Basis-Testsuite grün** (aktuelle Anzahl siehe README/Statusseite). Neue Fälle je
+- [test_strategy.md](test_strategy.md) – Teststrategie: Verifikation, Falsifikation, Review-Gates: Jede Einheit bekommt zwei Testarten. **Verifikation** zeigt, dass sie tut, was sie soll. **Falsifikation** versucht
+
+## Verlauf
+- [AENDERUNGEN.md](AENDERUNGEN.md) – Änderungen (Was / Warum / Alternativen): Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
+
+## Weiteres
+- [architecture.md](architecture.md) – Architektur – Zielbild und Verträge: ```mermaid
+- [plan.md](plan.md) – Projektplan – Scope, Budget, Gates: Minimalanforderungen: stehende Linie untersuchen, Alarme zu Ereignissen aggregieren, historisches Wissen abrufen,
+- [references.md](references.md) – Externe Quellen: was übernommen wurde, wie und unter welcher Lizenz: Drei Stufen – nie „Repo klonen und anpassen":
+- [stack.md](stack.md) – Stack und Entscheidungsgrundlage: Jede Zeile verweist auf eine ADR mit Alternativen, Kriterien und Quellen. Versionen: Stand 11.09.2026, vor Nutzung mit `pip index versions` 

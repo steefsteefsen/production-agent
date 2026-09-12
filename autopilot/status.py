@@ -25,9 +25,20 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 STATUS_DIR = ROOT / "docs" / "status"
 STEP_NAMES = ["Gate grün", "Review", "Commit", "Tag", "Sync-Paket"]
 SCOPE_RE = re.compile(r"^(?:feat|fix|test|docs|adr|sec|chore)\(([^)]+)\):")
+DOC_SECTIONS = [
+    ("Entscheidungen (ADRs)", lambda rel: rel.startswith("adr/")),
+    (
+        "Betrieb",
+        lambda rel: rel.startswith("betriebsanweisung/")
+        or rel in ("guardian.md", "orchestrator.md", "chat_interface.md"),
+    ),
+    ("Tests", lambda rel: rel in ("test_strategy.md", "test_cases.md")),
+    ("Verlauf", lambda rel: rel.startswith("sessions/") or rel == "AENDERUNGEN.md"),
+]
 
 
 # --- Quellen -----------------------------------------------------------------------------
@@ -573,6 +584,44 @@ def fill_markers(stage: bool, values: dict[str, str] | None = None) -> list[str]
 # --- Orchestrierung ----------------------------------------------------------------------
 
 
+def _doc_summary(path: Path) -> tuple[str, str]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    heading = next((ln.lstrip("# ").strip() for ln in lines if ln.startswith("#")), path.stem)
+    para = next((ln.strip() for ln in lines if ln.strip() and not ln.startswith(("#", "<!--"))), "")
+    desc = re.sub(r"\s+", " ", para)[:140]
+    desc = re.sub(
+        r"\d+\s+(Tests?|Werkzeuge?)", "…", desc
+    )  # D8-Muster in Beschreibungen neutralisieren
+    desc = re.sub(r"[SKD]1\s*[–-]\s*[SKD]\d", "…", desc)
+    desc = re.sub(r"\d+\s*%", "…", desc)
+    return heading, desc
+
+
+def build_docs_index(stage: bool) -> None:
+    """docs/index.md aus allen docs/**/*.md erzeugen (Guardian D11)."""
+    docs = ROOT / "docs"
+    sections: dict[str, list[str]] = {name: [] for name, _ in DOC_SECTIONS}
+    sections["Weiteres"] = []
+    for p in sorted(docs.rglob("*.md")):
+        if p.name == "index.md":
+            continue
+        rel = p.relative_to(docs).as_posix()
+        heading, desc = _doc_summary(p)
+        line = f"- [{rel}]({rel}) – {heading}" + (f": {desc}" if desc else "")
+        target = next((name for name, pred in DOC_SECTIONS if pred(rel)), "Weiteres")
+        sections[target].append(line)
+    parts = [
+        "# Doku-Index",
+        "Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.",
+    ]
+    for name in [n for n, _ in DOC_SECTIONS] + ["Weiteres"]:
+        if sections[name]:
+            parts.append(f"## {name}\n" + "\n".join(sections[name]))
+    (docs / "index.md").write_text("\n\n".join(parts) + "\n", encoding="utf-8")
+    if stage:
+        subprocess.run(["git", "add", "docs/index.md"], cwd=ROOT)
+
+
 def write_files(st: dict) -> None:
     STATUS_DIR.mkdir(parents=True, exist_ok=True)
     (STATUS_DIR / "status.json").write_text(
@@ -615,6 +664,13 @@ def generate(stage: bool = False, run_guardian_check: bool = False) -> dict:
     )
     write_files(st)
     fill_markers(stage)
+    build_docs_index(stage)
+    try:
+        import present  # noqa: PLC0415
+
+        present.generate(stage=stage)
+    except Exception as exc:  # noqa: BLE001
+        print(f"WARN present.py: {exc}", file=sys.stderr)
     if stage:
         subprocess.run(
             ["git", "add", "docs/status/status.json", "docs/status/index.html"], cwd=ROOT

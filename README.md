@@ -12,7 +12,7 @@ python -m venv .venv && source .venv/bin/activate
 make install                            # deps + pre-commit
 cp .env.example .env                    # API-Key eintragen
 python -m production_agent.data.simulator   # 360 Störungsereignisse → data/gold/mes.sqlite
-make test                               # Testsuite (<!-- auto:tests -->59<!-- /auto:tests --> Tests), läuft ohne API-Key
+make test                               # Testsuite (<!-- auto:tests -->70<!-- /auto:tests --> Tests), läuft ohne API-Key
 python autopilot/run.py --dry-run       # Prompts der Arbeitspakete ansehen, dann ohne --dry-run laufen lassen
 ```
 
@@ -49,14 +49,14 @@ Die Arbeitspakete WP0–WP7 stehen in `autopilot/tasks.yaml`; die Entscheidungsg
 
 ## Stand
 <!-- auto:stand -->
-- fertig: 0 von 11 Paketen
-- offen: P, A, WP0, WP1, WP2a, WP2b, WP3, WP4, WP5, WP6, WP7
-- Fortschritt: 0 % — siehe [Statusseite](docs/status/index.html)
+- fertig: 2 von 11 Paketen
+- offen: P, WP1, WP2a, WP2b, WP3, WP4, WP5, WP6, WP7
+- Fortschritt: 18 % — siehe [Statusseite](docs/status/index.html)
 <!-- /auto:stand -->
 
 Guardian-Regeln (automatisch aus dem Guardian-Docstring):
 <!-- auto:guardian_rules -->
-Regeln: S1–S9, K1–K5, D1–D9.
+Regeln: S1–S9, K1–K6, D1–D9.
 
 - **S1**: keine Secrets, keine .env committet
 - **S2**: keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
@@ -72,6 +72,7 @@ Regeln: S1–S9, K1–K5, D1–D9.
 - **K3**: Commit-Message folgt der Konvention (commit-msg-Hook)
 - **K4**: Coverage: gesamt >=80, security >=95, mes_server/workflow >=85
 - **K5**: jede entry-Zeile in .pre-commit-config.yaml beginnt mit .venv/bin/python
+- **K6**: tasks.yaml-WPs stehen in plan.yaml, Abhaengigkeiten sind aufloesbar und azyklisch
 - **D1**: jedes src-Modul ist in README oder docs/ namentlich erwaehnt
 - **D2**: jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
 - **D3**: src geaendert -> auch docs/, README oder tests/ geaendert

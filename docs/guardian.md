@@ -8,7 +8,7 @@ Die folgende Regelliste wird von `autopilot/status.py` aus dem Docstring von `gu
 von Hand getippt werden:
 
 <!-- auto:guardian_rules -->
-Regeln: S1–S9, K1–K5, D1–D9.
+Regeln: S1–S9, K1–K6, D1–D9.
 
 - **S1**: keine Secrets, keine .env committet
 - **S2**: keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
@@ -24,6 +24,7 @@ Regeln: S1–S9, K1–K5, D1–D9.
 - **K3**: Commit-Message folgt der Konvention (commit-msg-Hook)
 - **K4**: Coverage: gesamt >=80, security >=95, mes_server/workflow >=85
 - **K5**: jede entry-Zeile in .pre-commit-config.yaml beginnt mit .venv/bin/python
+- **K6**: tasks.yaml-WPs stehen in plan.yaml, Abhaengigkeiten sind aufloesbar und azyklisch
 - **D1**: jedes src-Modul ist in README oder docs/ namentlich erwaehnt
 - **D2**: jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
 - **D3**: src geaendert -> auch docs/, README oder tests/ geaendert

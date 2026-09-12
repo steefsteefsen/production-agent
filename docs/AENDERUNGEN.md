@@ -3,6 +3,19 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## Orchestrator, Präsentation, Doku-Index (Block 7/11, Teil B/C)
+**Was:** `autopilot/orchestrate.py` (Lane-Scheduler, dauerhafter Zustand `orchestrator.json`, Worktrees, Merge
+`--no-ff` mit Guardian und Rollback, Budget, `--dry-run`/`--retry`/`--skip`/`--push`) und `autopilot/plan.yaml`
+(Lanes inkl. infra, Abhängigkeiten, Infra-Pakete INF-3/4/9). Journal je WP (`autopilot/journal/<WP>.json`,
+`load_all`, `.gitattributes merge=union`); Tag erst nach Merge. `autopilot/present.py` erzeugt
+`docs/presentation/index.html` (sechs Tabs, Daten inline, file://-lauffähig) aus git-Log, Journal, Zustand, ADRs,
+Coverage. `status.py` erzeugt zusätzlich `docs/index.md` und ruft present im Hook. Guardian K6 (plan⇔tasks,
+azyklisch) und D11 (jede docs-Datei im Index). `docs/orchestrator.md`, `architecture.md`, `plan.md`.
+**Warum:** Parallel je Lane bauen, ohne dass sich Stränge im Journal überschreiben; der Ablauf soll aus Fakten
+erzählt werden statt aus Erinnerung; Doku-Index verhindert verwaiste Dateien.
+**Alternativen:** `parallel.sh` – verworfen zugunsten eines Schedulers mit Fortsetzung. Präsentation als Folien von
+Hand – verworfen, weil sie veraltet; sie wird aus dem Repo generiert.
+
 ## WP0 · Entscheidungen festgeschrieben (decisions.yaml, ADR-0001, BA-01)
 **Was:** decisions.yaml als geführte Fachentscheidung (14 reason_codes, sechs Kategorien, Kostensatz 200 €/min,
 Konfidenzschwelle 0,60, Rollen/Freigabe, Audit-Pseudonym, Recht/Normen). ADR-0001 (Ereignisdefinition) und
