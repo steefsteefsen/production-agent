@@ -7,6 +7,7 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [adr/0001-ereignisdefinition.md](adr/0001-ereignisdefinition.md) – ADR-0001: Störungsereignis – Beginn, Ende, Zusammenfassung: Datum: 2026-09-11 · Status: akzeptiert
 - [adr/0002-entscheidungsbasis-replay.md](adr/0002-entscheidungsbasis-replay.md) – ADR-0002: Entscheidungsbasis durch Replay, nicht durch Erfindung: Datum: 2026-09-10 · Status: akzeptiert
 - [adr/0003-orchestrierung.md](adr/0003-orchestrierung.md) – ADR-0003: Orchestrierung mit LangGraph: Datum: 2026-09-11 · Status: akzeptiert
+- [adr/0004-rag.md](adr/0004-rag.md) – ADR-0004: RAG-Architektur – Chunking, Modell und Hybrid-Suche: Datum: 2026-09-12 · Status: akzeptiert
 - [adr/0005-mcp-werkzeuge.md](adr/0005-mcp-werkzeuge.md) – ADR-0005: Sechs fachliche MCP-Werkzeuge statt generischem SQL: Datum: 2026-09-11 · Status: akzeptiert
 - [adr/0008-modell-und-kontext.md](adr/0008-modell-und-kontext.md) – ADR-0008: Claude Sonnet 5 über langchain-anthropic, Context Engineering je Knoten: Datum: 2026-09-11 · Status: akzeptiert
 - [adr/0009-frontend.md](adr/0009-frontend.md) – ADR-0009: Vite + React + shadcn/ui + Recharts, FastAPI/SSE: Datum: 2026-09-11 · Status: akzeptiert

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-12T23:32:53",
-  "commit": "1b6d17f01a3d2c96712e6a6fdb4806c3844e992d",
+  "generated_at": "2026-09-12T23:43:54",
+  "commit": "462a89b53a4442a64368c7fa6e9c25951d9be0aa",
   "branch": "main",
   "packages": [
     {
@@ -239,18 +239,18 @@
         "WP1",
         "WP2a"
       ],
-      "percent": 0,
-      "state": "offen",
+      "percent": 70,
+      "state": "review_pass",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 19:27"
         },
         {
           "name": "Review",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 19:27"
         },
         {
           "name": "Commit",
@@ -268,9 +268,9 @@
           "at": null
         }
       ],
-      "attempts": 0,
-      "cost_usd": 0,
-      "last_at": null,
+      "attempts": 1,
+      "cost_usd": 2.47,
+      "last_at": "2026-09-12 19:27",
       "commits": []
     },
     {
@@ -679,14 +679,20 @@
     }
   ],
   "totals": {
-    "percent": 25,
-    "hours_agent": 0.67,
-    "cost_usd": 4.37,
-    "tests": 170,
-    "coverage_total": 94,
+    "percent": 29,
+    "hours_agent": 1.05,
+    "cost_usd": 6.84,
+    "tests": 183,
+    "coverage_total": 90,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-12T23:32:38+02:00",
+      "kind": "commit",
+      "ref": "462a89b",
+      "text": "fix(infra): Commit-Prüfung, Post-Merge-Guardian, WP3-Platzhalter, K10"
+    },
     {
       "at": "2026-09-12T15:52:03+02:00",
       "kind": "commit",
@@ -754,6 +760,18 @@
       "text": "adr(WP0): Entscheidungen festgeschrieben, Simulator auf UP1/14 Codes"
     },
     {
+      "at": "2026-09-12 19:27",
+      "kind": "journal",
+      "ref": "WP2b",
+      "text": "WP2b ok (1 Versuche)"
+    },
+    {
+      "at": "2026-09-12 19:27",
+      "kind": "review",
+      "ref": "WP2b",
+      "text": "Review pass"
+    },
+    {
       "at": "2026-09-12 14:47",
       "kind": "journal",
       "ref": "WP2a",
@@ -804,7 +822,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 52,
+      "tests": 65,
       "coverage": 100
     },
     {
@@ -828,13 +846,13 @@
     {
       "path": "src/production_agent/mcp/",
       "files": 2,
-      "tests": 2,
-      "coverage": 89
+      "tests": 15,
+      "coverage": 76
     },
     {
       "path": "src/production_agent/security/",
       "files": 4,
-      "tests": 8,
+      "tests": 21,
       "coverage": 100
     }
   ]
