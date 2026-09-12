@@ -551,20 +551,66 @@ def build_from_bronze(
 
 
 if __name__ == "__main__":
+    import argparse
+    import json
+    import sys
+    import time as _time
+
+    ap = argparse.ArgumentParser(description="MES-Simulator")
+    ap.add_argument("--stream", action="store_true", help="Demo-Ereignis als JSON-Zeilen streamen")
+    ap.add_argument(
+        "--speed",
+        type=float,
+        default=60.0,
+        metavar="N",
+        help="Zeitrafferrate: 1 Echtzeit-Sekunde = N Sim-Sekunden (Standard 60)",
+    )
+    args = ap.parse_args()
+
     dec = load_decisions()
     evs = generate(dec)
-    Path("data/bronze/alarms_raw.csv").write_text(export_bronze_csv(evs), encoding="utf-8")
-    write_sqlite(dec, evs, "data/gold/mes.sqlite")
-    kurz = dec["ereignis"]["kurzstillstand_min"]
-    gold = [
-        e
-        for e in evs
-        if (dec["ereignis"]["prio1_immer_ereignis"] and _event_prio(e) == 1)
-        or (e.end - e.start).total_seconds() / 60 >= kurz
-    ]
-    avg = sum((e.end - e.start).total_seconds() / 60 for e in gold) / len(gold)
-    flood_share = sum(e.flood for e in gold) / len(gold)
-    print(
-        f"{len(gold)} Ereignisse (+{len(evs) - len(gold)} Kurzstillstände), "
-        f"Ø {avg:.1f} min, Alarmflut-Anteil {flood_share:.0%}"
-    )
+
+    if args.stream:
+        demo = evs[-1 - dec["simulation"]["demo_ereignis_index_von_hinten"]]
+        verfahren = dec["alarm_prioritaet"]["verfahren"]
+        stationen = dec["linie"]["stationen"]
+        line_id = dec["linie"]["line_id"]
+        station_name = (
+            stationen[demo.station] if demo.station < len(stationen) else f"S{demo.station}"
+        )
+        if not demo.alarms:
+            sys.exit(0)
+        ref_ts = demo.alarms[0][0]
+        for ts, code, prio, sev in demo.alarms:
+            delay = max(0.0, (ts - ref_ts).total_seconds() / args.speed)
+            if delay > 0:
+                _time.sleep(delay)
+            ref_ts = ts
+            payload = {
+                "source_node": f"{line_id}-S{demo.station}/{station_name}",
+                "alarm_id": f"{code}/{ts.isoformat()}",
+                "alarm_code": code,
+                "severity": sev,
+                "priority": prio,
+                "message": CATALOG[demo.reason]["cause"],
+                "active": True,
+                "ts": ts.isoformat(),
+                "topic": f"plant/{line_id}/{station_name}/alarm",
+            }
+            print(json.dumps(payload, ensure_ascii=False), flush=True)
+    else:
+        Path("data/bronze/alarms_raw.csv").write_text(export_bronze_csv(evs), encoding="utf-8")
+        write_sqlite(dec, evs, "data/gold/mes.sqlite")
+        kurz = dec["ereignis"]["kurzstillstand_min"]
+        gold = [
+            e
+            for e in evs
+            if (dec["ereignis"]["prio1_immer_ereignis"] and _event_prio(e) == 1)
+            or (e.end - e.start).total_seconds() / 60 >= kurz
+        ]
+        avg = sum((e.end - e.start).total_seconds() / 60 for e in gold) / len(gold)
+        flood_share = sum(e.flood for e in gold) / len(gold)
+        print(
+            f"{len(gold)} Ereignisse (+{len(evs) - len(gold)} Kurzstillstände), "
+            f"Ø {avg:.1f} min, Alarmflut-Anteil {flood_share:.0%}"
+        )

@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from langgraph.types import Command
 from pydantic import BaseModel
 
+from production_agent.api.mes_router import router as mes_router
 from production_agent.config import get_settings
 from production_agent.graph.workflow import build_graph
 
@@ -20,6 +21,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(mes_router)
 graph = build_graph(settings.checkpoint_db_path)
 
 

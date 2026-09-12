@@ -1,0 +1,76 @@
+[
+  {
+    "wp": "WP-B",
+    "agent": "ui-agent",
+    "at": "2026-09-12 17:14",
+    "ok": true,
+    "attempts": 3,
+    "minutes": 77.1,
+    "cost_usd": 0.18934425000000002,
+    "turns": 15,
+    "files": [
+      "Makefile",
+      "README.md",
+      "autopilot/journal.md",
+      "docs/index.md",
+      "docs/presentation/index.html",
+      "docs/status/index.html",
+      "docs/status/status.json",
+      "docs/test_strategy.md",
+      "src/production_agent/api/server.py",
+      "src/production_agent/data/simulator.py"
+    ],
+    "agent_summary": "ruff und pytest sind grün (alle Punkte, kein Fehler). \n\n**Abschlussmeldung:**\n\n- **Gebaut:** `ui`-Target in `Makefile` ergänzt – `make ui` wechselt in `frontend/` und startet `npm run dev` (Vite), das LiveMES-SSE-Tab und das Medallion-Tab (Bronze→Silber→Gold) sind damit über den Dev-Server erreichbar.\n- **Getestet:** `ruff check .` ohne Befund, `pytest -q` durchgängig grün.\n- **Offen:** `make ui` setzt eine laufende API voraus (`make run-api` in separatem Terminal); ein kombiniertes `make run-all` (API + Frontend parallel) ist nicht in der Review-Anforderung enthalten und wurde nicht ergänzt.",
+    "gate_tail": "grün",
+    "narrative": "",
+    "review": {
+      "verdict": "pass",
+      "summary": "Beide Checklisten-Punkte sind durch Code und Tests belegt. `make ui` startet den Vite-Dev-Server; die Tabs „Live-MES\" (SSE-Strom) und „Medallion\" (Bronze→Silber→Gold-Kette) sind vollständig implementiert und per FastAPI-Endpunkt angebunden. Fremde Bronze-IDs werden sowohl architektonisch (SQL-Filter `sequence_id = event_id`) als auch durch vier dedizierte Tests verhindert. Keine Sicherheitsverstöße gefunden.",
+      "items": [
+        {
+          "check": "make ui zeigt den Alarmstrom",
+          "result": "pass",
+          "evidence": "Makefile Zeile +4: `ui: ; cd frontend && npm run dev`. LiveMES.tsx verbindet per EventSource auf /mes/stream?speed=120, rendert Severity-Chart (Recharts) und Alarm-Liste. mes_router.py:34-75 liefert den SSE-Stream aus Simulator-Alarmen des Demo-Ereignisses.",
+          "severity": "high"
+        },
+        {
+          "check": "make ui zeigt die Kette Bronze→Silber→Gold",
+          "result": "pass",
+          "evidence": "Medallion.tsx:60-138 zeigt drei farblich getrennte Blöcke (Gold, Silber-Regel-Chips, Bronze-IDs). Daten kommen von GET /mes/lineage/{id} (mes_router.py:101-109), das pipeline_view.get_lineage() aufruft. pipeline_view.py:24-76 liest Gold-Zeile und Silber-Alarme (mit source_row_id) via sql_guard/open_readonly; rules_applied wird in Python zusammengestellt. App.tsx:43-44 verdrahtet beide Tabs.",
+          "severity": "high"
+        },
+        {
+          "check": "Keine fremde Bronze-ID in der Lineage",
+          "result": "pass",
+          "evidence": "pipeline_view.py:37-48: Silver-Query filtert `sequence_id = event_id` → nur Alarme dieses Ereignisses. bronze_ids = [r['source_row_id'] for r in silver]. Test test_lineage_enthaelt_nur_eigene_bronze_ids (test_pipeline_view.py:47-55) prüft `startswith('sim:1:')`. test_fremde_bronze_ids_nie_in_lineage_falsification (Zeile 58-65) doppelt ab. test_lineage_mehrere_ereignisse_unabhaengig (Zeile 90-101) prüft Schnittmenge Ereignis-1 ∩ Ereignis-2 = ∅. test_mes_lineage_nur_eigene_bronze_ids (test_mes_router.py:127-131) wiederholt den Check auf HTTP-Ebene.",
+          "severity": "high"
+        },
+        {
+          "check": "Kein freies SQL für das LLM",
+          "result": "pass",
+          "evidence": "pipeline_view.py: alle Zugriffe über run_readonly(conn, '... WHERE event_id = ?', (event_id,), max_rows=...). mes_router.py: ebenso run_readonly mit Parametern an jeder Stelle. Kein String-Interpolation in SQL.",
+          "severity": "high"
+        },
+        {
+          "check": "AuditLog bei allen API-Endpunkten",
+          "result": "pass",
+          "evidence": "mes_router.py:70 (stream), :97 (events), :108 (lineage), :149 (line) rufen je _audit().record(...) auf.",
+          "severity": "medium"
+        },
+        {
+          "check": "Keine Secrets im Code",
+          "result": "pass",
+          "evidence": "Kein Hard-coded Key/Token im Diff oder in den neuen Dateien. DB-Pfad und Audit-Pfad kommen über get_settings() aus settings.env.",
+          "severity": "high"
+        },
+        {
+          "check": "Abnahmetest tests/acceptance/test_wpb.py",
+          "result": "unclear",
+          "evidence": "test_wpb.py prüft nur Existenz und Nicht-Leere von messages.py (Zeilen 27-30). Der Test gilt für das gesamte WP-B als Gate, deckt aber weder den Alarmstrom noch die Medallion-Ansicht ab – das wird durch test_mes_router.py und test_pipeline_view.py kompensiert, die jedoch keine Acceptance-Tests im Sinne des Abnahme-Gates sind.",
+          "severity": "low"
+        }
+      ],
+      "_cost_usd": 0.43738175
+    }
+  }
+]

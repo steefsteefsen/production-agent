@@ -23,6 +23,8 @@ Bereinigung, Priorität, Alarmflut-Fenster, Zusammenfassungslücke) → Gold (ei
 | MES-Schema | data | mcp, graph | `src/production_agent/data/schema.sql` | additiv; sql_guard-Allowlist mitziehen (S4) |
 | MES-Werkzeuge | mcp | graph, ui | `docs/contracts/mes_tools.json` | Signaturen stabil; neue nur mit Anweisung (S3) |
 | Nachrichtenformat | data | ui, mcp | `src/production_agent/data/messages.py` | Pydantic, ADR-0010 |
+| MES-Alarmstrom (API) | ui | ui | `src/production_agent/api/mes_router.py` | FastAPI-Router, liest nur Silber-Alarme bis SIM_NOW |
+| Medallion-Ansicht | ui | ui | `src/production_agent/data/pipeline_view.py` | Bronze→Silber→Gold-Sicht fürs Cockpit, read-only |
 | API-Ereignisse | graph | ui | `docs/contracts/api.md` | SSE-Events additiv |
 | Agent-Zustand | graph | api, ui | `src/production_agent/graph/state.py` | additiv |
 

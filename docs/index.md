@@ -11,6 +11,7 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [adr/0005-mcp-werkzeuge.md](adr/0005-mcp-werkzeuge.md) – ADR-0005: Sechs fachliche MCP-Werkzeuge statt generischem SQL: Datum: 2026-09-11 · Status: akzeptiert
 - [adr/0008-modell-und-kontext.md](adr/0008-modell-und-kontext.md) – ADR-0008: Claude Sonnet 5 über langchain-anthropic, Context Engineering je Knoten: Datum: 2026-09-11 · Status: akzeptiert
 - [adr/0009-frontend.md](adr/0009-frontend.md) – ADR-0009: Vite + React + shadcn/ui + Recharts, FastAPI/SSE: Datum: 2026-09-11 · Status: akzeptiert
+- [adr/0010-mes-nachrichtenformat.md](adr/0010-mes-nachrichtenformat.md) – ADR-0010: MES-Nachrichtenformat – OPC UA A&C + ISA-95 JSON: Datum: 2026-09-12 · Status: akzeptiert
 
 ## Betrieb
 - [betriebsanweisung/BA-01-stoerungsmeldung.md](betriebsanweisung/BA-01-stoerungsmeldung.md) – Betriebsanweisung BA-01 · Störungsmeldung, Freigabe und Wiederanlauf – Verpackungslinie 1: Gültig ab: 2026-09-11 · Version 1.0 · Verantwortlich: Produktionsleitung Werk Nord · Geltungsbereich: Zuführung, Folienwickler,
