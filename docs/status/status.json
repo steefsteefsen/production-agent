@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-09-12T13:27:52",
-  "commit": "d9e016f90de1d7e3895f1eafa826e263a580a825",
-  "branch": "main",
+  "generated_at": "2026-09-12T15:23:39",
+  "commit": "7599efd1ddee0c4fe9835053faeeed2461fadbd1",
+  "branch": "wp/WP2a",
   "packages": [
     {
       "id": "P",
@@ -185,18 +185,18 @@
       "name": "WP2a",
       "agent": "mcp-agent",
       "deps": [],
-      "percent": 0,
-      "state": "offen",
+      "percent": 70,
+      "state": "review_pass",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 14:47"
         },
         {
           "name": "Review",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 14:47"
         },
         {
           "name": "Commit",
@@ -214,9 +214,9 @@
           "at": null
         }
       ],
-      "attempts": 0,
-      "cost_usd": 0,
-      "last_at": null,
+      "attempts": 1,
+      "cost_usd": 2.51,
+      "last_at": "2026-09-12 14:47",
       "commits": []
     },
     {
@@ -667,14 +667,20 @@
     }
   ],
   "totals": {
-    "percent": 12,
-    "hours_agent": 0.34,
-    "cost_usd": 1.87,
-    "tests": 150,
+    "percent": 17,
+    "hours_agent": 0.67,
+    "cost_usd": 4.37,
+    "tests": 168,
     "coverage_total": 94,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-12T13:27:35+02:00",
+      "kind": "commit",
+      "ref": "7599efd",
+      "text": "fix(infra): Selbstheilung, Selbstcheck, Rechte-Lernen für Nachtlauf"
+    },
     {
       "at": "2026-09-12T12:04:42+02:00",
       "kind": "commit",
@@ -710,6 +716,18 @@
       "kind": "commit",
       "ref": "c7292cb",
       "text": "adr(WP0): Entscheidungen festgeschrieben, Simulator auf UP1/14 Codes"
+    },
+    {
+      "at": "2026-09-12 14:47",
+      "kind": "journal",
+      "ref": "WP2a",
+      "text": "WP2a ok (1 Versuche)"
+    },
+    {
+      "at": "2026-09-12 14:47",
+      "kind": "review",
+      "ref": "WP2a",
+      "text": "Review pass"
     },
     {
       "at": "2026-09-12 11:43",
@@ -751,13 +769,13 @@
       "path": "src/production_agent/api/",
       "files": 1,
       "tests": 2,
-      "coverage": 83
+      "coverage": 100
     },
     {
       "path": "src/production_agent/data/",
       "files": 2,
       "tests": 29,
-      "coverage": 95
+      "coverage": 100
     },
     {
       "path": "src/production_agent/graph/",
@@ -769,7 +787,7 @@
       "path": "src/production_agent/mcp/",
       "files": 2,
       "tests": 2,
-      "coverage": 85
+      "coverage": 100
     },
     {
       "path": "src/production_agent/security/",

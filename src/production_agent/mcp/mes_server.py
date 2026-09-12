@@ -24,16 +24,21 @@ settings = get_settings()
 audit = AuditLog(settings.audit_log_path)
 mcp = FastMCP("mes")
 
+_MAX_ACTIVE_ALARMS = 100
+_MAX_ALARM_HISTORY = 20
+_MAX_SIMILAR_INCIDENTS = 5
+
 
 def _now() -> str:
     """Replay-Uhr: Historie ist alles VOR now, Gegenwart ist das Fenster BIS now (kein Leck)."""
     return settings.sim_now or datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _query(sql: str, params: tuple[Any, ...] = (), tool: str = "") -> str:
+def _query(sql: str, params: tuple[Any, ...] = (), tool: str = "", limit: int | None = None) -> str:
     conn = open_readonly(settings.mes_db_path)
+    max_rows = limit if limit is not None else settings.max_rows_per_tool
     try:
-        rows = run_readonly(conn, sql, params, max_rows=settings.max_rows_per_tool)
+        rows = run_readonly(conn, sql, params, max_rows=max_rows)
     finally:
         conn.close()
     audit.record("tool_call", tool=tool, sql=sql, params=params, rows=len(rows))
@@ -55,7 +60,10 @@ def _envelope(rows: list[dict[str, Any]], tool: str) -> str:
 @mcp.tool()
 def get_line_status(line_id: str) -> str:
     """Aktueller PackML-Zustand aller Betriebsmittel einer Linie sowie laufender Auftrag.
-    Nutze dies ZUERST, um zu wissen, ob und in welchem Zustand die Linie steht."""
+
+    Nutze dies, wenn du dir als Erstes ein Bild vom Zustand der Linie machen willst –
+    Pflicht-Einstieg jeder Analyse.
+    """
     sql = """
         SELECT e.equipment_id, e.name, e.position, s.packml_state, s.ts
         FROM equipment e
@@ -70,7 +78,11 @@ def get_line_status(line_id: str) -> str:
 
 @mcp.tool()
 def get_active_alarms(line_id: str, minutes: int = 30) -> str:
-    """Alarme der letzten N Minuten auf der Linie, nach Zeit sortiert, mit Priorität (ISA-18.2)."""
+    """Aktive Alarme der letzten N Minuten auf der Linie, sortiert nach Zeit (ISA-18.2-Priorität).
+
+    Nutze dies, wenn du wissen willst, welche Alarme die Störung ausgelöst haben und
+    ob eine Alarmflut vorliegt.
+    """
     sql = """
         SELECT a.ts, a.equipment_id, a.alarm_code, a.priority, a.sequence_id
         FROM alarms_silver a JOIN equipment e ON e.equipment_id = a.equipment_id
@@ -78,13 +90,21 @@ def get_active_alarms(line_id: str, minutes: int = 30) -> str:
         ORDER BY a.ts DESC
     """
     now = _now()
-    return _query(sql, (line_id, now, f"-{int(minutes)} minutes", now), tool="get_active_alarms")
+    return _query(
+        sql,
+        (line_id, now, f"-{int(minutes)} minutes", now),
+        tool="get_active_alarms",
+        limit=_MAX_ACTIVE_ALARMS,
+    )
 
 
 @mcp.tool()
 def get_alarm_history(alarm_code: str, limit: int = 20) -> str:
-    """Historische Störungsereignisse (Gold), die mit diesem Alarmcode begannen –
-    inkl. Dauer, Ursache und wirksamer Maßnahme."""
+    """Historische Störungsereignisse (Gold) mit diesem Erstalarmcode – Dauer, Ursache, Maßnahme.
+
+    Nutze dies, wenn du verstehen willst, wie oft und wie lange dieser Alarm in der
+    Vergangenheit zur Störung geführt hat (max. 20 Einträge).
+    """
     sql = """
         SELECT event_id, start_ts, duration_min, packml_state, reason_code,
                alarm_count, alarm_flood, resolution_action
@@ -93,14 +113,19 @@ def get_alarm_history(alarm_code: str, limit: int = 20) -> str:
     """
     return _query(
         sql,
-        (alarm_code, _now(), min(int(limit), settings.max_rows_per_tool)),
+        (alarm_code, _now(), min(int(limit), _MAX_ALARM_HISTORY)),
         tool="get_alarm_history",
+        limit=_MAX_ALARM_HISTORY,
     )
 
 
 @mcp.tool()
 def get_production_plan(line_id: str) -> str:
-    """Offene Aufträge der Linie mit Soll/Ist-Menge, Termin und Priorität."""
+    """Offene Aufträge der Linie mit Soll/Ist-Menge, Termin und Priorität.
+
+    Nutze dies, wenn du wissen willst, welche Aufträge noch laufen und welche Termine
+    durch den Stillstand gefährdet sein könnten.
+    """
     sql = """
         SELECT order_id, product, planned_qty, produced_qty, due_ts, priority
         FROM production_orders WHERE line_id = ? AND produced_qty < planned_qty
@@ -111,8 +136,11 @@ def get_production_plan(line_id: str) -> str:
 
 @mcp.tool()
 def estimate_impact(line_id: str, expected_downtime_min: float) -> str:
-    """Schätzt Produktionsverlust (Stück), Kosten (EUR) und Termingefährdung für eine
-    angenommene Stillstandsdauer. Deterministisch, regelbasiert – kein ML."""
+    """Schätzt Produktionsverlust, Kosten (EUR) und Termingefährdung je Auftrag. Regelbasiert.
+
+    Nutze dies, wenn du dem Produktionsleiter zeigen willst, was der Stillstand kostet
+    und welche Aufträge ihren Termin reißen.
+    """
     conn = open_readonly(settings.mes_db_path)
     try:
         line = run_readonly(conn, "SELECT * FROM lines WHERE line_id = ?", (line_id,), 1)
@@ -130,12 +158,37 @@ def estimate_impact(line_id: str, expected_downtime_min: float) -> str:
     rate = line[0]["design_rate_per_hour"]
     cost_rate = line[0]["cost_per_downtime_minute_eur"]
     lost_units = round(rate * expected_downtime_min / 60)
+
+    now_dt = datetime.fromisoformat(_now().replace(" ", "T"))
+    orders_detail = []
+    for o in orders:
+        remaining = o["planned_qty"] - o["produced_qty"]
+        production_time_min = remaining / rate * 60
+        try:
+            due_dt = datetime.fromisoformat(o["due_ts"].replace(" ", "T"))
+            time_until_due_min = (due_dt - now_dt).total_seconds() / 60
+        except (ValueError, AttributeError):
+            time_until_due_min = float("inf")
+        # Puffer = Zeit bis Termin − Restproduktionszeit − erwarteter Stillstand
+        buffer_min = time_until_due_min - production_time_min - expected_downtime_min
+        orders_detail.append(
+            {
+                "order_id": o["order_id"],
+                "buffer_min": round(buffer_min, 1),
+                "at_risk": buffer_min < 0,
+            }
+        )
+
     result = {
         "expected_downtime_min": expected_downtime_min,
         "lost_units": lost_units,
         "cost_eur": round(cost_rate * expected_downtime_min, 2),
-        "orders_at_risk": [o["order_id"] for o in orders[:5]],
-        "method": "regelbasiert: Nennleistung × Dauer; Kostensatz je Minute aus Stammdaten",
+        "orders": orders_detail,
+        "orders_at_risk": [o["order_id"] for o in orders_detail if o["at_risk"]],
+        "method": (
+            "regelbasiert: Nennleistung × Dauer; Kostensatz je Minute aus Stammdaten; "
+            "Puffer = Zeit bis Termin − Restproduktionszeit − Stillstand"
+        ),
     }
     audit.record(
         "tool_call", tool="estimate_impact", line_id=line_id, minutes=expected_downtime_min
@@ -147,8 +200,11 @@ def estimate_impact(line_id: str, expected_downtime_min: float) -> str:
 
 @mcp.tool()
 def find_similar_incidents(alarm_codes: list[str], packml_state: str, limit: int = 5) -> str:
-    """Case-Based Reasoning: ähnliche frühere Störungsereignisse anhand Alarmcodes und
-    PackML-Zustand. Liefert Ursache, Maßnahme, Ergebnis – das LLM argumentiert darüber."""
+    """Case-Based Reasoning: ähnliche frühere Störungen nach Alarmcodes und PackML-Zustand.
+
+    Nutze dies, wenn du Belege aus der Vergangenheit suchst, die deine Hypothese zur
+    Ursache stützen oder widerlegen (max. 5 Einträge).
+    """
     placeholders = ",".join("?" for _ in alarm_codes) or "''"
     sql = f"""
         SELECT g.event_id, g.start_ts, g.duration_min, g.first_alarm_code, g.reason_code,
@@ -157,8 +213,8 @@ def find_similar_incidents(alarm_codes: list[str], packml_state: str, limit: int
         WHERE g.first_alarm_code IN ({placeholders}) AND g.packml_state = ? AND g.end_ts <= ?
         ORDER BY g.start_ts DESC LIMIT ?
     """  # noqa: S608  # nosec B608 – nur "?"-Platzhalter, Werte laufen als Parameter
-    params = (*alarm_codes, packml_state, _now(), min(int(limit), settings.max_rows_per_tool))
-    return _query(sql, params, tool="find_similar_incidents")
+    params = (*alarm_codes, packml_state, _now(), min(int(limit), _MAX_SIMILAR_INCIDENTS))
+    return _query(sql, params, tool="find_similar_incidents", limit=_MAX_SIMILAR_INCIDENTS)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,89 @@
+[
+  {
+    "wp": "WP2a",
+    "agent": "mcp-agent",
+    "at": "2026-09-12 14:47",
+    "ok": true,
+    "attempts": 1,
+    "minutes": 19.8,
+    "cost_usd": 2.506567600000001,
+    "turns": 59,
+    "files": [
+      "autopilot/journal.md",
+      "docs/contracts/mes_tools.json",
+      "src/production_agent/mcp/mes_server.py",
+      "tests/fixtures/mes_fixture.sql",
+      "tests/test_mes_tools.py"
+    ],
+    "agent_summary": "Both `ruff check .` and `pytest` (154 passed, 14 skipped) are green. The commit cannot complete automatically because the pre-commit hooks expect `.venv/bin/python` in `orch-WP2a`, but this worktree has no `.venv` — it uses the `production-agent` venv. \n\nTo unblock the commit, please run once in `orch-WP2a`:\n```bash\nln -sf ~/production-agent/.venv .venv\ngit commit -m \"feat(WP2a): MES-MCP-Server fertigstellen\"\n```\n\n**What was done:**\n\n1. **Docstrings** – all 6 tools have a \"Nutze dies, wenn …\" sentence from the Produktionsleiter perspective.\n\n2. **Limits** – `_MAX_ACTIVE_ALARMS=100`, `_MAX_ALARM_HISTORY=20`, `_MAX_SIMILAR_INCIDENTS=5` as module constants; each tool passes `limit=` to `_query` so `run_readonly` enforces the cap at the Python layer (the SQL `LIMIT ?` was already there but `run_readonly` wasn't being told the cap).\n\n3. **`estimate_impact`** – complete buffer formula `Puffer = Zeit_bis_due − (Restmenge/rate×60) − expected_downtime_min`; result now includes an `\"orders\"` list with `buffer_min` and `at_risk` per order, and `\"orders_at_risk\"` only contains orders with negative buffer.\n\n4. **Replay-Uhr** – all tools already filtered on `ts <= _now(",
+    "gate_tail": "grün",
+    "narrative": "",
+    "review": {
+      "verdict": "pass",
+      "summary": "WP2a besteht die Prüfung. Alle 6 Werkzeuge haben produktionsleiter-taugliche Docstrings, der ADR-0002-Leck-Test ist korrekt implementiert und durch dedizierte Falsifikationstests abgesichert, und das Audit-Log ist für Werks-Nachvollziehbarkeit ausreichend. Eine Konsistenzlücke im Audit von estimate_impact (kein SQL / kein row count) ist kein Sicherheitsverstoß. Das dynamische SQL in find_similar_incidents ist sicher (nur ?-Platzhalter im f-string; sql_guard mit ALLOWED_TABLES und Keyword-Blacklist greift).",
+      "items": [
+        {
+          "check": "Werkzeugbeschreibungen: Als Produktionsleiter das richtige Werkzeug wählen?",
+          "result": "pass",
+          "evidence": "Alle 6 Werkzeuge haben klare 'Nutze dies, wenn…'-Formulierungen mit konkretem Anwendungskontext. Beispiele: get_line_status: 'Pflicht-Einstieg jeder Analyse' (mes_server.py:66–67); find_similar_incidents: 'Belege aus der Vergangenheit suchst, die deine Hypothese zur Ursache stützen oder widerlegen' (mes_server.py:206–208). Kongruent mit docs/contracts/mes_tools.json, das dieselben Beschreibungen trägt.",
+          "severity": "low"
+        },
+        {
+          "check": "Leck-Test: filtert get_alarm_history wirklich end_ts <= now?",
+          "result": "pass",
+          "evidence": "mes_server.py:113 – SQL-Bedingung 'AND end_ts <= ?' mit _now() als Parameter. Testnachweis: test_mes_tools.py:228–237 (test_get_alarm_history_leck_test) prüft, dass event_id=99 (end_ts='2026-06-15 10:30:00' > sim_now) nicht in der Rückgabe erscheint.",
+          "severity": "low"
+        },
+        {
+          "check": "Leck-Test: filtert find_similar_incidents wirklich end_ts <= now?",
+          "result": "pass",
+          "evidence": "mes_server.py:215 – SQL-Bedingung 'AND g.end_ts <= ?' mit _now() als Parameter. Testnachweis: test_mes_tools.py:337–349 (test_find_similar_incidents_leck_test) prüft dasselbe für event_id=99 mit first_alarm_code='E-LEAK'.",
+          "severity": "low"
+        },
+        {
+          "check": "Audit-Log-Zeile: ausreichend für Werks-Nachvollziehbarkeit?",
+          "result": "pass",
+          "evidence": "audit.py:16–19: jede Zeile enthält ts (Unix-Timestamp), event='tool_call', tool-Name, sql, params und rows. Für _query-basierte Werkzeuge (mes_server.py:46) vollständig. Bei estimate_impact (mes_server.py:195–196) fehlen SQL und row count – nur tool, line_id, minutes geloggt. Für Nachvollziehbarkeit 'wer, was, wann, mit welchen Parametern' ausreichend, aber inkonsistent zu den anderen 5 Werkzeugen.",
+          "severity": "low"
+        },
+        {
+          "check": "Kein freies SQL für das LLM",
+          "result": "pass",
+          "evidence": "sql_guard.py:42–53: validate_query() blockiert alles außer SELECT/WITH, prüft gegen ALLOWED_TABLES per Regex, verbietet Schreibkeywords. Alle DB-Zugriffe gehen über run_readonly (sql_guard.py:63–77). Das LLM sieht nie SQL, nur Werkzeug-Parameter.",
+          "severity": "high"
+        },
+        {
+          "check": "Dynamisches SQL in find_similar_incidents: Injection-Risiko?",
+          "result": "pass",
+          "evidence": "mes_server.py:210–211: Das f-string injiziert ausschließlich '?,?,?' (Platzhalter, kein Nutzerwert). Der Fallback '\"''\"' bei leerer alarm_codes-Liste ist ein vorab definiertes Literal, kein User-Input. Werte laufen als params über sqlite3-Parameterisierung. Noqa-/nosec-Kommentar dokumentiert die bewusste Entscheidung.",
+          "severity": "high"
+        },
+        {
+          "check": "Keine ausführende Maßnahme ohne Freigabe (CLAUDE.md: Agent EMPFIEHLT, führt nicht aus)",
+          "result": "pass",
+          "evidence": "Alle 6 Werkzeuge sind reine SELECT-Abfragen. open_readonly (sql_guard.py:57–60) öffnet SQLite mit 'mode=ro'. Keine Schreibpfade, kein action_policy-Aufruf im MES-Server nötig.",
+          "severity": "high"
+        },
+        {
+          "check": "Keine Secrets im Code",
+          "result": "pass",
+          "evidence": "Im Diff keine Schlüssel, Passwörter oder Tokens. Konfiguration läuft über get_settings() (mes_server.py:23). Keine .env-Werte direkt im Code.",
+          "severity": "high"
+        },
+        {
+          "check": "Genau 6 Werkzeuge im MES-Server",
+          "result": "pass",
+          "evidence": "mes_server.py: get_line_status (Z.62), get_active_alarms (Z.81), get_alarm_history (Z.103), get_production_plan (Z.124), estimate_impact (Z.139), find_similar_incidents (Z.203) – exakt 6 @mcp.tool()-Dekoratoren, kein weiterer.",
+          "severity": "high"
+        },
+        {
+          "check": "sanitize_tool_result() auf allen Rückgabepfaden",
+          "result": "pass",
+          "evidence": "mes_server.py:59: _envelope() ruft sanitize_tool_result() für alle _query-basierten Werkzeuge. estimate_impact ruft es direkt an zwei Stellen: Z.159 (Fehlerfall) und Z.198 (Normalfall).",
+          "severity": "high"
+        }
+      ],
+      "_cost_usd": 0.5532952499999999
+    }
+  }
+]
