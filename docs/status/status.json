@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T00:38:04",
-  "commit": "7e2b175209e761cb417ab99fde1d09b0a19702b8",
+  "generated_at": "2026-09-13T00:51:25",
+  "commit": "5c835b7e094c4e7a92fc3f166b82cd98cab56d94",
   "branch": "main",
   "packages": [
     {
@@ -673,8 +673,8 @@
       "name": "INF-E",
       "agent": "qa-agent",
       "deps": [],
-      "percent": 70,
-      "state": "review_pass",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
@@ -688,12 +688,12 @@
         },
         {
           "name": "Commit",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12T22:58:02+02:00"
         },
         {
           "name": "Tag",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
@@ -705,11 +705,17 @@
       "attempts": 1,
       "cost_usd": 1.43,
       "last_at": "2026-09-12 21:44",
-      "commits": []
+      "commits": [
+        {
+          "sha": "21f0660",
+          "title": "feat(INF-E): Builder-Ergebnis gesichert (Rettungs-Commit)",
+          "at": "2026-09-12T22:58:02+02:00"
+        }
+      ]
     }
   ],
   "totals": {
-    "percent": 61,
+    "percent": 62,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
     "tests": 277,
@@ -717,6 +723,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T00:37:48+02:00",
+      "kind": "commit",
+      "ref": "5c835b7",
+      "text": "Merge wp/INF-E: Ops-Cockpit für den Nachtlauf (--no-ff)"
+    },
     {
       "at": "2026-09-13T00:29:57+02:00",
       "kind": "commit",
@@ -752,6 +764,12 @@
       "kind": "commit",
       "ref": "462a89b",
       "text": "fix(infra): Commit-Prüfung, Post-Merge-Guardian, WP3-Platzhalter, K10"
+    },
+    {
+      "at": "2026-09-12T22:58:02+02:00",
+      "kind": "commit",
+      "ref": "21f0660",
+      "text": "feat(INF-E): Builder-Ergebnis gesichert (Rettungs-Commit)"
     },
     {
       "at": "2026-09-12T22:58:02+02:00",
@@ -974,6 +992,12 @@
       "kind": "tag",
       "ref": "wp/INF-9",
       "text": "Tag wp/INF-9"
+    },
+    {
+      "at": "",
+      "kind": "tag",
+      "ref": "wp/INF-E",
+      "text": "Tag wp/INF-E"
     },
     {
       "at": "",

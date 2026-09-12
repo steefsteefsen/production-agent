@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · docs(P): Nachtlauf-Integration – sechs Pakete nach main
+**Was:** WP2b, WP-B, INF-3, INF-4, INF-9, INF-E nach main gemergt; Statusseite, Präsentation und Doku-Marker aufgefrischt; WP3 neu eingereiht.
+**Warum (Problem oder Anlass):** Der Nachtlauf hatte die Stränge gebaut, aber die Worktree-Commits/Merges scheiterten still; die Arbeit lag nur auf Rettungs-Branches.
+**Alternativen (verworfen, weil ...):** Branches liegen lassen und WP3 zuerst – verworfen, weil abhängige Pakete auf die gemergte Basis warten.
+**Auswirkung (Verträge, ADR, Tests):** docs/status/*, docs/presentation/*, README-Marker, orchestrator.json.
+**Bezug (WP, ADR):** P
+
 ## 2026-09-13 · feat(INF-E): Ops-Cockpit nach main
 **Was:** autopilot/ops/app.py – lokale FastAPI-Oberfläche (Port 8010, `make ops`) zum Beobachten/Steuern des Nachtlaufs; drei zur Laufzeit umschaltbare Felder in config/runtime.yaml + Audit, decisions.yaml bleibt read-only.
 **Warum (Problem oder Anlass):** Der Nachtlauf brauchte eine lokale Beobachtungs- und Eingriffsoberfläche ohne Antasten von decisions.yaml (Guardian S5).
