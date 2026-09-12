@@ -7,6 +7,7 @@ abgerechnet). Nur der Production-Agent/die Evals nutzen den Key aus .env – das
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -14,10 +15,58 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_MODEL = {"builder": "sonnet", "reviewer": "sonnet", "decider": "opus"}
-# 429 / Nutzungsgrenze / "resets at ..." – Signale einer erschöpften Abo-Quote
-_QUOTA_RE = re.compile(
-    r"\b429\b|rate[ -]?limit|quota|usage limit|too many requests|resets? at|limit reached", re.I
-)
+# Klartext-Signale einer erschöpften Quote – nur zusammen mit einer echten Fehlerantwort ausgewertet
+_QUOTA_TEXT = ("rate limit", "usage limit", "resets at", "insufficient credit")
+DENIED_PATH = ROOT / "autopilot" / "state" / "denied.json"
+# Muster, die NIE als Recht gelernt werden dürfen – die Deny-Liste bleibt unantastbar
+NEVER_LEARN = ("git push", "rm -rf", "rm ", "sudo", ".env", "decisions.yaml", "tests/acceptance")
+
+
+def is_forbidden(pattern_or_cmd: str) -> bool:
+    """True, wenn ein Befehl/Muster nie automatisch erlaubt werden darf (git push, rm -rf, .env …)."""
+    low = (pattern_or_cmd or "").lower()
+    return any(t in low for t in NEVER_LEARN)
+
+
+def _pattern(cmd: str) -> str | None:
+    """'npm test --watch' → 'Bash(npm test:*)': Werkzeug + Unterbefehl bis zum ersten Argument."""
+    cmd = (cmd or "").strip()
+    if not cmd:
+        return None
+    toks = cmd.split()
+    prefix: list[str] = []
+    for t in toks:
+        if t.startswith("-"):
+            break
+        prefix.append(t)
+        if len(prefix) >= 2:  # Werkzeug + Unterbefehl reicht als Präfix
+            break
+    return f"Bash({' '.join(prefix) or toks[0]}:*)"
+
+
+def learn_denials(output: str, path: Path = DENIED_PATH) -> list[str]:
+    """permission_denials einer claude-Antwort als Befehlsmuster nach denied.json schreiben; NEUE zurückgeben."""
+    data = _last_json(output)
+    denials = data.get("permission_denials", []) if isinstance(data, dict) else []
+    existing: list = []
+    if path.exists():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            existing = []
+    seen = {e.get("pattern") for e in existing if isinstance(e, dict)}
+    new: list[str] = []
+    for d in denials:
+        cmd = d.get("command") or (d.get("tool_input") or {}).get("command") or ""
+        pat = _pattern(cmd)
+        if pat and pat not in seen:
+            seen.add(pat)
+            existing.append({"pattern": pat, "command": cmd})
+            new.append(pat)
+    if new:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(existing, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return new
 
 
 def env(api_billing: bool = False) -> dict:
@@ -45,9 +94,32 @@ def model(role: str) -> str:
     return _settings().get(f"CC_MODEL_{role.upper()}", _DEFAULT_MODEL[role])
 
 
+def _last_json(output: str) -> dict | None:
+    for line in reversed((output or "").strip().splitlines()):
+        line = line.strip()
+        if line.startswith("{"):
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                continue
+    try:
+        return json.loads(output)
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
 def is_quota(returncode: int, output: str) -> bool:
-    """Deutet die Ausgabe auf eine erschöpfte Quote (429/Limit) hin?"""
-    return bool(_QUOTA_RE.search(output or ""))
+    """Erschöpfte Quote nur bei ECHTER Fehlerantwort: is_error true UND 429/402 oder klarer Quota-Text.
+    Eine erfolgreiche Antwort (auch wenn das Wort 'limit' im Text steht) löst NIE eine Pause aus."""
+    data = _last_json(output)
+    if isinstance(data, dict):
+        if not data.get("is_error"):
+            return False
+        status = str(data.get("api_error_status") or data.get("status") or "")
+        blob = json.dumps(data, ensure_ascii=False).lower()
+        return status in ("429", "402") or any(s in blob for s in _QUOTA_TEXT)
+    low = (output or "").lower()
+    return bool(re.search(r"\b(429|402)\b", low)) and any(s in low for s in _QUOTA_TEXT)
 
 
 def preflight(api_billing: bool = False) -> tuple[bool, str]:

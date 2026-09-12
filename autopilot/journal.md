@@ -12,3 +12,113 @@
 **Offen:** `docs/data_layer.md` muss nach dem nächsten Commit von `autopilot/status.py --stage` in `docs/index.md` eingetragen werden (D11-Regel des Guardians).
 
 **Dateien:** docs/presentation/index.html, docs/status/index.html, docs/status/status.json, src/production_agent/data/simulator.py
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 15 min, dann erneut (bisher 0/480 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)

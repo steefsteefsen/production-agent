@@ -9,6 +9,7 @@ tasks.yaml benannten Dokumente. Nicht: den Verlauf des Builders. Anderes Modell 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -52,7 +53,20 @@ SYSTEM = (
 
 
 def _git(*args: str) -> str:
-    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True).stdout
+    # gehärtet: kein Pager, kein Terminal-Prompt, kein stdin-Block, Timeout – sonst hängt der Reviewer
+    env = {**os.environ, "GIT_PAGER": "cat", "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        return subprocess.run(
+            ["git", "--no-pager", *args],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=120,
+            env=env,
+        ).stdout
+    except subprocess.TimeoutExpired:
+        return ""
 
 
 def build_packet(wp_id: str, checklist: list[str], files: list[str], gate_tail: str) -> str:

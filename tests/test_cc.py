@@ -22,9 +22,15 @@ def test_models_from_settings():
     assert cc.model("decider") == "opus"
 
 
-def test_is_quota_detects_429_falsification():
-    assert cc.is_quota(1, "Error: 429 too many requests") is True
-    assert cc.is_quota(1, "usage limit reached, resets at 14:00") is True
+def test_is_quota_only_on_real_error():
+    assert cc.is_quota(1, '{"is_error": true, "api_error_status": "429"}') is True
+    assert cc.is_quota(1, '{"is_error": true, "error": "usage limit, resets at 14:00"}') is True
+
+
+def test_is_quota_not_on_successful_reviewer_answer_falsification():
+    # Erfolgreiche Reviewer-Antwort mit dem Wort "limit" im Text löst KEINE Pause aus
+    ok = '{"is_error": false, "result": "Alles ok, kein rate limit Problem", "verdict": "pass"}'
+    assert cc.is_quota(0, ok) is False
     assert cc.is_quota(0, "alles in Ordnung") is False
 
 

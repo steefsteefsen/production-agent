@@ -15,6 +15,8 @@ frontend/dist/
 data/qdrant/
 autopilot/logs/
 autopilot/status.json
+autopilot/state/
+.claude/settings.local.json
 data/bronze/*.csv
 .guardian/
 *.egg-info/

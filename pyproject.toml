@@ -73,5 +73,5 @@ exclude_dirs = ["tests", ".venv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q -m 'not e2e' --cov=production_agent --cov-report=term-missing:skip-covered --cov-report=json --cov-fail-under=80"
+addopts = "-q -m 'not e2e'"
 markers = ["e2e: End-to-End-Tests am laufenden System (Standard ausgeschlossen)"]

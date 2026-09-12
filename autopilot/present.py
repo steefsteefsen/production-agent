@@ -203,7 +203,7 @@ render();
 
 
 def _coverage() -> dict | None:
-    cov = ROOT / "coverage.json"
+    cov = ROOT / ".guardian" / "coverage.json"
     if not cov.exists():
         return None
     data = json.loads(cov.read_text(encoding="utf-8"))

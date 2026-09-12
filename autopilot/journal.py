@@ -107,7 +107,7 @@ def write(e: dict) -> None:
     wp_file = JOURNAL_DIR / f"{e['wp']}.json"
     data = json.loads(wp_file.read_text(encoding="utf-8")) if wp_file.exists() else []
     data.append(e)
-    wp_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    wp_file.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     status = "✅" if e["ok"] else "❌"
     block = (
         f"\n## {e['at']} · {e['wp']} · {e['agent']} · {status} (Versuche {e['attempts']}, "

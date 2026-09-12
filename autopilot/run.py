@@ -11,8 +11,10 @@ Sicherheit: Rechte kommen aus .claude/settings.json (kein git push, kein rm -rf,
 from __future__ import annotations
 
 import argparse
+import faulthandler
 import json
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -30,6 +32,20 @@ TASKS = ROOT / "autopilot" / "tasks.yaml"
 DECISIONS = ROOT / "decisions.yaml"
 STATUS = ROOT / "autopilot" / "status.json"
 LOGS = ROOT / "autopilot" / "logs"
+
+
+def _install_faulthandler() -> None:
+    """kill -USR1 <pid> schreibt einen Python-Stacktrace ins Log (findet Hänger auch ohne Kindprozess)."""
+    if hasattr(signal, "SIGUSR1"):
+        faulthandler.register(signal.SIGUSR1, all_threads=True)
+
+
+def phase(wp: str, name: str, log: Path) -> None:
+    """Jede Phase (builder/gate/review/decide/journal/commit) nennt sich sofort in Log UND stdout."""
+    line = f"{time.strftime('%H:%M:%S')} {wp} {name}"
+    with log.open("a", encoding="utf-8") as fh:
+        fh.write(f"\n----- PHASE {line}\n")
+    print(line, flush=True)
 
 
 def render(prompt: str, dec: dict) -> str:
@@ -106,6 +122,11 @@ def claude(
             fh.write(f"\n[TIMEOUT nach {timeout}s – Loop gezählt]\n")
             return 124, {"timeout": True}
         fh.write(p.stdout + "\n" + p.stderr)
+        learned = cc.learn_denials(
+            p.stdout
+        )  # verweigerte Rechte lernen (Vorschlag via Guardian K9)
+        if learned:
+            fh.write(f"\n[Rechte-Lernen: {learned}]\n")
         if cc.is_quota(p.returncode, p.stdout + p.stderr):
             fh.write("\n[QUOTA erreicht – pausieren, kein Loop-Verbrauch]\n")
             return 429, {"quota": True}
@@ -166,6 +187,11 @@ def main() -> int:
     )
     ap.add_argument("--no-commit", action="store_true", help="keinen Commit je WP")
     ap.add_argument(
+        "--extra-prompt",
+        default="",
+        help="Zusatztext, der an den WP-Prompt angehängt wird (Heal-Nachbesserung des Orchestrators)",
+    )
+    ap.add_argument(
         "--api-billing",
         action="store_true",
         help="claude bewusst über die API abrechnen (Budget aktiv); Standard ist Abo-Betrieb ohne API-Key",
@@ -173,18 +199,21 @@ def main() -> int:
     args = ap.parse_args()
     max_loops = (args.retries + 1) if args.retries is not None else args.max_loops
 
+    extra = f"\n\n## Nachbesserung (Heal)\n{args.extra_prompt}" if args.extra_prompt else ""
     dec = yaml.safe_load(DECISIONS.read_text(encoding="utf-8"))
     tasks = yaml.safe_load(TASKS.read_text(encoding="utf-8"))
     status = (
         json.loads(STATUS.read_text()) if STATUS.exists() else {"wp": {}, "hours": 0, "runs": {}}
     )
     LOGS.mkdir(exist_ok=True)
+    _install_faulthandler()
     if not args.dry_run:
         ready, msg = cc.preflight(args.api_billing)
         if not ready:
             print(f"Abbruch: {msg}")
             return 1
     t_start = time.time()
+    quota_hit = False
 
     for t in tasks:
         if args.only and t["id"] not in args.only:
@@ -192,7 +221,7 @@ def main() -> int:
         if status["wp"].get(t["id"]):
             print(f"{t['id']} bereits fertig – übersprungen")
             continue
-        prompt = render(t["prompt"], dec)
+        prompt = render(t["prompt"], dec) + extra
         if args.dry_run:
             print(f"\n### {t['id']} → {t['agent']}\n{prompt}\n--- gate: {t['gate']}")
             continue
@@ -201,7 +230,7 @@ def main() -> int:
         t0 = time.time()
         cj = None
         for attempt in range(1, max_loops + 1):
-            print(f"{t['id']} Versuch {attempt}/{max_loops} ({t['agent']}) …", flush=True)
+            phase(t["id"], f"builder: start (Versuch {attempt}/{max_loops})", log)
             _, cj = claude(
                 prompt,
                 t["agent"],
@@ -212,20 +241,25 @@ def main() -> int:
                 args.api_billing,
             )
             if cj and cj.get("quota"):
-                print(f"{t['id']}: Quota erreicht – Abbruch dieses WP (kein Loop-Verbrauch)")
+                phase(t["id"], "quota: erkannt – Abbruch dieses WP (Exit 3)", log)
+                quota_hit = True
                 out = "Quota erreicht"
                 break
             if cj and cj.get("timeout"):
                 out = f"Claude-Timeout nach {args.claude_timeout}s (zählt als Loop)"
-                print(f"{t['id']}: {out}")
+                phase(t["id"], "timeout: " + out, log)
                 continue
+            phase(t["id"], "gate: start", log)
             rc, out = gate(t["gate"], log)
             if rc == 0:
                 ok = True
                 break
-            prompt = f"{render(t['prompt'], dec)}\n\nDer Abnahmetest ist fehlgeschlagen. Behebe genau das:\n{out}"
+            prompt = f"{render(t['prompt'], dec) + extra}\n\nDer Abnahmetest ist fehlgeschlagen. Behebe genau das:\n{out}"
+        if quota_hit:
+            return 3
         verdict = None
         if ok and args.review in ("auto", "both"):
+            phase(t["id"], "review: start", log)
             verdict = reviewer.review(
                 t["id"],
                 t.get("review_gate", []),
@@ -242,7 +276,7 @@ def main() -> int:
                 )
                 print(f"{t['id']}: Reviewer fail – ein Nachbesserungslauf")
                 _, cj = claude(
-                    f"{render(t['prompt'], dec)}\n\nEin unabhängiger Review hat diese Punkte beanstandet. Behebe genau diese:\n{fails}",
+                    f"{render(t['prompt'], dec) + extra}\n\nEin unabhängiger Review hat diese Punkte beanstandet. Behebe genau diese:\n{fails}",
                     t["agent"],
                     args.max_turns,
                     args.budget,
@@ -272,6 +306,7 @@ def main() -> int:
             if verdict and verdict.get("question_for_human"):
                 print(f"  Frage des Reviewers: {verdict['question_for_human']}")
             ok = input("Abnehmen? (j/n) ").strip().lower() == "j"
+        phase(t["id"], "journal: start", log)
         e = journal.entry(
             t["id"],
             t["agent"],
@@ -285,6 +320,7 @@ def main() -> int:
         e["review"] = verdict
         journal.write(e)
         if ok and not args.no_commit:
+            phase(t["id"], "commit: start", log)
             journal.commit(t["id"], e)
         status["wp"][t["id"]] = ok
         status["runs"][t["id"]] = {

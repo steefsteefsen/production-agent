@@ -3,7 +3,7 @@
 Dokumentationsaktualität verletzt sind. Deterministisch, ohne LLM, in Sekunden. Mit --llm zusätzlich
 ein kontextfreier Doku-Konsistenz-Check über claude -p (manuell, nicht im Hook – Kosten/Nichtdeterminismus).
 
-Regeln (S1–S9, K1–K7, D1–D11), je eine Zeile – hieraus erzeugt status.py den Marker auto:guardian_rules:
+Regeln (S1–S9, K1–K9, D1–D11), je eine Zeile – hieraus erzeugt status.py den Marker auto:guardian_rules:
  S1  keine Secrets, keine .env committet
  S2  keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
  S3  MES-Server genau 6 Werkzeuge, RAG genau 1, kein Werkzeug *sql/query/write/exec*
@@ -20,6 +20,8 @@ Regeln (S1–S9, K1–K7, D1–D11), je eine Zeile – hieraus erzeugt status.py
  K5  jede entry-Zeile in .pre-commit-config.yaml beginnt mit .venv/bin/python
  K6  tasks.yaml-WPs stehen in plan.yaml, Abhaengigkeiten sind aufloesbar und azyklisch
  K7  tests/acceptance/ nur mit GUARDIAN_ALLOW_ACCEPTANCE=1 aenderbar (Abnahmetests = Spezifikation)
+ K8  autopilot/ geaendert -> autopilot/selfcheck.py grün (GUARDIAN_SKIP_K8=1 unterdrueckt)
+ K9  gelernte Rechte (state/denied.json) noch nicht erlaubt -> WARNUNG mit Allow-Vorschlag (blockiert nie)
  D1  jedes src-Modul ist in README oder docs/ namentlich erwaehnt
  D2  jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
  D3  src geaendert -> auch docs/, README oder tests/ geaendert
@@ -431,7 +433,7 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
             cwd=ROOT,
             capture_output=True,
         )
-        subprocess.run(["git", "add", *py_staged], cwd=ROOT)
+        subprocess.run(["git", "add", "-A"], cwd=ROOT)  # alle geänderten Dateien, nicht nur Python
     for tool, cmd in (
         ("ruff", [sys.executable, "-m", "ruff", "check", "."]),
         ("bandit", [sys.executable, "-m", "bandit", "-q", "-c", "pyproject.toml", "-r", "src"]),
@@ -440,11 +442,21 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
         if r.returncode != 0:
             errors.append(f"K2 {tool} rot: {(r.stdout + r.stderr)[-300:].strip()}")
 
-    # K4 Coverage-Grenzen
-    cov_path = ROOT / "coverage.json"
+    # K4 Coverage-Grenzen – nur .guardian/coverage.json aus dem VOLLEN Lauf zählt (Teilläufe ignoriert)
+    cov_path = ROOT / ".guardian" / "coverage.json"
     if not cov_path.exists() or (time.time() - cov_path.stat().st_mtime) > 3600:
+        cov_path.parent.mkdir(exist_ok=True)
         subprocess.run(
-            [sys.executable, "-m", "pytest", "-q", "-p", "no:warnings"],
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "no:warnings",
+                "--cov=production_agent",
+                "--cov-report=json:.guardian/coverage.json",
+            ],
             cwd=ROOT,
             capture_output=True,
             text=True,
@@ -487,6 +499,44 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
         for f in modified:
             if f.startswith("tests/acceptance/") and f.endswith(".py"):
                 errors.append(f"K7 {f} geändert – Abnahmetest, nur mit GUARDIAN_ALLOW_ACCEPTANCE=1")
+
+    # K8 Autopilot geändert → Selbstcheck muss grün sein (falsches Flag/Importfehler blockiert den Commit)
+    if (
+        any(f.startswith("autopilot/") and f.endswith(".py") for f in files)
+        and os.environ.get("GUARDIAN_SKIP_K8") != "1"
+    ):
+        r = subprocess.run(  # noqa: S603
+            [sys.executable, str(ROOT / "autopilot" / "selfcheck.py")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        if r.returncode != 0:
+            errors.append("K8 Selbstcheck rot:\n" + (r.stdout + r.stderr)[-800:].strip())
+
+    # K9 gelernte, noch nicht erlaubte Rechte als WARNUNG melden (blockiert nie; Deny bleibt tabu)
+    import cc  # noqa: PLC0415
+
+    if cc.DENIED_PATH.exists():
+        try:
+            learned = json.loads(cc.DENIED_PATH.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            learned = []
+        local = ROOT / ".claude" / "settings.local.json"
+        allow = (
+            json.loads(local.read_text(encoding="utf-8")).get("permissions", {}).get("allow", [])
+            if local.exists()
+            else []
+        )
+        for e in learned:
+            pat = e.get("pattern") if isinstance(e, dict) else e
+            cmd = e.get("command", "") if isinstance(e, dict) else ""
+            if pat and pat not in allow and not cc.is_forbidden(pat) and not cc.is_forbidden(cmd):
+                warn.append(
+                    f"K9 neue Rechteanforderung {pat} – übernehmen mit "
+                    f"`python autopilot/orchestrate.py --allow-learned` (→ .claude/settings.local.json)"
+                )
 
     # D1 Modul in Doku erwähnt
     doc_text = (ROOT / "README.md").read_text(encoding="utf-8") + "".join(

@@ -86,7 +86,7 @@ chk "kein API-Key im Index"              '! git grep -qE "sk-ant-[A-Za-z0-9_-]{2
 chk "decisions.yaml eingefroren"         'test -s .guardian/decisions.sha256'
 chk "Autopilot dry-run ohne {{ }}"       '[ "$(python autopilot/run.py --dry-run | grep -c "{{")" = "0" ]'
 chk "status.json aktuell"                'python autopilot/status.py --check'
-chk "Coverage ≥ 80 %"                    'python -c "import json;assert json.load(open(\"coverage.json\"))[\"totals\"][\"percent_covered\"]>=80"'
+chk "Coverage ≥ 80 %"                    'python -c "import json;assert json.load(open(\".guardian/coverage.json\"))[\"totals\"][\"percent_covered\"]>=80"'
 
 echo "== Leck-Simulation (Guardian S7/S8, wird sofort zurückgenommen)"
 cp .env /tmp/_env; echo "SELFTEST_TOKEN=selftest-0123456789abcdef" >> /tmp/_env  # gitleaks:allow

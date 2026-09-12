@@ -198,3 +198,63 @@ def test_orchestrate_run_flags_are_covered_by_run_help():
     assert used, "dry-run nennt keine run.py-Befehle"
     for flag in used:
         assert flag in help_txt, f"{flag} fehlt in run.py --help"
+
+
+def test_heal_loop_bounded_no_infinite_loop(monkeypatch):
+    """Bleibt der Fix erfolglos, heilt der Orchestrator höchstens max_heal_rounds-mal, dann escalated."""
+    monkeypatch.setattr(orchestrate, "save_state", lambda s: None)
+    r = orchestrate.Runner(PLAN, heal=True, max_heal_rounds=2)
+    calls = {"n": 0}
+
+    def fake_heal_wp(wp, state):
+        calls["n"] += 1
+        state["wp"][wp]["status"] = "escalated"  # Fix schlägt fehl
+
+    monkeypatch.setattr(r, "heal_wp", fake_heal_wp)
+    state = orchestrate.init_state(PLAN, 40.0, "t")
+    state["wp"]["WP1"]["status"] = "escalated"
+    r._heal_loop("WP1", state)
+    assert calls["n"] == 2
+    assert state["wp"]["WP1"]["status"] == "escalated"
+
+
+def test_heal_loop_recovers_after_first_round(monkeypatch):
+    monkeypatch.setattr(orchestrate, "save_state", lambda s: None)
+    r = orchestrate.Runner(PLAN, heal=True, max_heal_rounds=2)
+    calls = {"n": 0}
+
+    def fake_heal_wp(wp, state):
+        calls["n"] += 1
+        state["wp"][wp]["status"] = "review_pass"
+
+    monkeypatch.setattr(r, "heal_wp", fake_heal_wp)
+    state = orchestrate.init_state(PLAN, 40.0, "t")
+    state["wp"]["WP1"]["status"] = "escalated"
+    r._heal_loop("WP1", state)
+    assert calls["n"] == 1
+    assert state["wp"]["WP1"]["status"] == "review_pass"
+
+
+def test_selfheal_autopilot_recovers_after_fix():
+    calls = {"gate": 0, "fix": 0}
+
+    def gate():
+        calls["gate"] += 1
+        return 0 if calls["fix"] >= 1 else 1
+
+    assert orchestrate.selfheal_autopilot(
+        gate, lambda i: calls.__setitem__("fix", calls["fix"] + 1), rounds=2, log=lambda *_: None
+    )
+    assert calls["fix"] == 1
+
+
+def test_selfheal_autopilot_escalates_after_rounds_falsification():
+    calls = {"fix": 0}
+    ok = orchestrate.selfheal_autopilot(
+        lambda: 1,
+        lambda i: calls.__setitem__("fix", calls["fix"] + 1),
+        rounds=2,
+        log=lambda *_: None,
+    )
+    assert ok is False
+    assert calls["fix"] == 2  # gedeckelt: kein Endlos-Heilen

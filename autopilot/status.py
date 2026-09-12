@@ -133,7 +133,7 @@ def pytest_count() -> int:
 
 
 def read_coverage() -> dict | None:
-    cov = ROOT / "coverage.json"
+    cov = ROOT / ".guardian" / "coverage.json"  # nur der volle Lauf schreibt hierhin
     if not cov.exists():
         return None
     data = json.loads(cov.read_text(encoding="utf-8"))

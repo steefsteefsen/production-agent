@@ -16,7 +16,9 @@ Merge und Guardian stecken in einem injizierbaren Runner (Tests ersetzen ihn dur
 from __future__ import annotations
 
 import argparse
+import faulthandler
 import json
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -28,6 +30,7 @@ PLAN_PATH = ROOT / "autopilot" / "plan.yaml"
 TASKS_PATH = ROOT / "autopilot" / "tasks.yaml"
 STATE_PATH = ROOT / "autopilot" / "state" / "orchestrator.json"
 ESCALATION_PATH = ROOT / "ESCALATION.md"
+cc_DENIED = ROOT / "autopilot" / "state" / "denied.json"
 
 STEEF_LANE = "steef"  # P/A/WP0 – von Stefan, gelten als Voraussetzung (merged)
 DONE = "merged"
@@ -161,6 +164,7 @@ def init_state(plan: dict, budget_total: float, run_id: str) -> dict:
             "status": DONE if merged else "pending",
             "lane": p["lane"],
             "loops": 0,
+            "heal_rounds": 0,
             "cost_usd": 0.0,
             "started_at": None,
             "finished_at": None,
@@ -220,6 +224,13 @@ def orchestrate(
                 _resume_quota(state, plan)
                 save_state(state)
                 return 3
+            msg = (
+                f"quota – warte {quota_interval // 60} min, dann erneut "
+                f"(bisher {waited // 60}/{int(quota_wait_hours * 60)} min)"
+            )
+            print(msg, flush=True)
+            with (ROOT / "autopilot" / "journal.md").open("a", encoding="utf-8") as fh:
+                fh.write(f"\n## quota-Pause: {msg}\n")
             sleep(quota_interval)
             waited += quota_interval
             _resume_quota(state, plan)
@@ -246,10 +257,19 @@ def orchestrate(
 class Runner:
     """Live-Runner: Worktree je WP, Subprozess run.py, Merge auf main mit Guardian-Gate."""
 
-    def __init__(self, plan: dict, push: bool = False, auto_decide: bool = False):
+    def __init__(
+        self,
+        plan: dict,
+        push: bool = False,
+        auto_decide: bool = False,
+        heal: bool = True,
+        max_heal_rounds: int = 2,
+    ):
         self.plan = plan
         self.push = push
         self.auto_decide = auto_decide
+        self.heal = heal
+        self.max_heal_rounds = max_heal_rounds
 
     def budget_ok(self, state: dict) -> bool:
         return state["budget_used"] < state["budget_total"]
@@ -279,13 +299,9 @@ class Runner:
             "4",
             cwd=worktree,
         )
-        import cc  # noqa: PLC0415
-
         w["last_gate_tail"] = (r.stdout + r.stderr)[-600:]
         w["worktree"] = str(worktree)
-        if cc.is_quota(
-            r.returncode, r.stdout + r.stderr
-        ):  # Abo-Quote erschöpft: pausieren, kein Loop
+        if r.returncode == 3:  # run.py signalisiert Quota per Exitcode 3: pausieren, kein Loop
             w["status"] = "quota"
             state["_quota"] = True
             save_state(state)
@@ -308,9 +324,69 @@ class Runner:
             if d.get("action") == "apply":  # automatisch entschieden – bitte prüfen
                 w["status"] = "review_pass"
                 w["auto_decided"] = True
+        if w["status"] == "escalated" and self.heal:
+            self._heal_loop(
+                wp, state
+            )  # bis zu max_heal_rounds Nachbesserungen, dann bleibt es escalated
         if w["status"] == "escalated":
             self._escalate(wp, w)
         save_state(state)
+
+    def _heal_loop(self, wp: str, state: dict) -> None:
+        """Erschöpfter Strang → Fixer-Runden (gedeckelt), damit nichts endlos läuft."""
+        w = state["wp"][wp]
+        w.setdefault("heal_rounds", 0)
+        while w["status"] == "escalated" and w["heal_rounds"] < self.max_heal_rounds:
+            w["heal_rounds"] += 1
+            self.heal_wp(wp, state)
+            save_state(state)
+
+    def heal_wp(self, wp: str, state: dict) -> None:
+        import heal as heal_mod  # noqa: PLC0415
+
+        w = state["wp"][wp]
+        worktree = Path(w.get("worktree") or (ROOT.parent / f"orch-{wp}"))
+        spec = next(
+            (
+                p.get("spec", {}).get("prompt_ref", "")
+                for p in self.plan["packages"]
+                if p["id"] == wp
+            ),
+            "",
+        )
+        diff = self._sh("git", "-C", str(worktree), "diff", "HEAD").stdout
+        complaints = json.dumps(w.get("last_review") or {}, ensure_ascii=False)
+        h = heal_mod.heal(wp, spec, w.get("last_gate_tail", ""), complaints, diff)
+        w.setdefault("history", []).append(
+            {
+                "phase": "heal",
+                "round": w["heal_rounds"],
+                "action": h.get("action"),
+                "cause": h.get("cause"),
+                "reason": h.get("reason"),
+            }
+        )
+        if (
+            h.get("action") != "apply"
+        ):  # Spec-/Sicherheitsänderung nötig → nicht selbst heilen, eskalieren
+            w["status"] = "escalated"
+            self._escalate(wp, w, detail="Heal verworfen: " + str(h.get("reason", "")))
+            return
+        r = self._sh(
+            sys.executable,
+            "autopilot/run.py",
+            "--only",
+            wp,
+            "--review",
+            "auto",
+            "--max-loops",
+            "2",
+            "--extra-prompt",
+            h.get("fix_prompt", ""),
+            cwd=worktree,
+        )
+        w["last_gate_tail"] = (r.stdout + r.stderr)[-600:]
+        w["status"] = "review_pass" if r.returncode == 0 else "escalated"
 
     def merge_wp(self, wp: str, state: dict) -> None:
         w = state["wp"][wp]
@@ -346,6 +422,110 @@ class Runner:
             )
 
 
+SETTINGS_LOCAL = ROOT / ".claude" / "settings.local.json"
+SETTINGS_MAIN = ROOT / ".claude" / "settings.json"
+
+
+def _deny_list() -> list[str]:
+    if not SETTINGS_MAIN.exists():
+        return []
+    cfg = json.loads(SETTINGS_MAIN.read_text(encoding="utf-8"))
+    return cfg.get("permissions", {}).get("deny", [])
+
+
+def apply_learned(
+    denied_path: Path = cc_DENIED, settings_local: Path = SETTINGS_LOCAL
+) -> list[str]:
+    """--allow-learned: gelernte Muster in settings.local.json/allow übernehmen. Verbotenes/Deny nie.
+
+    Schreibt ausschließlich in settings.local.json (nie settings.json). Überspringt alles, was cc.is_forbidden
+    ist oder in der Deny-Liste steht (git push, rm -rf, .env, decisions.yaml, tests/acceptance …)."""
+    import cc  # noqa: PLC0415
+
+    if not denied_path.exists():
+        return []
+    try:
+        entries = json.loads(denied_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    local = (
+        json.loads(settings_local.read_text(encoding="utf-8")) if settings_local.exists() else {}
+    )
+    allow = local.setdefault("permissions", {}).setdefault("allow", [])
+    deny = _deny_list()
+    added: list[str] = []
+    for e in entries:
+        pat = e.get("pattern") if isinstance(e, dict) else e
+        cmd = e.get("command", "") if isinstance(e, dict) else ""
+        if not pat or pat in allow or pat in deny or cc.is_forbidden(pat) or cc.is_forbidden(cmd):
+            continue
+        allow.append(pat)
+        added.append(pat)
+    if added:
+        settings_local.parent.mkdir(parents=True, exist_ok=True)
+        settings_local.write_text(
+            json.dumps(local, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+    return added
+
+
+def selfheal_autopilot(run_gate, fixer, rounds: int = 2, log=print) -> bool:
+    """Selbstcheck rot → Fixer auf den Autopilot-Code (max. rounds Runden). True = am Ende grün.
+
+    run_gate() liefert 0, wenn Selbstcheck UND pytest grün sind; fixer(runde) bessert den autopilot/-Code
+    nach (Deny unverändert). Deckelung verhindert Endlos-Heilung."""
+    if run_gate() == 0:
+        return True
+    for i in range(1, rounds + 1):
+        log(f"Selbstcheck rot – Autopilot-Fixer-Runde {i}/{rounds}")
+        fixer(i)
+        if run_gate() == 0:
+            return True
+    return False
+
+
+def _live_gate() -> int:
+    sc = subprocess.run(  # noqa: S603
+        [sys.executable, str(ROOT / "autopilot" / "selfcheck.py")], cwd=ROOT
+    ).returncode
+    if sc != 0:
+        return sc
+    return subprocess.run(  # noqa: S603
+        [sys.executable, "-m", "pytest", "-q", "-p", "no:warnings", "--no-cov"], cwd=ROOT
+    ).returncode
+
+
+def _live_fixer(_round: int) -> None:
+    import cc  # noqa: PLC0415
+
+    context = (
+        "Der Selbstcheck (autopilot/selfcheck.py) oder pytest ist rot. Finde und behebe die Ursache im "
+        "autopilot/-Code. Ändere NICHT tests/acceptance/, decisions.yaml oder Sicherheitsregeln. "
+        "Prüfe am Ende selbst: python autopilot/selfcheck.py und pytest -q."
+    )
+    subprocess.run(  # noqa: S603
+        [
+            "claude",
+            "-p",
+            context,
+            "--model",
+            cc.model("builder"),
+            "--permission-mode",
+            "dontAsk",
+            "--allowedTools",
+            "Read,Edit,Grep,Glob,Bash",
+            "--max-turns",
+            "30",
+            "--output-format",
+            "json",
+        ],
+        cwd=ROOT,
+        env=cc.env(),
+        stdin=subprocess.DEVNULL,
+        timeout=1800,
+    )
+
+
 def _print_dry_run(plan: dict, state: dict) -> None:
     print("Lanes:", ", ".join(plan["lanes"]))
     rdy = startable(state, plan)
@@ -374,7 +554,33 @@ def main(argv: list[str] | None = None) -> int:
         "--quota-wait-hours", type=float, default=8.0, help="max. Wartezeit bei Quota, dann Exit 3"
     )
     ap.add_argument("--run-id", default="run")
+    ap.add_argument(
+        "--yes", action="store_true", help="Rückfragen (z. B. --skip) ohne Nachfrage bestätigen"
+    )
+    ap.add_argument(
+        "--heal",
+        dest="heal",
+        action="store_true",
+        default=True,
+        help="erschöpfte/zweimal abgelehnte WPs per Fixer-Session nachbessern (Standard an)",
+    )
+    ap.add_argument("--no-heal", dest="heal", action="store_false", help="Selbstheilung abschalten")
+    ap.add_argument("--heal-rounds", type=int, default=2, help="max. Fixer-Runden je WP/Autopilot")
+    ap.add_argument(
+        "--no-selfcheck",
+        dest="selfcheck",
+        action="store_false",
+        default=True,
+        help="Selbstcheck des Autopilots vor dem Lauf überspringen",
+    )
+    ap.add_argument(
+        "--allow-learned",
+        action="store_true",
+        help="gelernte, ungefährliche Rechte (denied.json) in settings.local.json übernehmen",
+    )
     args = ap.parse_args(argv)
+    if hasattr(signal, "SIGUSR1"):
+        faulthandler.register(signal.SIGUSR1, all_threads=True)  # kill -USR1 <pid> → Stacktrace
 
     plan = load_plan()
     tasks_ids = {t["id"] for t in load_tasks()}
@@ -385,6 +591,10 @@ def main(argv: list[str] | None = None) -> int:
             print(" -", e)
         return 1
 
+    if args.allow_learned:  # gelernte Rechte übernehmen (nur settings.local.json, nie Verbotenes)
+        added = apply_learned()
+        print("Gelernte Rechte übernommen:", ", ".join(added) if added else "keine neuen")
+
     state = load_state(plan, args.budget_total_usd, args.run_id)
     state["budget_total"] = args.budget_total_usd
     if args.retry:
@@ -393,7 +603,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{args.retry} neu eingereiht (pending)")
         return 0
     if args.skip:
-        if input(f"{args.skip} als von Hand erledigt markieren? (j/n) ").strip().lower() == "j":
+        ok = (
+            args.yes
+            or input(f"{args.skip} als von Hand erledigt markieren? (j/n) ").strip().lower() == "j"
+        )
+        if ok:
             state["wp"].setdefault(args.skip, {})["status"] = DONE
             save_state(state)
             print(f"{args.skip} als merged markiert")
@@ -402,7 +616,25 @@ def main(argv: list[str] | None = None) -> int:
         _print_dry_run(plan, state)
         return 0 if all_merged(state, plan) else 2
 
-    runner = Runner(plan, push=args.push, auto_decide=args.auto_decide)
+    if args.selfcheck:  # kaputten Autopilot VOR dem echten Lauf erkennen (und ggf. selbst heilen)
+        ok = (
+            selfheal_autopilot(_live_gate, _live_fixer, rounds=args.heal_rounds)
+            if args.heal
+            else _live_gate() == 0
+        )
+        if not ok:
+            print(
+                "Selbstcheck rot – echter Lauf abgebrochen. Details: python autopilot/selfcheck.py"
+            )
+            return 1
+
+    runner = Runner(
+        plan,
+        push=args.push,
+        auto_decide=args.auto_decide,
+        heal=args.heal,
+        max_heal_rounds=args.heal_rounds,
+    )
     return orchestrate(
         plan,
         state,

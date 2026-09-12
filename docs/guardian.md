@@ -8,7 +8,7 @@ Die folgende Regelliste wird von `autopilot/status.py` aus dem Docstring von `gu
 von Hand getippt werden:
 
 <!-- auto:guardian_rules -->
-Regeln: S1–S9, K1–K7, D1–D9.
+Regeln: S1–S9, K1–K9, D1–D9.
 
 - **S1**: keine Secrets, keine .env committet
 - **S2**: keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
@@ -26,6 +26,8 @@ Regeln: S1–S9, K1–K7, D1–D9.
 - **K5**: jede entry-Zeile in .pre-commit-config.yaml beginnt mit .venv/bin/python
 - **K6**: tasks.yaml-WPs stehen in plan.yaml, Abhaengigkeiten sind aufloesbar und azyklisch
 - **K7**: tests/acceptance/ nur mit GUARDIAN_ALLOW_ACCEPTANCE=1 aenderbar (Abnahmetests = Spezifikation)
+- **K8**: autopilot/ geaendert -> autopilot/selfcheck.py grün (GUARDIAN_SKIP_K8=1 unterdrueckt)
+- **K9**: gelernte Rechte (state/denied.json) noch nicht erlaubt -> WARNUNG mit Allow-Vorschlag (blockiert nie)
 - **D1**: jedes src-Modul ist in README oder docs/ namentlich erwaehnt
 - **D2**: jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
 - **D3**: src geaendert -> auch docs/, README oder tests/ geaendert
