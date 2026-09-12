@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-12T11:15:59",
-  "commit": "5c54d09244ea53fe1f9859cb9f2d06e468517ba0",
+  "generated_at": "2026-09-12T11:20:23",
+  "commit": "f086ccdd8c772418fe2aeb147d1a1558babcd96a",
   "branch": "main",
   "packages": [
     {
@@ -625,10 +625,49 @@
       "cost_usd": 0,
       "last_at": null,
       "commits": []
+    },
+    {
+      "id": "INF-E",
+      "name": "INF-E",
+      "agent": "qa-agent",
+      "deps": [],
+      "percent": 0,
+      "state": "offen",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Review",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Commit",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Tag",
+          "done": false,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 0,
+      "cost_usd": 0,
+      "last_at": null,
+      "commits": []
     }
   ],
   "totals": {
-    "percent": 13,
+    "percent": 12,
     "hours_agent": 0.0,
     "cost_usd": 0,
     "tests": 105,
@@ -636,6 +675,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-12T11:15:46+02:00",
+      "kind": "commit",
+      "ref": "f086ccd",
+      "text": "feat(autopilot): Abo-Betrieb, Quota-Pause, WP-Gates auf gate_no_skip"
+    },
     {
       "at": "2026-09-12T10:55:13+02:00",
       "kind": "commit",

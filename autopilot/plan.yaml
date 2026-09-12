@@ -27,3 +27,4 @@ packages:
   - {id: INF-3, lane: infra, deps: [WP0], effort_h: 1.0, spec: {prompt_ref: "tasks.yaml#INF-3"}}
   - {id: INF-4, lane: infra, deps: [WP0], effort_h: 2.0, spec: {prompt_ref: "tasks.yaml#INF-4"}}
   - {id: INF-9, lane: infra, deps: [WP0], effort_h: 0.5, spec: {prompt_ref: "tasks.yaml#INF-9"}}
+  - {id: INF-E, lane: infra, deps: [WP0], effort_h: 3.0, spec: {prompt_ref: "tasks.yaml#INF-E"}}

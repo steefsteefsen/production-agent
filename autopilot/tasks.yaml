@@ -285,3 +285,22 @@
   - src/production_agent/data/messages.py
   - docs/adr/0010-mes-nachrichtenformat.md
   - tests/acceptance/test_wpb.py
+- id: INF-E
+  agent: qa-agent
+  gate: pytest tests/test_ops.py -q
+  prompt: |
+    E) Ops-Cockpit (autopilot/ops/) – lokale Oberfläche für Stefan, unabhängig vom Produktionsleiter-Frontend.
+    15. FastAPI-App autopilot/ops/app.py auf http://localhost:8010 (make ops), eine HTML-Seite ohne Build-Schritt (Vanilla JS, Polling alle 5 s, Farben Teal/Wein/Salbei, Deutsch). Tabs:
+        a) Ablauf: Lanes als Zeilen, WPs als Kacheln in Zustandsfarbe (pending/ready/running/gate_green/review_pass/merged/exhausted/escalated/blocked), Loops, Kosten, Start/Ende; darunter Live-Tail des laufenden WP-Logs (autopilot/logs/orch-<WP>.log, letzte 40 Zeilen) und der Journal-Einträge; Kacheln klickbar → Gate-Ausgabe, Reviewer-Urteil, Sync-Paket-Link.
+        b) Stand: Kennzahlen aus docs/status/status.json (Pakete, Prozent, Tests, Coverage, Guardian), ESCALATION.md gerendert mit Abschnitt "Automatisch entschieden"; Aktionen: Dry-Run anzeigen, Orchestrator starten (Flags: --auto-decide, --push, Budget), stoppen (SIGTERM, laufende Builder dürfen enden), --retry <WP>, --skip <WP> (mit Bestätigung), Sync-Paket erzeugen.
+        c) Konfiguration: decisions.yaml vollständig gerendert, gruppiert nach Abschnitten, jede Zeile mit Kommentar aus der YAML; Felder mit configurable: true (alarm_prioritaet.verfahren, audit.personenbezug, konfidenz.schwelle_empfehlung) editierbar über Dropdown/Slider. Speichern schreibt NICHT in decisions.yaml (Guardian S5), sondern nach config/runtime.yaml (committet) mit Audit-Zeile (Zeit, Feld, alt → neu, Rolle "Stefan"); Settings und Graph lesen runtime.yaml als Override. Alle übrigen Felder read-only mit Hinweis "Entscheidung – Änderung nur über decisions.yaml + GUARDIAN_ALLOW_DECISIONS". Anzeige, welche Constraints aktuell wirken (Ereignisregeln, Schwelle, Rollen, Vier-Augen, Timeout, Prioritätsverfahren) als Kartenliste "Aktive Constraints".
+        d) Präsentation: bettet docs/presentation/index.html ein.
+    16. Sicherheit: nur 127.0.0.1; keine Shell-Freitextbefehle, nur die benannten Aktionen; Start/Stop über subprocess mit festen Argumenten; jede Aktion ins Audit.
+    17. tests/test_ops.py (TestClient): Verifikation (GET / liefert Tabs; /api/state gibt Lanes; /api/config zeigt configurable-Felder; PUT /api/config schreibt runtime.yaml + Audit); Falsifikation (PUT auf nicht-configurable Feld → 403; decisions.yaml bleibt byte-identisch; Aktion mit unbekanntem WP → 404).
+    18. Makefile: ops. README "Ops-Cockpit". docs/ops.md. AENDERUNGEN-Eintrag.
+  review_gate:
+  - Start/Stop/Retry funktionieren gegen orchestrator.json
+  - PUT auf nicht-configurable Feld → 403
+  review_files:
+  - autopilot/ops/app.py
+  - docs/ops.md
