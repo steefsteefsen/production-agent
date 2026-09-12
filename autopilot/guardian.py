@@ -22,6 +22,7 @@ Regeln (S1–S9, K1–K9, D1–D11), je eine Zeile – hieraus erzeugt status.py
  K7  tests/acceptance/ nur mit GUARDIAN_ALLOW_ACCEPTANCE=1 aenderbar (Abnahmetests = Spezifikation)
  K8  autopilot/ geaendert -> autopilot/selfcheck.py grün (GUARDIAN_SKIP_K8=1 unterdrueckt)
  K9  gelernte Rechte (state/denied.json) noch nicht erlaubt -> WARNUNG mit Allow-Vorschlag (blockiert nie)
+ K10  jeder {{a.b}}-Platzhalter in tasks.yaml existiert in decisions.yaml (Renderfehler = Nachtlauf tot)
  D1  jedes src-Modul ist in README oder docs/ namentlich erwaehnt
  D2  jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
  D3  src geaendert -> auch docs/, README oder tests/ geaendert
@@ -226,6 +227,28 @@ def _blank_markers(text: str) -> str:
         text,
         flags=re.S,
     )
+
+
+def check_task_placeholders(tasks: list[dict], dec: dict) -> list[str]:
+    """K10: jeder {{a.b}}-Platzhalter in einem tasks.yaml-Prompt muss in decisions.yaml auflösbar sein.
+
+    Ein veralteter Platzhalter (z. B. {{routing.bei_alarmflut}}) lässt run.py.render() mit KeyError abbrechen,
+    bevor der Builder auch nur startet – der Nachtlauf-Blocker bei WP3. Rein statisch, ohne LLM."""
+    errs: list[str] = []
+
+    def resolves(path: str) -> bool:
+        cur = dec
+        for part in path.split("."):
+            if not isinstance(cur, dict) or part not in cur:
+                return False
+            cur = cur[part]
+        return True
+
+    for t in tasks:
+        for ph in sorted(set(re.findall(r"\{\{([a-z_.]+)\}\}", t.get("prompt", "")))):
+            if not resolves(ph):
+                errs.append(f"K10 {t['id']}: Platzhalter {{{{{ph}}}}} fehlt in decisions.yaml")
+    return errs
 
 
 def check_doc_facts(files: dict[str, str]) -> list[str]:
@@ -482,6 +505,16 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
             errors += orchestrate.check_plan(tids, orchestrate.load_plan())
         except Exception as exc:  # noqa: BLE001
             warn.append(f"K6 plan.yaml nicht auswertbar: {exc}")
+
+    # K10 tasks.yaml-Platzhalter ⇔ decisions.yaml (Renderfehler bricht run.py ab, bevor der Builder startet)
+    try:
+        import orchestrate  # noqa: PLC0415
+        import yaml as _yaml  # noqa: PLC0415
+
+        dec = _yaml.safe_load((ROOT / "decisions.yaml").read_text(encoding="utf-8"))
+        errors += check_task_placeholders(orchestrate.load_tasks(), dec)
+    except Exception as exc:  # noqa: BLE001
+        warn.append(f"K10 tasks.yaml/decisions.yaml nicht auswertbar: {exc}")
 
     # K7 Abnahmetests sind Spezifikation – Änderung nur mit ausdrücklicher Freigabe
     if os.environ.get("GUARDIAN_ALLOW_ACCEPTANCE") != "1":

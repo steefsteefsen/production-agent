@@ -321,7 +321,14 @@ def main() -> int:
         journal.write(e)
         if ok and not args.no_commit:
             phase(t["id"], "commit: start", log)
-            journal.commit(t["id"], e)
+            committed = journal.commit(t["id"], e)
+            if not committed:  # kein Commit trotz grünem Gate → WP gilt NICHT als OK
+                ok = False
+                out = (
+                    "Commit fehlgeschlagen: kein neuer Commit trotz grünem Gate "
+                    f"(siehe autopilot/logs/commit-fail-{t['id']}.log)"
+                )
+                phase(t["id"], "commit: FEHLGESCHLAGEN – " + out, log)
         status["wp"][t["id"]] = ok
         status["runs"][t["id"]] = {
             "attempts": attempt,

@@ -89,7 +89,8 @@
     3. Knoten 4 und 6 mit ChatAnthropic ({{llm.model}}) und with_structured_output: Hypothesis(cause, reason_code, confidence, evidence[],
        expected_downtime_min) und RecommendedAction. Systemprompts in graph/prompts.py mit PROMPT_VERSION; Kern: {{llm.systemprompt_kern}}
        Jeder Knoten bekommt nur seinen Kontext (kein Vollverlauf).
-    4. Routing: bei Alarmflut → {{routing.bei_alarmflut}}; bei Held → {{routing.bei_held_bedienerinitiiert}}; sonst {{routing.sonst}}.
+    4. Routing: einfachster Graph OHNE Verzweigung – Wissen wird immer abgerufen ({{routing.immer_wissen_abrufen}}),
+       kein Alarmflut-/Held-Sonderpfad (decisions.yaml: „einfachster Graph: keine Verzweigung").
        Wiederholung bei Konfidenz < Schwelle: {{routing.wiederholung_bei_konfidenz_unter_schwelle}} (einmal, 60-min-Fenster).
     5. Schritt 7 bleibt interrupt()/Command(resume). Replay-Uhr: build_graph akzeptiert sim_now und setzt SIM_NOW für die MCP-Server.
     6. api/server.py: /investigations streamt Knotenergebnisse per SSE (sse-starlette), Event je Knoten {node, payload, trace}; docs/contracts/api.md mit Beispiel-Events.

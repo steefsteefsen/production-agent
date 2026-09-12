@@ -16,6 +16,7 @@ data/qdrant/
 autopilot/logs/
 autopilot/status.json
 autopilot/state/
+ESCALATION.md
 .claude/settings.local.json
 data/bronze/*.csv
 .guardian/

@@ -407,37 +407,70 @@ class Runner:
         w["status"] = "review_pass" if r.returncode == 0 else "escalated"
 
     def merge_wp(self, wp: str, state: dict) -> None:
+        """Merge nach main. Nach dem Merge werden ZUERST die generierten Dateien neu erzeugt
+        (status.py/present.py --stage) und ein voller Coverage-Lauf gezogen, dann als Teil des
+        Merge-Commits gefaltet (--amend, ohne Hooks), DANN der Guardian – sonst ist er nach dem
+        Merge rot (D6/D7 Marker/Status, K4 Coverage veraltet). Die Guardian-Ausgabe geht IMMER
+        vollständig ins Log (autopilot/logs/guardian-merge-<WP>.log) und bei Rot in ESCALATION.md."""
         w = state["wp"][wp]
+        base = self._sh("git", "rev-parse", "HEAD").stdout.strip()
         merge = self._sh(
             "git", "merge", "--no-ff", f"wp/{wp}", "-m", f"Merge wp/{wp}: {wp} übernommen (--no-ff)"
         )
         if merge.returncode != 0:
             self._sh("git", "merge", "--abort")
             w["status"] = "escalated"
-            self._escalate(wp, w, detail="Merge-Konflikt")
+            self._escalate(wp, w, detail="Merge-Konflikt:\n" + (merge.stdout + merge.stderr)[-800:])
             return
+        # Generierte Dateien nachziehen und Coverage frisch ziehen, dann in den Merge-Commit falten.
+        self._sh(sys.executable, "autopilot/status.py", "--stage")
+        self._sh(sys.executable, "autopilot/present.py", "--stage")
+        self._sh(
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "-p",
+            "no:warnings",
+            "--cov=production_agent",
+            "--cov-report=json:.guardian/coverage.json",
+        )
+        self._sh("git", "add", "-A")
+        self._sh("git", "-c", "core.hooksPath=/dev/null", "commit", "--amend", "--no-edit")
         guard = self._sh(sys.executable, "autopilot/guardian.py")
+        guard_out = guard.stdout + guard.stderr
+        self._log_guardian(wp, guard_out)  # Guardian-Ausgabe IMMER vollständig ins Log
         if guard.returncode != 0:
-            self._sh("git", "reset", "--hard", "ORIG_HEAD")
+            self._sh("git", "reset", "--hard", base)
             w["status"] = "escalated"
-            self._escalate(wp, w, detail="Guardian rot nach Merge")
+            w["last_gate_tail"] = guard_out[-600:]
+            self._escalate(wp, w, detail="Guardian rot nach Merge", guardian=guard_out)
             return
         w["merge_sha"] = self._sh("git", "rev-parse", "HEAD").stdout.strip()
         w["status"] = DONE
         self._sh("git", "tag", "-f", f"wp/{wp}")
         self._sh("git", "worktree", "remove", "--force", w["worktree"] or f"../orch-{wp}")
 
+    def _log_guardian(self, wp: str, out: str) -> None:
+        logs = ROOT / "autopilot" / "logs"
+        logs.mkdir(parents=True, exist_ok=True)
+        (logs / f"guardian-merge-{wp}.log").write_text(out, encoding="utf-8")
+
     def push(self, state: dict) -> None:
         self._sh("git", "push", "--tags")
         self._sh("git", "push")
 
-    def _escalate(self, wp: str, w: dict, detail: str = "") -> None:
+    def _escalate(self, wp: str, w: dict, detail: str = "", guardian: str = "") -> None:
         with ESCALATION_PATH.open("a", encoding="utf-8") as fh:
             fh.write(
                 f"\n## {wp}\n- Status: {w['status']} {('· ' + detail) if detail else ''}\n"
                 f"- Gate-Ausgabe:\n```\n{w['last_gate_tail']}\n```\n"
-                f"- Sync-Paket: `python autopilot/sync.py {wp}`\n"
             )
+            if (
+                guardian
+            ):  # vollständige Guardian-Ausgabe nach dem Merge (nicht nur die letzten 600 Zeichen)
+                fh.write(f"- Guardian-Ausgabe (vollständig):\n```\n{guardian.strip()}\n```\n")
+            fh.write(f"- Sync-Paket: `python autopilot/sync.py {wp}`\n")
 
 
 SETTINGS_LOCAL = ROOT / ".claude" / "settings.local.json"

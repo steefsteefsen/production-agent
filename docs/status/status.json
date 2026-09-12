@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-12T15:52:17",
-  "commit": "1f46d3d2dd879eabe380b89cdf636b1fe911b992",
+  "generated_at": "2026-09-12T23:32:53",
+  "commit": "1b6d17f01a3d2c96712e6a6fdb4806c3844e992d",
   "branch": "main",
   "packages": [
     {
@@ -8,39 +8,45 @@
       "name": "Planung",
       "agent": "—",
       "deps": [],
-      "percent": 0,
-      "state": "offen",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
           "name": "Review",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
           "name": "Commit",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
           "name": "Tag",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
           "name": "Sync-Paket",
-          "done": false,
+          "done": true,
           "at": null
         }
       ],
       "attempts": 0,
       "cost_usd": 0,
       "last_at": null,
-      "commits": []
+      "commits": [
+        {
+          "sha": "1b6d17f",
+          "title": "docs(P): Nachtlauf-Stand veröffentlichen (WP2a, Blocker)",
+          "at": "2026-09-12T15:52:03+02:00"
+        }
+      ]
     },
     {
       "id": "A",
@@ -673,7 +679,7 @@
     }
   ],
   "totals": {
-    "percent": 19,
+    "percent": 25,
     "hours_agent": 0.67,
     "cost_usd": 4.37,
     "tests": 170,
@@ -681,6 +687,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-12T15:52:03+02:00",
+      "kind": "commit",
+      "ref": "1b6d17f",
+      "text": "docs(P): Nachtlauf-Stand veröffentlichen (WP2a, Blocker)"
+    },
     {
       "at": "2026-09-12T15:47:45+02:00",
       "kind": "commit",
@@ -817,7 +829,7 @@
       "path": "src/production_agent/mcp/",
       "files": 2,
       "tests": 2,
-      "coverage": 86
+      "coverage": 89
     },
     {
       "path": "src/production_agent/security/",

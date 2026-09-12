@@ -477,7 +477,7 @@ def parse_guardian_rules() -> list[tuple[str, str]]:
     doc = m.group(1) if m else ""
     rules: list[tuple[str, str]] = []
     for line in doc.splitlines():
-        mm = re.match(r"\s*([SKD]\d[a-z]?)\s{2,}(.+?)\s*$", line)
+        mm = re.match(r"\s*([SKD]\d{1,2}[a-z]?)\s{2,}(.+?)\s*$", line)
         if mm:
             rules.append((mm.group(1), mm.group(2)))
     return rules
@@ -486,7 +486,9 @@ def parse_guardian_rules() -> list[tuple[str, str]]:
 def _rule_ranges(rules: list[tuple[str, str]]) -> str:
     def hi(prefix: str) -> int:
         nums = [
-            int(re.match(rf"{prefix}(\d)", r).group(1)) for r, _ in rules if r.startswith(prefix)
+            int(re.match(rf"{prefix}(\d{{1,2}})", r).group(1))
+            for r, _ in rules
+            if r.startswith(prefix)
         ]
         return max(nums) if nums else 0
 

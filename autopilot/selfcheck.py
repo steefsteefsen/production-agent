@@ -192,6 +192,105 @@ def check_worktree_commit() -> tuple[bool, str]:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def check_rescue_commit_on_hook_failure() -> tuple[bool, str]:
+    """journal._commit_or_rescue: scheitert der reguläre Commit an einem Hook (Guardian rot im Worktree),
+    MUSS ein Rettungs-Commit OHNE Hooks entstehen und autopilot/logs/commit-fail-<WP>.log geschrieben werden.
+
+    Genau der Nachtlauf-Blocker, bei dem journal.commit den Rückgabewert von git commit nicht prüfte: der
+    Commit scheiterte still, run.py meldete trotzdem OK. Deterministisch, in einem Wegwerf-Repo, ohne Modell."""
+    if os.environ.get("GIT_INDEX_FILE") or os.environ.get("GIT_DIR"):
+        return True, "innerhalb eines git-Hooks – Rettungs-Commit-Probe übersprungen"
+    import journal  # noqa: PLC0415
+
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    tmp = Path(tempfile.mkdtemp(prefix="selfcheck-rescue-"))
+    repo = tmp / "repo"
+    repo.mkdir()
+
+    def g(*a: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", *a], cwd=repo, capture_output=True, text=True, env=env)  # noqa: S603, S607
+
+    orig_root = journal.ROOT
+    try:
+        g("init", "-q")
+        g("config", "user.email", "selfcheck@example.invalid")
+        g("config", "user.name", "Selfcheck")
+        (repo / "a.txt").write_text("erste Fassung\n")
+        g("add", "-A")
+        g("commit", "-q", "-m", "init")
+        base = g("rev-parse", "HEAD").stdout.strip()
+        hook = repo / ".git" / "hooks" / "pre-commit"  # Hook, der IMMER scheitert
+        hook.write_text("#!/bin/sh\necho 'Hook rot (Selbstcheck-Probe)' 1>&2\nexit 1\n")
+        hook.chmod(0o755)
+        (repo / "a.txt").write_text("zweite Fassung\n")
+        g("add", "-A")
+        journal.ROOT = (
+            repo  # journal._git/_git_cp und der Fail-Log-Pfad zeigen auf das Wegwerf-Repo
+        )
+        ok = journal._commit_or_rescue(
+            "PROBE", "chore(PROBE): Rettung", "Body", "Gate: grün | Review: pass | Guardian: ok"
+        )
+        head = g("rev-parse", "HEAD").stdout.strip()
+        if not ok or head == base:
+            return False, "kein Rettungs-Commit trotz Hook-Fehler"
+        if not (repo / "autopilot" / "logs" / "commit-fail-PROBE.log").exists():
+            return False, "commit-fail-PROBE.log nicht geschrieben"
+        if "hooks: übersprungen" not in g("log", "-1", "--format=%B").stdout:
+            return False, "Rettungs-Commit ohne Footer 'hooks: übersprungen'"
+        return True, "Hook-Fehler → Rettungs-Commit ohne Hooks + commit-fail-Log geschrieben"
+    finally:
+        journal.ROOT = orig_root
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def check_merge_post_guardian_green() -> tuple[bool, str]:
+    """Runner.merge_wp: nach dem Merge ZUERST status.py/present.py --stage + voller Coverage-Lauf, DANN
+    Guardian; bei grünem Guardian wird der Strang merged. Genau der Fix für „Guardian rot nach Merge"
+    (D6/D7/K4 waren nach dem Merge veraltet). Reihenfolge über einen aufzeichnenden Fake-_sh geprüft."""
+    import orchestrate  # noqa: PLC0415
+
+    calls: list[tuple[str, ...]] = []
+
+    class _R:
+        returncode = 0
+        stdout = "deadbee\n"
+        stderr = ""
+
+    class Recording(orchestrate.Runner):
+        def _sh(self, *args: str, cwd=orchestrate.ROOT):
+            calls.append(args)
+            return _R()
+
+    plan = {"lanes": {}, "packages": [{"id": "WP1", "lane": "data", "deps": []}]}
+    r = Recording(plan)
+    state = orchestrate.init_state(plan, 40.0, "selfcheck")
+    state["wp"]["WP1"]["status"] = "review_pass"
+    state["wp"]["WP1"]["worktree"] = "orch-WP1-platzhalter"  # Fake-_sh berührt den Pfad nie
+    r.merge_wp("WP1", state)
+    joined = [" ".join(a) for a in calls]
+
+    def idx(sub: str) -> int:
+        return next((i for i, c in enumerate(joined) if sub in c), -1)
+
+    i_merge, i_status = idx("merge --no-ff"), idx("status.py --stage")
+    i_present, i_cov, i_guard = (
+        idx("present.py --stage"),
+        idx("--cov=production_agent"),
+        idx("guardian.py"),
+    )
+    if not (-1 < i_merge < i_status and i_merge < i_present and i_merge < i_cov < i_guard):
+        return (
+            False,
+            f"Reihenfolge falsch: merge={i_merge} status={i_status} present={i_present} cov={i_cov} guard={i_guard}",
+        )
+    if state["wp"]["WP1"]["status"] != orchestrate.DONE:
+        return False, "Guardian grün, aber Strang nicht merged"
+    return (
+        True,
+        "Merge → status/present/Coverage in Merge-Commit gefaltet → Guardian; grün → merged",
+    )
+
+
 CHECKS = [
     ("Imports", check_imports),
     ("run.py-Flags", check_run_cli),
@@ -199,6 +298,8 @@ CHECKS = [
     ("Quota-429", check_quota),
     ("Heal", check_heal),
     ("Worktree-Commit (echte Hooks)", check_worktree_commit),
+    ("Rettungs-Commit bei Hook-Fehler", check_rescue_commit_on_hook_failure),
+    ("Merge + Post-Merge-Guardian grün", check_merge_post_guardian_green),
 ]
 
 
