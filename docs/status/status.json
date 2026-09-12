@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T00:23:13",
-  "commit": "f3798ae48c8eb44a66099049ed22e827fa756260",
+  "generated_at": "2026-09-13T00:30:12",
+  "commit": "970ccc9c3095b1b3a118f5d16d6929133575c6d6",
   "branch": "main",
   "packages": [
     {
@@ -538,8 +538,8 @@
       "name": "INF-4",
       "agent": "qa-agent",
       "deps": [],
-      "percent": 70,
-      "state": "review_pass",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
@@ -550,6 +550,51 @@
           "name": "Review",
           "done": true,
           "at": "2026-09-12 20:39"
+        },
+        {
+          "name": "Commit",
+          "done": true,
+          "at": "2026-09-12T22:58:02+02:00"
+        },
+        {
+          "name": "Tag",
+          "done": true,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 1,
+      "cost_usd": 0.2,
+      "last_at": "2026-09-12 20:39",
+      "commits": [
+        {
+          "sha": "e3812e8",
+          "title": "feat(INF-4): Builder-Ergebnis gesichert (Rettungs-Commit)",
+          "at": "2026-09-12T22:58:02+02:00"
+        }
+      ]
+    },
+    {
+      "id": "INF-9",
+      "name": "INF-9",
+      "agent": "qa-agent",
+      "deps": [],
+      "percent": 70,
+      "state": "review_pass",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": true,
+          "at": "2026-09-12 20:52"
+        },
+        {
+          "name": "Review",
+          "done": true,
+          "at": "2026-09-12 20:52"
         },
         {
           "name": "Commit",
@@ -568,47 +613,8 @@
         }
       ],
       "attempts": 1,
-      "cost_usd": 0.2,
-      "last_at": "2026-09-12 20:39",
-      "commits": []
-    },
-    {
-      "id": "INF-9",
-      "name": "INF-9",
-      "agent": "qa-agent",
-      "deps": [],
-      "percent": 0,
-      "state": "offen",
-      "steps": [
-        {
-          "name": "Gate grün",
-          "done": false,
-          "at": null
-        },
-        {
-          "name": "Review",
-          "done": false,
-          "at": null
-        },
-        {
-          "name": "Commit",
-          "done": false,
-          "at": null
-        },
-        {
-          "name": "Tag",
-          "done": false,
-          "at": null
-        },
-        {
-          "name": "Sync-Paket",
-          "done": false,
-          "at": null
-        }
-      ],
-      "attempts": 0,
-      "cost_usd": 0,
-      "last_at": null,
+      "cost_usd": 0.34,
+      "last_at": "2026-09-12 20:52",
       "commits": []
     },
     {
@@ -697,14 +703,20 @@
     }
   ],
   "totals": {
-    "percent": 48,
-    "hours_agent": 3.34,
-    "cost_usd": 9.61,
+    "percent": 54,
+    "hours_agent": 3.53,
+    "cost_usd": 9.95,
     "tests": 247,
     "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T00:22:59+02:00",
+      "kind": "commit",
+      "ref": "970ccc9",
+      "text": "Merge wp/INF-4: CI/CD-Pipeline und E2E-Smoke (--no-ff)"
+    },
     {
       "at": "2026-09-13T00:03:29+02:00",
       "kind": "commit",
@@ -728,6 +740,12 @@
       "kind": "commit",
       "ref": "462a89b",
       "text": "fix(infra): Commit-Prüfung, Post-Merge-Guardian, WP3-Platzhalter, K10"
+    },
+    {
+      "at": "2026-09-12T22:58:02+02:00",
+      "kind": "commit",
+      "ref": "e3812e8",
+      "text": "feat(INF-4): Builder-Ergebnis gesichert (Rettungs-Commit)"
     },
     {
       "at": "2026-09-12T22:58:02+02:00",
@@ -812,6 +830,18 @@
       "kind": "commit",
       "ref": "c7292cb",
       "text": "adr(WP0): Entscheidungen festgeschrieben, Simulator auf UP1/14 Codes"
+    },
+    {
+      "at": "2026-09-12 20:52",
+      "kind": "journal",
+      "ref": "INF-9",
+      "text": "INF-9 ok (1 Versuche)"
+    },
+    {
+      "at": "2026-09-12 20:52",
+      "kind": "review",
+      "ref": "INF-9",
+      "text": "Review pass"
     },
     {
       "at": "2026-09-12 20:39",
@@ -902,6 +932,12 @@
       "kind": "tag",
       "ref": "wp/INF-3",
       "text": "Tag wp/INF-3"
+    },
+    {
+      "at": "",
+      "kind": "tag",
+      "ref": "wp/INF-4",
+      "text": "Tag wp/INF-4"
     },
     {
       "at": "",

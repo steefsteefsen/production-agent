@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · docs(INF-9): Backlog und offene Punkte nach main
+**Was:** docs/BACKLOG.md mit priorisierten offenen Punkten und Verweisen aus README/Statusseite.
+**Warum (Problem oder Anlass):** Offene Entscheidungen und Nice-to-haves waren nur verstreut im Journal dokumentiert.
+**Alternativen (verworfen, weil ...):** GitHub-Issues – im öffentlichen PoC-Repo unnötiger Overhead.
+**Auswirkung (Verträge, ADR, Tests):** docs/BACKLOG.md, docs/index.md, README-Marker.
+**Bezug (WP, ADR):** INF-9
+
 ## 2026-09-13 · feat(INF-4): CI/CD-Pipeline und E2E-Smoke nach main
 **Was:** GitHub-/GitLab-CI mit E2E-Job (LLM_MODE=mock), Makefile-Ziel e2e, tests/e2e-Smoke, replay-Erweiterung.
 **Warum (Problem oder Anlass):** Der PoC brauchte einen reproduzierbaren CI-Lauf ohne API-Schlüssel und einen End-to-End-Rauchtest.

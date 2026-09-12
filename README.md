@@ -1,7 +1,5 @@
 # Production Agent PoC
 
-[![CI](https://github.com/steefsteefsen/production-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/steefsteefsen/production-agent/actions/workflows/ci.yml)
-
 Untersuchung einer stehenden Produktionslinie: simulierte MES-Daten → Alarmanalyse → historisches Wissen → Wirkungsschätzung → sichere Maßnahmenempfehlung mit menschlicher Freigabe.
 
 Stack: LangGraph · FastMCP (2 Server) · Anthropic Claude · FastAPI/SSE · Vite/React · Langfuse · SQLite (Bronze→Silber→Gold)
@@ -51,9 +49,9 @@ Die Arbeitspakete WP0–WP7 stehen in `autopilot/tasks.yaml`; die Entscheidungsg
 
 ## Stand
 <!-- auto:stand -->
-- fertig: 7 von 16 Paketen
-- offen: WP1, WP3, WP4, WP5, WP6, WP7, INF-4, INF-9, INF-E
-- Fortschritt: 48 % — siehe [Statusseite](docs/status/index.html)
+- fertig: 8 von 16 Paketen
+- offen: WP1, WP3, WP4, WP5, WP6, WP7, INF-9, INF-E
+- Fortschritt: 54 % — siehe [Statusseite](docs/status/index.html)
 <!-- /auto:stand -->
 
 Guardian-Regeln (automatisch aus dem Guardian-Docstring):

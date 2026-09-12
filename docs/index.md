@@ -27,6 +27,7 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [AENDERUNGEN.md](AENDERUNGEN.md) – Änderungen (Was / Warum / Alternativen): Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 
 ## Weiteres
+- [BACKLOG.md](BACKLOG.md) – Backlog – Phase 2 (Block 9): Fachliche Erweiterungen nach Abschluss der Kernarbeitspakete WP0–WP7.
 - [architecture.md](architecture.md) – Architektur – Zielbild und Verträge: ```mermaid
 - [data_layer.md](data_layer.md) – Datenschicht Bronze→Silber→Gold: Technische Referenz für `src/production_agent/data/` (Simulator, Replay, Schema).
 - [plan.md](plan.md) – Projektplan – Scope, Budget, Gates: Minimalanforderungen: stehende Linie untersuchen, Alarme zu Ereignissen aggregieren, historisches Wissen abrufen,
