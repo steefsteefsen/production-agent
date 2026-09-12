@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-12T15:45:14",
-  "commit": "7599efd1ddee0c4fe9835053faeeed2461fadbd1",
+  "generated_at": "2026-09-12T15:47:59",
+  "commit": "08d775f64b008b7920cd8443bcd129faf705cf10",
   "branch": "main",
   "packages": [
     {
@@ -185,18 +185,18 @@
       "name": "WP2a",
       "agent": "mcp-agent",
       "deps": [],
-      "percent": 0,
-      "state": "offen",
+      "percent": 70,
+      "state": "review_pass",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 14:47"
         },
         {
           "name": "Review",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 14:47"
         },
         {
           "name": "Commit",
@@ -214,9 +214,9 @@
           "at": null
         }
       ],
-      "attempts": 0,
-      "cost_usd": 0,
-      "last_at": null,
+      "attempts": 1,
+      "cost_usd": 2.51,
+      "last_at": "2026-09-12 14:47",
       "commits": []
     },
     {
@@ -667,14 +667,20 @@
     }
   ],
   "totals": {
-    "percent": 12,
-    "hours_agent": 0.34,
-    "cost_usd": 1.87,
-    "tests": 152,
+    "percent": 17,
+    "hours_agent": 0.67,
+    "cost_usd": 4.37,
+    "tests": 170,
     "coverage_total": 94,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-12T15:45:00+02:00",
+      "kind": "commit",
+      "ref": "08d775f",
+      "text": "fix(infra): Nachtlauf-Blocker – Worktree-Commit, Quota-Probe, K2"
+    },
     {
       "at": "2026-09-12T13:27:35+02:00",
       "kind": "commit",
@@ -716,6 +722,18 @@
       "kind": "commit",
       "ref": "c7292cb",
       "text": "adr(WP0): Entscheidungen festgeschrieben, Simulator auf UP1/14 Codes"
+    },
+    {
+      "at": "2026-09-12 14:47",
+      "kind": "journal",
+      "ref": "WP2a",
+      "text": "WP2a ok (1 Versuche)"
+    },
+    {
+      "at": "2026-09-12 14:47",
+      "kind": "review",
+      "ref": "WP2a",
+      "text": "Review pass"
     },
     {
       "at": "2026-09-12 11:43",

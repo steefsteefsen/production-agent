@@ -1,0 +1,219 @@
+[
+  {
+    "name": "get_line_status",
+    "description": "Aktueller PackML-Zustand aller Betriebsmittel einer Linie sowie laufender Auftrag. Nutze dies, wenn du dir als Erstes ein Bild vom Zustand der Linie machen willst – Pflicht-Einstieg jeder Analyse.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "line_id": {
+          "type": "string",
+          "description": "Linien-ID aus der MES-Stammdatenbank, z. B. 'L1'."
+        }
+      },
+      "required": ["line_id"]
+    },
+    "max_rows": 200,
+    "example_call": {
+      "line_id": "L1"
+    },
+    "example_result": [
+      {
+        "equipment_id": "L1-S1",
+        "name": "Folienwickler",
+        "position": 1,
+        "packml_state": "Held",
+        "ts": "2026-06-15 09:55:00"
+      },
+      {
+        "equipment_id": "L1-S2",
+        "name": "Siegelstation",
+        "position": 2,
+        "packml_state": "Execute",
+        "ts": "2026-06-15 09:50:00"
+      }
+    ]
+  },
+  {
+    "name": "get_active_alarms",
+    "description": "Aktive Alarme der letzten N Minuten auf der Linie, nach Zeit sortiert, mit ISA-18.2-Priorität. Nutze dies, wenn du wissen willst, welche Alarme die Störung ausgelöst haben und ob eine Alarmflut vorliegt.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "line_id": {
+          "type": "string",
+          "description": "Linien-ID, z. B. 'L1'."
+        },
+        "minutes": {
+          "type": "integer",
+          "description": "Zeitfenster in Minuten vor der Replay-Uhr (Standard: 30).",
+          "default": 30
+        }
+      },
+      "required": ["line_id"]
+    },
+    "max_rows": 100,
+    "example_call": {
+      "line_id": "L1",
+      "minutes": 30
+    },
+    "example_result": [
+      {
+        "ts": "2026-06-15 09:55:03",
+        "equipment_id": "L1-S1",
+        "alarm_code": "E-4711",
+        "priority": 2,
+        "sequence_id": 42
+      }
+    ]
+  },
+  {
+    "name": "get_alarm_history",
+    "description": "Historische Störungsereignisse (Gold), die mit diesem Alarmcode begannen – inkl. Dauer, Ursache und wirksamer Maßnahme. Nutze dies, wenn du verstehen willst, wie oft und wie lange dieser Alarm in der Vergangenheit zur Störung geführt hat.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "alarm_code": {
+          "type": "string",
+          "description": "ISA-18.2-Alarmcode, z. B. 'E-4711'."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximale Trefferzahl (Standard: 20, Obergrenze: 20).",
+          "default": 20
+        }
+      },
+      "required": ["alarm_code"]
+    },
+    "max_rows": 20,
+    "example_call": {
+      "alarm_code": "E-4711",
+      "limit": 10
+    },
+    "example_result": [
+      {
+        "event_id": 87,
+        "start_ts": "2026-06-14 14:22:00",
+        "duration_min": 18.5,
+        "packml_state": "Held",
+        "reason_code": "STO-FOLIE",
+        "alarm_count": 12,
+        "alarm_flood": 1,
+        "resolution_action": "Folie neu einfaedeln, Rolle pruefen"
+      }
+    ]
+  },
+  {
+    "name": "get_production_plan",
+    "description": "Offene Aufträge der Linie mit Soll/Ist-Menge, Termin und Priorität. Nutze dies, wenn du wissen willst, welche Aufträge noch laufen und welche Termine durch den Stillstand gefährdet sein könnten.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "line_id": {
+          "type": "string",
+          "description": "Linien-ID, z. B. 'L1'."
+        }
+      },
+      "required": ["line_id"]
+    },
+    "max_rows": 200,
+    "example_call": {
+      "line_id": "L1"
+    },
+    "example_result": [
+      {
+        "order_id": "A-2207",
+        "product": "Karton 12er",
+        "planned_qty": 4800,
+        "produced_qty": 3120,
+        "due_ts": "2026-06-15 10:40:00",
+        "priority": 1
+      }
+    ]
+  },
+  {
+    "name": "estimate_impact",
+    "description": "Schätzt Produktionsverlust (Stück), Kosten (EUR) und Termingefährdung je Auftrag für eine angenommene Stillstandsdauer. Deterministisch, regelbasiert – kein ML. Nutze dies, wenn du dem Produktionsleiter zeigen willst, was der Stillstand kostet und welche Aufträge ihren Termin reißen.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "line_id": {
+          "type": "string",
+          "description": "Linien-ID, z. B. 'L1'."
+        },
+        "expected_downtime_min": {
+          "type": "number",
+          "description": "Erwartete Stillstandsdauer in Minuten (aus Hypothese oder Erfahrungswert)."
+        }
+      },
+      "required": ["line_id", "expected_downtime_min"]
+    },
+    "max_rows": null,
+    "example_call": {
+      "line_id": "L1",
+      "expected_downtime_min": 20
+    },
+    "example_result": {
+      "expected_downtime_min": 20,
+      "lost_units": 1200,
+      "cost_eur": 4000.0,
+      "orders": [
+        {
+          "order_id": "A-2207",
+          "buffer_min": -5.3,
+          "at_risk": true
+        },
+        {
+          "order_id": "A-2208",
+          "buffer_min": 452.0,
+          "at_risk": false
+        }
+      ],
+      "orders_at_risk": ["A-2207"],
+      "method": "regelbasiert: Nennleistung × Dauer; Kostensatz je Minute aus Stammdaten; Puffer = Zeit bis Termin − Restproduktionszeit − Stillstand"
+    }
+  },
+  {
+    "name": "find_similar_incidents",
+    "description": "Case-Based Reasoning: ähnliche frühere Störungsereignisse anhand Alarmcodes und PackML-Zustand, mit Ursache, Maßnahme und Ergebnis. Nutze dies, wenn du Belege aus der Vergangenheit suchst, die deine Hypothese zur Ursache stützen oder widerlegen.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "alarm_codes": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Liste von Alarmcodes der aktuellen Störung, z. B. ['E-4711', 'E-4713']."
+        },
+        "packml_state": {
+          "type": "string",
+          "description": "PackML-Zustand der Linie, z. B. 'Held' oder 'Stopped'."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximale Trefferzahl (Standard: 5, Obergrenze: 5).",
+          "default": 5
+        }
+      },
+      "required": ["alarm_codes", "packml_state"]
+    },
+    "max_rows": 5,
+    "example_call": {
+      "alarm_codes": ["E-4711", "E-4713"],
+      "packml_state": "Held",
+      "limit": 3
+    },
+    "example_result": [
+      {
+        "event_id": 87,
+        "start_ts": "2026-06-14 14:22:00",
+        "duration_min": 18.5,
+        "first_alarm_code": "E-4711",
+        "reason_code": "STO-FOLIE",
+        "resolution_action": "Folie neu einfaedeln",
+        "root_cause": "Folienriss an Station 1",
+        "action_taken": "Folienrolle gewechselt und Wickler neu eingestellt",
+        "outcome": "Wiederanlauf nach 19 min",
+        "doc_ref": "FolienwicklerWartung.md"
+      }
+    ]
+  }
+]
