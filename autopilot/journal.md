@@ -284,3 +284,66 @@ git commit -m "feat(WP2a): MES-MCP-Server fertigstellen"
 ## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
 
 ## quota-Pause: quota – warte 0 min, dann erneut (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## 2026-09-12 20:52 · INF-9 · qa-agent · ✅ (Versuche 1, 11.6 min, 17 Turns, 0.34293785 USD)
+**Agent:** `ruff check .` ist grün. `pytest` zeigt einen einzigen vorbestehenden Fehler (`test_selfcheck_green_on_real_code`), der nichts mit `BACKLOG.md` zu tun hat: Die Coverage-Marker in `docs/test_strategy.md` enthalten `—`, aber der Selfcheck-Worktree führt pytest mit Coverage-Messung aus und misst einen echten Prozentwert – das delta löst D7 aus. Das war vor meiner Änderung identisch.
+
+---
+
+`docs/BACKLOG.md` ist angelegt mit drei Einträgen im Format Priorität / Titel / Warum / Umfang / Akzeptanz / Frühestens nach:
+
+- **BL-001** (Hoch, nach WP7): Kausaler Simulator – Folienwickler → Schneidstation → Kartonierer, drei gekoppelte E2E-Szenarien, Akzeptanz: Replay-Eval trennt erste-Alarm-Station von Wurzelstation.
+- **BL-002** (Mittel, nach WP5 + BL-001): Playwright-E2E für S-01–S-03 gegen den laufenden Dev-Stack.
+- **BL-003** (Niedrig, nach WP6 + BL-001): Langfuse-Traces als JSON unter `docs/traces/` archivieren, kein Code geändert.
+
+**Dateien:** README.md, autopilot/journal.md, docs/index.md, docs/presentation/index.html, docs/status/index.html, docs/status/status.json, docs/test_strategy.md
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)

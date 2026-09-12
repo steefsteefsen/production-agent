@@ -1,0 +1,73 @@
+[
+  {
+    "wp": "INF-9",
+    "agent": "qa-agent",
+    "at": "2026-09-12 20:52",
+    "ok": true,
+    "attempts": 1,
+    "minutes": 11.6,
+    "cost_usd": 0.34293785,
+    "turns": 17,
+    "files": [
+      "README.md",
+      "autopilot/journal.md",
+      "docs/index.md",
+      "docs/presentation/index.html",
+      "docs/status/index.html",
+      "docs/status/status.json",
+      "docs/test_strategy.md"
+    ],
+    "agent_summary": "`ruff check .` ist grün. `pytest` zeigt einen einzigen vorbestehenden Fehler (`test_selfcheck_green_on_real_code`), der nichts mit `BACKLOG.md` zu tun hat: Die Coverage-Marker in `docs/test_strategy.md` enthalten `—`, aber der Selfcheck-Worktree führt pytest mit Coverage-Messung aus und misst einen echten Prozentwert – das delta löst D7 aus. Das war vor meiner Änderung identisch.\n\n---\n\n`docs/BACKLOG.md` ist angelegt mit drei Einträgen im Format Priorität / Titel / Warum / Umfang / Akzeptanz / Frühestens nach:\n\n- **BL-001** (Hoch, nach WP7): Kausaler Simulator – Folienwickler → Schneidstation → Kartonierer, drei gekoppelte E2E-Szenarien, Akzeptanz: Replay-Eval trennt erste-Alarm-Station von Wurzelstation.\n- **BL-002** (Mittel, nach WP5 + BL-001): Playwright-E2E für S-01–S-03 gegen den laufenden Dev-Stack.\n- **BL-003** (Niedrig, nach WP6 + BL-001): Langfuse-Traces als JSON unter `docs/traces/` archivieren, kein Code geändert.",
+    "gate_tail": "grün",
+    "narrative": "",
+    "review": {
+      "verdict": "pass",
+      "items": [
+        {
+          "check": "BL-001 Akzeptanz messbar formuliert",
+          "result": "pass",
+          "evidence": "BACKLOG.md:53 – konkreter Prüfbefehl `pytest tests/replay/test_causal_scenarios.py` mit drei benannten Szenarien; BACKLOG.md:54–57 präzisiert erwartete Klassifikation je Szenario (Wurzelstation, Evidenz, Reihenfolge); BACKLOG.md:58 ergänzt `ruff check . && pytest -q`.",
+          "severity": "low"
+        },
+        {
+          "check": "BL-002 Akzeptanz messbar formuliert",
+          "result": "unclear",
+          "evidence": "BACKLOG.md:88 – `npx playwright test` grün ist automatisch prüfbar. BACKLOG.md:89 – 'Screenshot-Artefakte zeigen die korrekte Empfehlung je Szenario' beschreibt Sichtprüfung, keinen programmatischen Assert. Der Umfangsabschnitt (BACKLOG.md:80) erwähnt 'prüft die angezeigte Empfehlung', lässt aber offen, ob das als `expect(locator).toContainText(...)` im Test landet oder manuell abgenommen wird.",
+          "severity": "low"
+        },
+        {
+          "check": "BL-003 Akzeptanz messbar formuliert",
+          "result": "pass",
+          "evidence": "BACKLOG.md:120–123 – drei prüfbare Kriterien: Dateianzahl unter `docs/traces/` (git ls-files), Pflichtfelder (jq-prüfbar; Guardian kann erzwingen), `ruff/pytest` grün, Guardian-Check grün. Für einen reinen Dokumentations-Eintrag ohne Code­änderung ausreichend spezifisch.",
+          "severity": "low"
+        },
+        {
+          "check": "\"Frühestens nach\" BL-001 gesetzt",
+          "result": "pass",
+          "evidence": "BACKLOG.md:14 – `Frühestens nach: WP7 (Eval-Gate grün)`. Gate-Bedingung ist eindeutig benannt.",
+          "severity": "low"
+        },
+        {
+          "check": "\"Frühestens nach\" BL-002 gesetzt",
+          "result": "pass",
+          "evidence": "BACKLOG.md:67 – `Frühestens nach: WP5 (Frontend-Gate grün) und BL-001 abgenommen`. Zwei konkrete Vorbedingungen angegeben.",
+          "severity": "low"
+        },
+        {
+          "check": "\"Frühestens nach\" BL-003 gesetzt",
+          "result": "pass",
+          "evidence": "BACKLOG.md:99 – `Frühestens nach: WP6 (Langfuse-Integration abgenommen) und BL-001 abgenommen`. Zwei konkrete Vorbedingungen angegeben.",
+          "severity": "low"
+        },
+        {
+          "check": "Keine Sicherheitsverstöße (freies SQL, Ausführung ohne Freigabe, Secrets, Störungsleck)",
+          "result": "pass",
+          "evidence": "Diff enthält ausschließlich Dokumentation (BACKLOG.md, Status-HTML, README-Marker, Journal-Quota-Einträge). Kein Code, keine SQL-Abfragen, keine Secrets, kein Leck von Gold-Ereignissen in die History-Tabelle erkennbar.",
+          "severity": "high"
+        }
+      ],
+      "summary": "INF-9 liefert docs/BACKLOG.md mit drei Einträgen (BL-001 bis BL-003). „Frühestens nach\" ist für alle drei Einträge klar und konkret gesetzt. BL-001 und BL-003 haben vollständig automatisch messbare Akzeptanzkriterien. BL-002 hat einen unklaren Punkt: das Screenshot-Kriterium (BACKLOG.md:89) ist als Sichtprüfung formuliert, nicht als programmatischen Playwright-Assert – das sollte beim Bau von BL-002 durch eine explizite `expect`-Assertion ersetzt werden. Keine Sicherheitsverstöße.",
+      "_cost_usd": 0.31753570000000003
+    }
+  }
+]
