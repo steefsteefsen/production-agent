@@ -27,7 +27,7 @@ def main(wp: str) -> int:
         print(f"gate_no_skip: {f.relative_to(ROOT)} fehlt")
         return 1
     r = subprocess.run(
-        [sys.executable, "-m", "pytest", str(f), "-q", "-rs", "-o", "addopts="],
+        [sys.executable, "-m", "pytest", str(f), "-q", "-rs", "--no-cov", "-o", "addopts="],
         cwd=ROOT,
         capture_output=True,
         text=True,

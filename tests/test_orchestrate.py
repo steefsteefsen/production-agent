@@ -160,6 +160,25 @@ def test_cycle_is_k6_error_falsification():
     assert any("K6" in e and "zyklus" in e.lower() for e in orchestrate.check_plan(set(), bad_plan))
 
 
+def _gate_no_cov_ok(gate: str) -> bool:
+    """Ein Gate ist ok, wenn es kein pytest ruft oder jeder pytest-Aufruf --no-cov trägt."""
+    return "pytest" not in gate or "--no-cov" in gate
+
+
+def test_all_pytest_gates_use_no_cov():
+    import yaml
+
+    tasks = yaml.safe_load((ROOT / "autopilot" / "tasks.yaml").read_text(encoding="utf-8"))
+    for t in tasks:
+        assert _gate_no_cov_ok(t["gate"]), f"{t['id']}: pytest-Gate ohne --no-cov"
+
+
+def test_gate_without_no_cov_is_red_falsification():
+    assert _gate_no_cov_ok("pytest tests/test_x.py -q") is False
+    assert _gate_no_cov_ok("pytest tests/test_x.py -q --no-cov") is True
+    assert _gate_no_cov_ok("make lint test") is True
+
+
 def test_orchestrate_run_flags_are_covered_by_run_help():
     """Jedes run.py-Flag, das orchestrate.py --dry-run ausgibt, muss run.py --help kennen."""
     import re

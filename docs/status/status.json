@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-12T11:20:23",
-  "commit": "f086ccdd8c772418fe2aeb147d1a1558babcd96a",
+  "generated_at": "2026-09-12T12:04:54",
+  "commit": "a01287c3a542509230be076b1e9630f76b6e9ef6",
   "branch": "main",
   "packages": [
     {
@@ -147,7 +147,7 @@
       "agent": "data-agent",
       "deps": [],
       "percent": 0,
-      "state": "offen",
+      "state": "läuft",
       "steps": [
         {
           "name": "Gate grün",
@@ -175,9 +175,9 @@
           "at": null
         }
       ],
-      "attempts": 0,
-      "cost_usd": 0,
-      "last_at": null,
+      "attempts": 1,
+      "cost_usd": 1.87,
+      "last_at": "2026-09-12 11:43",
       "commits": []
     },
     {
@@ -668,13 +668,19 @@
   ],
   "totals": {
     "percent": 12,
-    "hours_agent": 0.0,
-    "cost_usd": 0,
-    "tests": 105,
-    "coverage_total": 92,
+    "hours_agent": 0.34,
+    "cost_usd": 1.87,
+    "tests": 128,
+    "coverage_total": 94,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-12T11:20:10+02:00",
+      "kind": "commit",
+      "ref": "a01287c",
+      "text": "feat(autopilot): Ops-Cockpit als Paket INF-E in plan/tasks"
+    },
     {
       "at": "2026-09-12T11:15:46+02:00",
       "kind": "commit",
@@ -698,6 +704,12 @@
       "kind": "commit",
       "ref": "c7292cb",
       "text": "adr(WP0): Entscheidungen festgeschrieben, Simulator auf UP1/14 Codes"
+    },
+    {
+      "at": "2026-09-12 11:43",
+      "kind": "journal",
+      "ref": "WP1",
+      "text": "WP1 offen (1 Versuche)"
     },
     {
       "at": "2026-09-11T15:03:30+02:00",
@@ -726,7 +738,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 32,
+      "tests": 52,
       "coverage": 100
     },
     {
@@ -738,8 +750,8 @@
     {
       "path": "src/production_agent/data/",
       "files": 2,
-      "tests": 9,
-      "coverage": 90
+      "tests": 29,
+      "coverage": 95
     },
     {
       "path": "src/production_agent/graph/",

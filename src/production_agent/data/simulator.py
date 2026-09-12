@@ -489,6 +489,67 @@ def export_bronze_csv(events: list[Event]) -> str:
     return buf.getvalue()
 
 
+def _flush_sequence(
+    entries: list[tuple[datetime, str, int]],
+    machine: str,
+    seq_id: int,
+    flood_n: int,
+    flood_win: int,
+    out: list[dict[str, Any]],
+) -> None:
+    """Schreibt eine abgeschlossene Alarmsequenz als Silver-Zeilen in out."""
+    flood = int(_is_flood([(ts, "", 0, 0) for ts, _, _ in entries], flood_n, flood_win))
+    for ts, alarm, row_num in entries:
+        out.append(
+            {
+                "machine": machine,
+                "ts": ts.replace(microsecond=0).isoformat(sep=" "),
+                "alarm_code": alarm,
+                "sequence_id": seq_id,
+                "alarm_flood": flood,
+                "source_row_id": f"csv:{machine}:{row_num}",
+            }
+        )
+
+
+def build_from_bronze(
+    csv_path: str | Path,
+    gap_min: float = 5.0,
+    flood_n: int = 10,
+    flood_win: int = 10,
+) -> list[dict[str, Any]]:
+    """Liest Bronze-CSV (machine,timestamp,alarm) und rekonstruiert Silver-Zeilen.
+
+    Sequenzierung: aufeinanderfolgende Alarme derselben Maschine mit Lücke <= gap_min
+    bilden eine Sequenz (sequence_id). Alarmflut-Flag: >= flood_n Alarme in flood_win min.
+    source_row_id: 'csv:{machine}:{zeilennummer}' sichert Bronze→Silber-Rückverfolgbarkeit.
+    """
+    rows_by_machine: dict[str, list[tuple[datetime, str, int]]] = {}
+    with Path(csv_path).open(encoding="utf-8", newline="") as f:
+        for row_num, row in enumerate(csv.DictReader(f), start=2):
+            ts = datetime.fromisoformat(row["timestamp"])
+            rows_by_machine.setdefault(row["machine"], []).append((ts, row["alarm"], row_num))
+
+    silver: list[dict[str, Any]] = []
+    seq_id = 0
+    gap = timedelta(minutes=gap_min)
+
+    for machine, entries in rows_by_machine.items():
+        entries.sort()
+        current: list[tuple[datetime, str, int]] = []
+        for ts, alarm, row_num in entries:
+            if current and ts - current[-1][0] > gap:
+                seq_id += 1
+                _flush_sequence(current, machine, seq_id, flood_n, flood_win, silver)
+                current = []
+            current.append((ts, alarm, row_num))
+        if current:
+            seq_id += 1
+            _flush_sequence(current, machine, seq_id, flood_n, flood_win, silver)
+
+    return silver
+
+
 if __name__ == "__main__":
     dec = load_decisions()
     evs = generate(dec)

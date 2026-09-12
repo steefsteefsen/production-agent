@@ -24,6 +24,11 @@ def test_required_tools_allowed():
         assert needed in joined, needed
 
 
+def test_python_c_patterns_allowed():
+    assert "Bash(python -c:*)" in PERM["allow"]
+    assert "Bash(python3 -c:*)" in PERM["allow"]
+
+
 def test_git_push_in_allow_is_red_falsification():
     assert push_allowed({"allow": ["Bash(git push:*)"], "deny": []}) is True
 

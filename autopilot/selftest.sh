@@ -26,7 +26,7 @@ chk "settings.env vorhanden und getrackt" '[ -f settings.env ] && ! git check-ig
 echo "== Code"
 chk "ruff check"                         'ruff check .'
 chk "bandit"                             'python -m bandit -q -c pyproject.toml -r src'
-chk "pytest (alle, ohne e2e)"            'python -m pytest -q -p no:warnings -x'
+chk "pytest (alle, ohne e2e)"            'python -m pytest -q -p no:warnings -x --no-cov'
 N=$(python -m pytest -q -p no:warnings 2>/dev/null | grep -oE "[0-9]+ passed" | tail -1 ); echo "      Tests: ${N:-?}"
 
 echo "== Daten"

@@ -6,7 +6,8 @@
   "permissions": {
     "allow": [
       "Read", "Edit", "Write", "Grep", "Glob",
-      "Bash(pytest:*)", "Bash(python:*)", "Bash(python3:*)", "Bash(python -m:*)", "Bash(ruff:*)",
+      "Bash(pytest:*)", "Bash(python:*)", "Bash(python3:*)", "Bash(python -m:*)",
+      "Bash(python -c:*)", "Bash(python3 -c:*)", "Bash(ruff:*)",
       "Bash(bandit:*)", "Bash(pip install:*)", "Bash(pip-audit:*)", "Bash(npm:*)", "Bash(npx:*)",
       "Bash(node:*)", "Bash(uvicorn:*)", "Bash(playwright:*)", "Bash(docker compose:*)",
       "Bash(git add:*)", "Bash(git commit:*)", "Bash(git status:*)", "Bash(git diff:*)",
