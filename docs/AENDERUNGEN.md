@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · feat(INF-E): Ops-Cockpit nach main
+**Was:** autopilot/ops/app.py – lokale FastAPI-Oberfläche (Port 8010, `make ops`) zum Beobachten/Steuern des Nachtlaufs; drei zur Laufzeit umschaltbare Felder in config/runtime.yaml + Audit, decisions.yaml bleibt read-only.
+**Warum (Problem oder Anlass):** Der Nachtlauf brauchte eine lokale Beobachtungs- und Eingriffsoberfläche ohne Antasten von decisions.yaml (Guardian S5).
+**Alternativen (verworfen, weil ...):** Direkte CLI-Aufrufe – kein Lanes-Überblick; eigenes React-Frontend – Build-Schritt für lokalen Einzelnutzer unnötig.
+**Auswirkung (Verträge, ADR, Tests):** autopilot/ops/app.py, docs/ops.md, Makefile-Ziel ops, tests/test_ops.py, tests/test_mes_coverage.py.
+**Bezug (WP, ADR):** INF-E
+
 ## 2026-09-13 · docs(INF-9): Backlog und offene Punkte nach main
 **Was:** docs/BACKLOG.md mit priorisierten offenen Punkten und Verweisen aus README/Statusseite.
 **Warum (Problem oder Anlass):** Offene Entscheidungen und Nice-to-haves waren nur verstreut im Journal dokumentiert.

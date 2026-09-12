@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T00:30:12",
-  "commit": "970ccc9c3095b1b3a118f5d16d6929133575c6d6",
+  "generated_at": "2026-09-13T00:38:04",
+  "commit": "7e2b175209e761cb417ab99fde1d09b0a19702b8",
   "branch": "main",
   "packages": [
     {
@@ -583,8 +583,8 @@
       "name": "INF-9",
       "agent": "qa-agent",
       "deps": [],
-      "percent": 70,
-      "state": "review_pass",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
@@ -598,12 +598,12 @@
         },
         {
           "name": "Commit",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12T22:58:02+02:00"
         },
         {
           "name": "Tag",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
@@ -615,7 +615,13 @@
       "attempts": 1,
       "cost_usd": 0.34,
       "last_at": "2026-09-12 20:52",
-      "commits": []
+      "commits": [
+        {
+          "sha": "b058d8b",
+          "title": "feat(INF-9): Builder-Ergebnis gesichert (Rettungs-Commit)",
+          "at": "2026-09-12T22:58:02+02:00"
+        }
+      ]
     },
     {
       "id": "WP-B",
@@ -667,18 +673,18 @@
       "name": "INF-E",
       "agent": "qa-agent",
       "deps": [],
-      "percent": 0,
-      "state": "offen",
+      "percent": 70,
+      "state": "review_pass",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 21:44"
         },
         {
           "name": "Review",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 21:44"
         },
         {
           "name": "Commit",
@@ -696,21 +702,27 @@
           "at": null
         }
       ],
-      "attempts": 0,
-      "cost_usd": 0,
-      "last_at": null,
+      "attempts": 1,
+      "cost_usd": 1.43,
+      "last_at": "2026-09-12 21:44",
       "commits": []
     }
   ],
   "totals": {
-    "percent": 54,
-    "hours_agent": 3.53,
-    "cost_usd": 9.95,
-    "tests": 247,
+    "percent": 61,
+    "hours_agent": 4.38,
+    "cost_usd": 11.39,
+    "tests": 277,
     "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T00:29:57+02:00",
+      "kind": "commit",
+      "ref": "7e2b175",
+      "text": "Merge wp/INF-9: Backlog und offene Punkte (--no-ff)"
+    },
     {
       "at": "2026-09-13T00:22:59+02:00",
       "kind": "commit",
@@ -740,6 +752,12 @@
       "kind": "commit",
       "ref": "462a89b",
       "text": "fix(infra): Commit-Prüfung, Post-Merge-Guardian, WP3-Platzhalter, K10"
+    },
+    {
+      "at": "2026-09-12T22:58:02+02:00",
+      "kind": "commit",
+      "ref": "b058d8b",
+      "text": "feat(INF-9): Builder-Ergebnis gesichert (Rettungs-Commit)"
     },
     {
       "at": "2026-09-12T22:58:02+02:00",
@@ -830,6 +848,18 @@
       "kind": "commit",
       "ref": "c7292cb",
       "text": "adr(WP0): Entscheidungen festgeschrieben, Simulator auf UP1/14 Codes"
+    },
+    {
+      "at": "2026-09-12 21:44",
+      "kind": "journal",
+      "ref": "INF-E",
+      "text": "INF-E ok (2 Versuche)"
+    },
+    {
+      "at": "2026-09-12 21:44",
+      "kind": "review",
+      "ref": "INF-E",
+      "text": "Review pass"
     },
     {
       "at": "2026-09-12 20:52",
@@ -942,6 +972,12 @@
     {
       "at": "",
       "kind": "tag",
+      "ref": "wp/INF-9",
+      "text": "Tag wp/INF-9"
+    },
+    {
+      "at": "",
+      "kind": "tag",
       "ref": "wp/WP-B",
       "text": "Tag wp/WP-B"
     },
@@ -966,19 +1002,19 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 126,
+      "tests": 144,
       "coverage": 100
     },
     {
       "path": "src/production_agent/api/",
       "files": 2,
-      "tests": 18,
+      "tests": 36,
       "coverage": 93
     },
     {
       "path": "src/production_agent/data/",
       "files": 4,
-      "tests": 77,
+      "tests": 95,
       "coverage": 83
     },
     {

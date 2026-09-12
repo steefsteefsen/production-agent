@@ -308,6 +308,67 @@ git commit -m "feat(WP2a): MES-MCP-Server fertigstellen"
 ## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
 
 ## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
 ## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
 
 ## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
@@ -621,3 +682,55 @@ In `.github/workflows/ci.yml` (Zeilen 93–100):
 `test_ui.py` bleibt unverändert; der Guard war immer korrekt, nur die Umgebungsvariable wurde falsch belegt.
 
 **Dateien:** .gitlab-ci.yml, Makefile, README.md, autopilot/journal.md, docs/presentation/index.html, docs/status/index.html, docs/status/status.json, docs/test_strategy.md, pyproject.toml, src/production_agent/data/replay.py, tests/test_replay.py
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## 2026-09-12 21:44 · INF-E · qa-agent · ✅ (Versuche 2, 50.7 min, 58 Turns, 1.4312508499999996 USD)
+**Agent:** 186 Tests bestanden, 0 Fehler. `ruff check . && pytest -q` ist grün.
+
+---
+
+**Was gebaut:** Neue Testdatei `tests/test_mes_coverage.py` mit 18 Tests für die drei vorher ungecoverten Module (`data/messages.py`, `data/pipeline_view.py`, `api/mes_router.py`) – Coverage von 71.9% auf 92.2% angehoben, sodass der Guardian-K4-Check (≥80%) jetzt besteht.
+
+**Was getestet:** `ruff check .` – alle Prüfungen bestanden; `pytest` – 186 passed, 14 skipped (e2e-Marker), inkl. `test_selfcheck_green_on_real_code` und alle 12 `test_ops.py`-Tests.
+
+**Was offen:** Die `autopilot/ops/`-Dateien, `tests/test_ops.py`, `docs/ops.md` und `tests/test_mes_coverage.py` sind noch untracked und müssen in einem separaten Commit (WP INF-E) eingecheckt werden.
+
+**Dateien:** Makefile, README.md, autopilot/journal.md, docs/AENDERUNGEN.md, docs/index.md, docs/presentation/index.html, docs/status/index.html, docs/status/status.json, docs/test_strategy.md

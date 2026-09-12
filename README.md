@@ -12,11 +12,24 @@ python -m venv .venv && source .venv/bin/activate
 make install                            # deps + pre-commit
 cp .env.example .env                    # API-Key eintragen
 python -m production_agent.data.simulator   # 360 Störungsereignisse → data/gold/mes.sqlite
-make test                               # Testsuite (<!-- auto:tests -->247<!-- /auto:tests --> Tests), läuft ohne API-Key
+make test                               # Testsuite (<!-- auto:tests -->277<!-- /auto:tests --> Tests), läuft ohne API-Key
 python autopilot/run.py --dry-run       # Prompts der Arbeitspakete ansehen, dann ohne --dry-run laufen lassen
 ```
 
 Konfiguration steht in `settings.env` (committet), Geheimnisse in `.env` (gitignored). `.env` enthält nur Schlüssel, die auf KEY/SECRET/TOKEN/PASSWORD enden.
+
+## Ops-Cockpit
+
+```bash
+make ops   # startet http://localhost:8010
+```
+
+Lokale Steuerungsoberfläche für Stefan (unabhängig vom Produktionsleiter-Frontend).
+Vier Tabs: **Ablauf** (WP-Kacheln in Zustandsfarbe, Live-Log, Journal), **Stand** (Kennzahlen, Aktionen),
+**Konfiguration** (decisions.yaml read-only, editierbare Felder schreiben `config/runtime.yaml` + Audit),
+**Präsentation** (bettet `docs/presentation/index.html` ein).
+Nur 127.0.0.1; keine Shell-Freitexteingaben; jede Aktion in `config/ops_audit.jsonl` protokolliert.
+Dokumentation: [docs/ops.md](docs/ops.md).
 
 ## Die Entscheidungsbasis (ADR-0002)
 Ein Simulator erzeugt 90 Tage Historie inklusive Auflösung und schreibt sie durch Bronze → Silber → Gold. „Jetzt" ist eine Replay-Uhr
@@ -49,9 +62,9 @@ Die Arbeitspakete WP0–WP7 stehen in `autopilot/tasks.yaml`; die Entscheidungsg
 
 ## Stand
 <!-- auto:stand -->
-- fertig: 8 von 16 Paketen
-- offen: WP1, WP3, WP4, WP5, WP6, WP7, INF-9, INF-E
-- Fortschritt: 54 % — siehe [Statusseite](docs/status/index.html)
+- fertig: 9 von 16 Paketen
+- offen: WP1, WP3, WP4, WP5, WP6, WP7, INF-E
+- Fortschritt: 61 % — siehe [Statusseite](docs/status/index.html)
 <!-- /auto:stand -->
 
 Guardian-Regeln (automatisch aus dem Guardian-Docstring):
