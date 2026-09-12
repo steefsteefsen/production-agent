@@ -41,3 +41,20 @@ Zahlen, Regelbereiche, Stände und Listen in der Doku niemals tippen – nur üb
 die `autopilot/status.py --stage` bei jedem Commit aus Fakten füllt (Hook `status-refresh`, läuft zuerst). Wer eine neue
 veränderliche Angabe braucht, ergänzt einen Key in `status.py` und einen Marker, nie eine Zahl. Subagents dürfen Marker-Inhalte
 nicht editieren. Der Guardian erzwingt das: D7 (Marker aktuell), D8 (keine getippten Fakten außerhalb Markern), D9 (Stand-Abschnitt).
+
+## Änderungen begründen
+Jede Änderung an `src/`, `autopilot/`, `docs/adr/`, `docs/contracts/` oder `decisions.yaml` erfordert einen Eintrag in
+`docs/AENDERUNGEN.md` (neueste oben). Format exakt:
+
+```
+## YYYY-MM-DD · <typ>(<scope>): <Titel>
+**Was:** <was wurde geändert>
+**Warum (Problem oder Anlass):** <Problem oder Anlass>
+**Alternativen (verworfen, weil ...):** <verworfene Optionen>
+**Auswirkung (Verträge, ADR, Tests):** <betroffene Verträge, ADRs, Tests>
+**Bezug (WP, ADR):** <WP-ID oder ADR-Nummer>
+```
+
+`autopilot/journal.py changelog_entry(wp_id, e)` schreibt den Eintrag automatisch vor dem Commit (Was aus erster Zeile der
+Abschlussmeldung, Warum aus der Zeile `Warum: ...`). Der Guardian prüft D4 (Felder, Datum, kein Platzhalter) und D5
+(Titel = erste Commit-Zeile, geprüft in `commit_check.py`).

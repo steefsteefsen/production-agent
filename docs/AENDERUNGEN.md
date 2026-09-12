@@ -3,6 +3,20 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · fix(INF-3): Integration von WP2b/WP-B/INF-3 nach main
+**Was:** Änderungsprotokoll-Pflicht (D4/D5, changelog_entry) mit den bisherigen Merges vereinigt; journal.commit behält Rückgabe-Prüfung und Rettungs-Commit, ruft zusätzlich changelog_entry.
+**Warum (Problem oder Anlass):** Nachtlauf-Rückstand: die gebauten Stränge mussten nach main, dabei kollidierte die neue Begründungspflicht mit der Commit-Prüfung.
+**Alternativen (verworfen, weil ...):** INF-3 nur eine Seite übernehmen – verwirft entweder die Rettungs-Commit- oder die Changelog-Logik, beide sind nötig.
+**Auswirkung (Verträge, ADR, Tests):** autopilot/journal.py, guardian D4/D5/D10, commit_check.py, tests/test_changelog.py.
+**Bezug (WP, ADR):** INF-3
+
+## 2026-09-12 · feat(INF-3): Änderungsprotokoll mit Begründungspflicht eingeführt
+**Was:** Änderungsprotokoll mit Begründungspflicht eingeführt (Phase-2 Block 3)
+**Warum (Problem oder Anlass):** Bisher fehlte eine strukturierte Begründungspflicht für Änderungen; Entscheidungen waren nicht maschinell prüfbar nachvollziehbar.
+**Alternativen (verworfen, weil ...):** Freitext-Kommentare in Commits – verworfen, weil nicht maschinell prüfbar; keine Pflicht – verworfen, weil Entscheidungen undokumentiert bleiben.
+**Auswirkung (Verträge, ADR, Tests):** Guardian D4/D5 verschärft (D5 ehemals README-Link → D10); commit_check.py um D5-Check erweitert; journal.py changelog_entry() vor commit(); tests/test_changelog.py neu; alle agent/*.md enden mit Warum-Pflicht.
+**Bezug (WP, ADR):** INF-3
+
 ## Abo-Betrieb für Claude Code (Max 5×)
 **Was:** autopilot/cc.py bündelt den Abo-Betrieb: claude-Subprozesse ohne ANTHROPIC_API_KEY (nur mit
 --api-billing mit Key und Budget), Modelle aus settings.env (CC_MODEL_BUILDER/REVIEWER/DECIDER =

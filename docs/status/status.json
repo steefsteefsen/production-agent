@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-12T23:51:53",
-  "commit": "33b0327f6f67f82e4ff0cd31ed5e3e7d3aa14cb8",
+  "generated_at": "2026-09-13T00:03:43",
+  "commit": "6026adc68ce603bf0b5e4717c61188d403f84299",
   "branch": "main",
   "packages": [
     {
@@ -493,18 +493,18 @@
       "name": "INF-3",
       "agent": "qa-agent",
       "deps": [],
-      "percent": 0,
-      "state": "offen",
+      "percent": 70,
+      "state": "review_pass",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 20:02"
         },
         {
           "name": "Review",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 20:02"
         },
         {
           "name": "Commit",
@@ -522,9 +522,9 @@
           "at": null
         }
       ],
-      "attempts": 0,
-      "cost_usd": 0,
-      "last_at": null,
+      "attempts": 1,
+      "cost_usd": 2.38,
+      "last_at": "2026-09-12 20:02",
       "commits": []
     },
     {
@@ -610,8 +610,8 @@
       "name": "WP-B",
       "agent": "ui-agent",
       "deps": [],
-      "percent": 70,
-      "state": "review_pass",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
@@ -625,12 +625,12 @@
         },
         {
           "name": "Commit",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12T22:58:01+02:00"
         },
         {
           "name": "Tag",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
@@ -642,7 +642,13 @@
       "attempts": 1,
       "cost_usd": 0.19,
       "last_at": "2026-09-12 17:14",
-      "commits": []
+      "commits": [
+        {
+          "sha": "d1f84fd",
+          "title": "feat(WP-B): Builder-Ergebnis gesichert (Rettungs-Commit)",
+          "at": "2026-09-12T22:58:01+02:00"
+        }
+      ]
     },
     {
       "id": "INF-E",
@@ -685,14 +691,20 @@
     }
   ],
   "totals": {
-    "percent": 36,
-    "hours_agent": 2.34,
-    "cost_usd": 7.03,
-    "tests": 229,
+    "percent": 42,
+    "hours_agent": 2.78,
+    "cost_usd": 9.41,
+    "tests": 242,
     "coverage_total": 86,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-12T23:51:37+02:00",
+      "kind": "commit",
+      "ref": "6026adc",
+      "text": "Merge wp/WP-B: React-Cockpit, MES-Alarmstrom und Medallion-Ansicht (--no-ff)"
+    },
     {
       "at": "2026-09-12T23:43:38+02:00",
       "kind": "commit",
@@ -704,6 +716,12 @@
       "kind": "commit",
       "ref": "462a89b",
       "text": "fix(infra): Commit-Prüfung, Post-Merge-Guardian, WP3-Platzhalter, K10"
+    },
+    {
+      "at": "2026-09-12T22:58:01+02:00",
+      "kind": "commit",
+      "ref": "d1f84fd",
+      "text": "feat(WP-B): Builder-Ergebnis gesichert (Rettungs-Commit)"
     },
     {
       "at": "2026-09-12T22:58:01+02:00",
@@ -778,6 +796,18 @@
       "text": "adr(WP0): Entscheidungen festgeschrieben, Simulator auf UP1/14 Codes"
     },
     {
+      "at": "2026-09-12 20:02",
+      "kind": "journal",
+      "ref": "INF-3",
+      "text": "INF-3 ok (1 Versuche)"
+    },
+    {
+      "at": "2026-09-12 20:02",
+      "kind": "review",
+      "ref": "INF-3",
+      "text": "Review pass"
+    },
+    {
       "at": "2026-09-12 19:27",
       "kind": "journal",
       "ref": "WP2b",
@@ -840,6 +870,12 @@
     {
       "at": "",
       "kind": "tag",
+      "ref": "wp/WP-B",
+      "text": "Tag wp/WP-B"
+    },
+    {
+      "at": "",
+      "kind": "tag",
       "ref": "wp/WP2a",
       "text": "Tag wp/WP2a"
     },
@@ -858,7 +894,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 111,
+      "tests": 124,
       "coverage": 100
     },
     {

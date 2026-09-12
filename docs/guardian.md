@@ -32,8 +32,8 @@ Regeln: S1–S9, K1–K10, D1–D9.
 - **D1**: jedes src-Modul ist in README oder docs/ namentlich erwaehnt
 - **D2**: jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
 - **D3**: src geaendert -> auch docs/, README oder tests/ geaendert
-- **D4**: docs/AENDERUNGEN.md vorhanden und nicht leer
-- **D5**: README.md verlinkt docs/status/index.html
+- **D4**: Aenderungen in src/autopilot/adr/contracts/decisions: AENDERUNGEN.md gestaged, Datum heute, alle fuenf Felder, kein Platzhalter
+- **D5**: Titel oberster AENDERUNGEN.md-Eintrag gleich erster Commit-Zeile (Pruefung commit_check.py)
 - **D6**: docs/status/status.json gestaged, frisch (<10 min), commit leer oder == HEAD
 - **D7**: jeder auto-Marker in getrackten *.md hat den von status.py berechneten Wert
 - **D8**: ausserhalb Markern keine getippten Zahlen/Regelbereiche/Coverage in README.md und docs/*.md
