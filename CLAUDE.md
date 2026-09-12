@@ -28,7 +28,7 @@ Langfuse self-hosted. Datenschicht Bronze→Silber→Gold in SQLite; **Gold = ei
 - Platzhalter `{{...}}` werden von autopilot/run.py aus decisions.yaml gefüllt. Fehlt ein Wert: nachfragen, nicht raten.
 
 ## Commits
-`<typ>(<scope>): <Zusammenfassung ≤ 72 Zeichen, Deutsch, Präsens>` · Leerzeile · Body = Abschlussmeldung (gebaut / getestet / offen) · Leerzeile ·
+`<typ>(<scope>): <Zusammenfassung, Deutsch, Präsens>` (erste Zeile insgesamt ≤ 72 Zeichen inkl. Typ/Scope) · Leerzeile · Body = Abschlussmeldung (gebaut / getestet / offen) · Leerzeile ·
 `Gate: grün|rot | Review: pass|fail|escalate|human | Guardian: ok`. Typen feat fix test docs adr sec chore; Scope P, A, WP0–WP7 oder Modulname.
 Ein Commit je Arbeitspaket, danach Tag `wp/<id>`. Nur `main`. Der Hook `autopilot/commit_check.py` lehnt alles andere ab.
 

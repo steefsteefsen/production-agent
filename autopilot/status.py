@@ -372,10 +372,10 @@ def render_html(st: dict) -> str:
         f'<div class="tile"><b>{v}</b><span>{k}</span></div>'
         for k, v in [
             ("Tests", t["tests"]),
-            ("Coverage", f'{t["coverage_total"]}%' if t["coverage_total"] is not None else "—"),
+            ("Coverage", f"{t['coverage_total']}%" if t["coverage_total"] is not None else "—"),
             (
                 "Coverage security",
-                f'{t["coverage_security"]}%' if t["coverage_security"] is not None else "—",
+                f"{t['coverage_security']}%" if t["coverage_security"] is not None else "—",
             ),
             ("Agentenstunden", t["hours_agent"]),
             ("Kosten (USD)", t["cost_usd"]),
@@ -436,8 +436,8 @@ ul.timeline .at{{color:#5a6b72;font-size:12px}}
 <script id="data" type="application/json">{data}</script>
 <header>
   <h1>Production Agent – Projektstatus</h1>
-  <div class="meta">Stand {st['generated_at']} · Commit {st['commit'][:7] or '—'} · Branch {st['branch']}</div>
-  <div style="margin-top:10px;max-width:420px">{_bar(t['percent'], '#679881')}</div>
+  <div class="meta">Stand {st["generated_at"]} · Commit {st["commit"][:7] or "—"} · Branch {st["branch"]}</div>
+  <div style="margin-top:10px;max-width:420px">{_bar(t["percent"], "#679881")}</div>
 </header>
 <main>
   <div class="tiles">{tiles}</div>

@@ -3,6 +3,19 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## WP0 · Entscheidungen festgeschrieben (decisions.yaml, ADR-0001, BA-01)
+**Was:** decisions.yaml als geführte Fachentscheidung (14 reason_codes, sechs Kategorien, Kostensatz 200 €/min,
+Konfidenzschwelle 0,60, Rollen/Freigabe, Audit-Pseudonym, Recht/Normen). ADR-0001 (Ereignisdefinition) und
+Betriebsanweisung BA-01 (auch als RAG-Kopie in data/docs). Simulator auf decisions.yaml gezogen: alle 14 Codes im
+CATALOG, vorgelagerte Anlage UP1 (StateChange, Grund EXT-UP), Kurzstillstände (< kurzstillstand_min ohne Prio-1) in
+neue Tabelle short_stops statt Gold, Prio-1 immer Gold, Severity und zwei Prioritätsverfahren (isa18_matrix Standard,
+hersteller_severity). Schema: severity in alarms_silver, first_alarm_prio in downtime_events_gold, Tabelle short_stops
+(sql_guard-Allowlist ergänzt). Guardian D6 nur bei nicht-leerem Index.
+**Warum:** Der Agent entscheidet je Ereignis, nicht je Alarm; die Entscheidungsbasis muss aus Normen abgeleitet und
+eingefroren sein, bevor der erste Agentenlauf startet – geraten wäre wertlos.
+**Alternativen:** Feste Codeliste im Simulator – verworfen, weil sie von decisions.yaml abweichen kann. Kurzstillstände
+in Gold führen – verworfen, weil sie die Ähnlichkeitssuche verwässern (ADR-0001, Option C).
+
 ## Doku-Fakten nur aus Markern (Guardian D7 bis D9, K5)
 **Was:** README, `docs/guardian.md` und `docs/test_strategy.md` nutzen `<!-- auto:key -->`-Marker; `autopilot/status.py --stage`
 füllt sie bei jedem Commit (Hook `status-refresh`, läuft zuerst) aus Fakten (Testanzahl, Coverage, Guardian-Regeln,

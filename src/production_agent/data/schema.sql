@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS alarms_silver (
   equipment_id TEXT NOT NULL REFERENCES equipment(equipment_id),
   ts TEXT NOT NULL,
   alarm_code TEXT NOT NULL,
-  priority INTEGER NOT NULL,      -- ISA-18.2: 1 hoch ... 4 niedrig
+  priority INTEGER NOT NULL,      -- ISA-18.2: 1 hoch ... 4 niedrig (Verfahren aus decisions.yaml)
+  severity INTEGER NOT NULL,      -- OPC-UA-Severity 1..1000 (Herkunft der Priorität)
   sequence_id INTEGER,            -- Alarmsequenz nach Silber-Aggregation
   source_row_id TEXT              -- Herkunft (Bronze) für Nachvollziehbarkeit
 );
@@ -52,12 +53,21 @@ CREATE TABLE IF NOT EXISTS downtime_events_gold (
   packml_state TEXT NOT NULL,     -- Stopped | Held | Suspended | Aborted
   reason_code TEXT REFERENCES downtime_reason_codes(code),
   first_alarm_code TEXT,
+  first_alarm_prio INTEGER,       -- Dringlichkeit des Ereignisses (1 = Sicherheit/Anlagenschaden)
   alarm_count INTEGER,
   alarm_flood INTEGER DEFAULT 0,  -- ISA-18.2: >=10 Alarme in 10 min
   order_id TEXT,
   lost_units INTEGER,
   cost_eur REAL,
   resolution_action TEXT          -- was hat geholfen (Basis für find_similar_incidents)
+);
+
+-- Kurzstillstände (< kurzstillstand_min, ohne Prio-1): Leistungsverlust, kein Ereignis (ADR-0001)
+CREATE TABLE IF NOT EXISTS short_stops (
+  station TEXT NOT NULL,
+  start_ts TEXT NOT NULL,
+  end_ts TEXT NOT NULL,
+  duration_min REAL NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS production_orders (

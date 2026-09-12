@@ -17,3 +17,11 @@ def test_missing_scope_and_footer_fail_falsification():
         "feat(WP1): " + "x" * 80 + "\n\nGate: grün | Review: pass | Guardian: ok"
     )
     assert commit_check.check("feat(WP1): ok\n\nkein footer")
+
+
+def test_title_length_limit_is_72_falsification():
+    footer = "\n\nGate: grün | Review: pass | Guardian: ok"
+    too_long = "feat(WP1): " + "x" * (73 - len("feat(WP1): "))  # erste Zeile = 73 Zeichen
+    assert any("72" in e for e in commit_check.check(too_long + footer))
+    exact = "feat(WP1): " + "x" * (72 - len("feat(WP1): "))  # erste Zeile = 72 Zeichen
+    assert commit_check.check(exact + footer) == []

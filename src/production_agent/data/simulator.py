@@ -5,6 +5,12 @@ die durch Bronze → Silber → Gold läuft. „Jetzt" ist ein Cursor auf einem 
 alles davor ist Historie mit bekannter Lösung, das Ereignis selbst läuft „live" ohne Ende und ohne
 Auflösung. Historie und aktueller Fall stammen also aus derselben Verteilung – wie im echten MES –
 und die Lösung des aktuellen Falls ist für den Agenten unsichtbar (kein Leakage).
+
+Regeln aus decisions.yaml (ADR-0001): Beginn = PackML-Wechsel weg von Execute, Erstalarm im Fenster
+±erstalarm_fenster_s, Ereignisende = Execute ≥ 60 s stabil, Ereignisse < kurzstillstand_min ohne
+Prio-1-Alarm sind Kurzstillstände (Tabelle short_stops, nicht Gold), Prio-1 ist immer Gold.
+Alarmpriorität nach alarm_prioritaet.verfahren (isa18_matrix Standard oder hersteller_severity),
+Severity 1–1000 je Alarm mitgeführt. Vorgelagerte Anlage UP1 sendet StateChange (Grund EXT-UP).
 """
 
 from __future__ import annotations
@@ -22,7 +28,7 @@ import yaml
 
 PACKML_STOP_STATES = ["Stopped", "Held", "Suspended", "Aborted"]
 
-# Alarmcode-Katalog je Störungsgrund:
+# Alarmcode-Katalog je Störungsgrund (deckt alle 14 reason_codes aus decisions.yaml):
 # Erstalarm, typische Folgealarme, Ursache, Maßnahme, Dauer-Spanne, PackML-Zustand, Station
 CATALOG: dict[str, dict[str, Any]] = {
     "STO-FOLIE": {
@@ -61,6 +67,15 @@ CATALOG: dict[str, dict[str, Any]] = {
         "state": "Aborted",
         "station": 4,
     },
+    "STO-SIEGEL": {
+        "first": "E-7101",
+        "follow": ["E-7102", "E-4720"],
+        "cause": "Siegeltemperatur außerhalb Toleranz / Heizung",
+        "action": "Heizung prüfen, Temperatur nachregeln, Station quittieren",
+        "dur": (10, 35),
+        "state": "Held",
+        "station": 3,
+    },
     "MAT-LEER": {
         "first": "W-1001",
         "follow": ["W-1002"],
@@ -77,6 +92,15 @@ CATALOG: dict[str, dict[str, Any]] = {
         "action": "Stau beseitigen, Bandgeschwindigkeit prüfen",
         "dur": (4, 15),
         "state": "Held",
+        "station": 4,
+    },
+    "MAT-KARTON": {
+        "first": "W-6401",
+        "follow": ["W-6402"],
+        "cause": "Kartonvorrat leer",
+        "action": "Kartons nachlegen, Magazin prüfen",
+        "dur": (5, 14),
+        "state": "Suspended",
         "station": 4,
     },
     "SETUP": {
@@ -97,6 +121,15 @@ CATALOG: dict[str, dict[str, Any]] = {
         "state": "Held",
         "station": 3,
     },
+    "QUAL-NIO": {
+        "first": "E-7201",
+        "follow": ["E-7202"],
+        "cause": "Ausschussrate über Grenze",
+        "action": "Prozess prüfen, Muster ziehen, Charge sperren",
+        "dur": (8, 25),
+        "state": "Held",
+        "station": 3,
+    },
     "EXT-UP": {
         "first": "W-9001",
         "follow": [],
@@ -105,6 +138,15 @@ CATALOG: dict[str, dict[str, Any]] = {
         "dur": (10, 40),
         "state": "Suspended",
         "station": 0,
+    },
+    "EXT-DOWN": {
+        "first": "W-9101",
+        "follow": [],
+        "cause": "Nachgelagerte Anlage / Abtransport steht",
+        "action": "Abtransport klären, Puffer prüfen",
+        "dur": (8, 30),
+        "state": "Suspended",
+        "station": 5,
     },
     "ORG": {
         "first": "I-0200",
@@ -117,23 +159,30 @@ CATALOG: dict[str, dict[str, Any]] = {
     },
 }
 WEIGHTS = {
-    "STO-FOLIE": 30,
-    "STO-SENSOR": 18,
-    "STO-ANTRIEB": 6,
-    "STO-ELEK": 6,
-    "MAT-LEER": 12,
-    "MAT-STAU": 10,
-    "SETUP": 8,
-    "QUAL-HOLD": 5,
-    "EXT-UP": 3,
-    "ORG": 2,
+    "STO-FOLIE": 24,
+    "STO-SENSOR": 14,
+    "STO-ANTRIEB": 5,
+    "STO-ELEK": 5,
+    "STO-SIEGEL": 5,
+    "MAT-LEER": 8,
+    "MAT-STAU": 7,
+    "MAT-KARTON": 4,
+    "SETUP": 6,
+    "QUAL-HOLD": 4,
+    "QUAL-NIO": 3,
+    "EXT-UP": 8,
+    "EXT-DOWN": 3,
+    "ORG": 4,
 }
+# ISA-18.2-Matrix-Priorität je Alarmcode (Konsequenz × Reaktionszeit)
 PRIORITY = {
     "E-4711": 2,
     "E-3302": 2,
     "E-5101": 1,
     "E-6001": 1,
     "E-7001": 2,
+    "E-7101": 2,
+    "E-7201": 3,
     "E-4720": 3,
     "W-2101": 3,
     "E-4713": 3,
@@ -143,14 +192,21 @@ PRIORITY = {
     "E-6002": 2,
     "E-6003": 3,
     "E-7002": 3,
+    "E-7102": 3,
+    "E-7202": 3,
     "W-1001": 3,
     "W-1002": 4,
     "W-1201": 3,
     "W-1202": 4,
+    "W-6401": 4,
+    "W-6402": 4,
     "W-9001": 3,
+    "W-9101": 3,
     "I-0100": 4,
     "I-0200": 4,
 }
+# Severity-Basis je ISA-Priorität (OPC-UA-Band-Mitte) für das Verfahren hersteller_severity
+_SEV_BASE = {1: 850, 2: 680, 3: 480, 4: 280}
 
 
 @dataclass
@@ -160,13 +216,26 @@ class Event:
     start: datetime
     end: datetime
     station: int
-    alarms: list[tuple[datetime, str, int]]  # ts, code, priority
+    alarms: list[tuple[datetime, str, int, int]]  # ts, code, priority, severity
     flood: bool
     ai4i: dict[str, float]
 
 
 def load_decisions(path: str | Path = "decisions.yaml") -> dict[str, Any]:
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+
+
+def _severity(rng: random.Random, code: str) -> int:
+    return max(1, min(1000, round(rng.gauss(_SEV_BASE[PRIORITY[code]], 110))))
+
+
+def _band(sev: int) -> int:
+    return 1 if sev >= 800 else 2 if sev >= 600 else 3 if sev >= 400 else 4
+
+
+def _prio(code: str, sev: int, verfahren: str) -> int:
+    """Priorität nach gewähltem Verfahren: ISA-18.2-Matrix (fest) oder Hersteller-Severity-Band."""
+    return PRIORITY[code] if verfahren == "isa18_matrix" else _band(sev)
 
 
 def _ai4i_snapshot(rng: random.Random, reason: str) -> dict[str, float]:
@@ -193,6 +262,7 @@ def _ai4i_snapshot(rng: random.Random, reason: str) -> dict[str, float]:
 
 def generate(dec: dict[str, Any]) -> list[Event]:
     sim, ev_def = dec["simulation"], dec["ereignis"]
+    verfahren = dec["alarm_prioritaet"]["verfahren"]
     rng = random.Random(sim["seed"])  # noqa: S311  # nosec B311 – Simulation, keine Kryptografie
     t = datetime(2026, 6, 1, 6, 0)
     events: list[Event] = []
@@ -203,14 +273,15 @@ def generate(dec: dict[str, Any]) -> list[Event]:
         reason = rng.choices(reasons, weights=[WEIGHTS[r] for r in reasons])[0]
         c = CATALOG[reason]
         dur = rng.uniform(*c["dur"])
-        alarms = [(t, c["first"], PRIORITY[c["first"]])]
+        sev0 = _severity(rng, c["first"])
+        alarms = [(t, c["first"], _prio(c["first"], sev0, verfahren), sev0)]
         # Folgealarme: bei Störungen oft Kaskade → Alarmflut nach ISA-18.2
         n_follow = rng.randint(0, 3) if not reason.startswith("STO") else rng.randint(4, 40)
         for _ in range(n_follow):
             code = rng.choice(c["follow"] or [c["first"]])
-            alarms.append(
-                (t + timedelta(minutes=rng.uniform(0, min(dur, 12))), code, PRIORITY[code])
-            )
+            sev = _severity(rng, code)
+            ts = t + timedelta(minutes=rng.uniform(0, min(dur, 12)))
+            alarms.append((ts, code, _prio(code, sev, verfahren), sev))
         alarms.sort()
         flood = _is_flood(alarms, ev_def["alarmflut_alarme"], ev_def["alarmflut_fenster_min"])
         events.append(
@@ -225,25 +296,32 @@ def generate(dec: dict[str, Any]) -> list[Event]:
                 _ai4i_snapshot(rng, reason),
             )
         )
-    # Demo-Ereignis erzwingen (Zustand und Erstalarm aus decisions.yaml)
+    # Demo-Ereignis erzwingen (Zustand, Erstalarm, Dauer aus decisions.yaml → Gold mit Alarmflut)
     demo = events[-1 - sim["demo_ereignis_index_von_hinten"]]
     reason = next(r for r, c in CATALOG.items() if c["first"] == sim["demo_alarm_code"])
     c = CATALOG[reason]
     demo.reason, demo.station = reason, c["station"]
-    demo.alarms = [
-        (demo.start + timedelta(seconds=s * 20), code, PRIORITY[code])
-        for s, code in enumerate([c["first"]] + [rng.choice(c["follow"]) for _ in range(36)])
-    ]
+    demo.alarms = []
+    for s, code in enumerate([c["first"]] + [rng.choice(c["follow"]) for _ in range(36)]):
+        sev = _severity(rng, code)
+        ts = demo.start + timedelta(seconds=s * 20)
+        demo.alarms.append((ts, code, _prio(code, sev, verfahren), sev))
     demo.flood = True
+    demo.end = demo.start + timedelta(minutes=rng.uniform(*c["dur"]))
     return events
 
 
-def _is_flood(alarms: list[tuple[datetime, str, int]], n: int, window: int) -> bool:
+def _is_flood(alarms: list[tuple[datetime, str, int, int]], n: int, window: int) -> bool:
     ts = [a[0] for a in alarms]
     for i in range(len(ts)):
         if sum(1 for x in ts if timedelta(0) <= x - ts[i] <= timedelta(minutes=window)) >= n:
             return True
     return False
+
+
+def _event_prio(ev: Event) -> int:
+    """Dringlichkeit des Ereignisses = kleinste (dringendste) Alarmpriorität; 4 ohne Alarm."""
+    return min((a[2] for a in ev.alarms), default=4)
 
 
 def write_sqlite(
@@ -259,6 +337,8 @@ def write_sqlite(
     conn = sqlite3.connect(db_path)
     conn.executescript(Path(schema_path).read_text(encoding="utf-8"))
     line = dec["linie"]
+    kurz = dec["ereignis"]["kurzstillstand_min"]
+    prio1_immer = dec["ereignis"]["prio1_immer_ereignis"]
     conn.execute(
         "INSERT INTO lines VALUES (?,?,?,?,?)",
         (
@@ -274,6 +354,13 @@ def write_sqlite(
             "INSERT INTO equipment VALUES (?,?,?,?)",
             (f"{line['line_id']}-S{i}", line["line_id"], st, i),
         )
+    # Vorgelagerte Anlage UP1 als externe Quelle (sendet nur StateChange)
+    up = line.get("vorgelagerte_anlage")
+    if up:
+        conn.execute(
+            "INSERT INTO equipment VALUES (?,?,?,?)",
+            (up["id"], line["line_id"], up["name"], len(line["stationen"])),
+        )
     for code, cat, desc, loss in dec["reason_codes"]:
         conn.execute("INSERT INTO downtime_reason_codes VALUES (?,?,?,?)", (code, cat, desc, loss))
     alarm_id = 0
@@ -281,42 +368,54 @@ def write_sqlite(
         eq = f"{line['line_id']}-S{ev.station}"
         c = CATALOG[ev.reason]
         dur = (ev.end - ev.start).total_seconds() / 60
-        lost = round(line["design_rate_per_hour"] * dur / 60)
-        cost = round(line["cost_per_downtime_minute_eur"] * dur, 2)
-        for ts, code, prio in ev.alarms:
+        start_iso = ev.start.replace(microsecond=0).isoformat(sep=" ")
+        end_iso = ev.end.replace(microsecond=0).isoformat(sep=" ")
+        ev_prio = _event_prio(ev)
+        to_gold = (prio1_immer and ev_prio == 1) or dur >= kurz
+        if not to_gold:
+            # Kurzstillstand (Leistungsverlust) – nicht in Gold, aggregiert in short_stops
+            conn.execute(
+                "INSERT INTO short_stops VALUES (?,?,?,?)",
+                (line["stationen"][ev.station], start_iso, end_iso, round(dur, 1)),
+            )
+            continue
+        for ts, code, prio, sev in ev.alarms:
             alarm_id += 1
             conn.execute(
-                "INSERT INTO alarms_silver VALUES (?,?,?,?,?,?,?)",
+                "INSERT INTO alarms_silver VALUES (?,?,?,?,?,?,?,?)",
                 (
                     alarm_id,
                     eq,
                     ts.replace(microsecond=0).isoformat(sep=" "),
                     code,
                     prio,
+                    sev,
                     ev.event_id,
                     f"sim:{ev.event_id}:{alarm_id}",
                 ),
             )
+        conn.execute("INSERT INTO equipment_state VALUES (?,?,?)", (eq, start_iso, c["state"]))
+        conn.execute("INSERT INTO equipment_state VALUES (?,?,?)", (eq, end_iso, "Execute"))
+        if ev.reason == "EXT-UP" and up:  # UP1 sendet StateChange, Ursache außerhalb der Linie
+            uid = up["id"]
+            sql_state = "INSERT OR IGNORE INTO equipment_state VALUES (?,?,?)"
+            conn.execute(sql_state, (uid, start_iso, "Stopped"))
+            conn.execute(sql_state, (uid, end_iso, "Execute"))
+        lost = round(line["design_rate_per_hour"] * dur / 60)
+        cost = round(line["cost_per_downtime_minute_eur"] * dur, 2)
         conn.execute(
-            "INSERT INTO equipment_state VALUES (?,?,?)",
-            (eq, ev.start.replace(microsecond=0).isoformat(sep=" "), c["state"]),
-        )
-        conn.execute(
-            "INSERT INTO equipment_state VALUES (?,?,?)",
-            (eq, ev.end.replace(microsecond=0).isoformat(sep=" "), "Execute"),
-        )
-        conn.execute(
-            "INSERT INTO downtime_events_gold VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO downtime_events_gold VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 ev.event_id,
                 line["line_id"],
                 eq,
-                ev.start.replace(microsecond=0).isoformat(sep=" "),
-                ev.end.replace(microsecond=0).isoformat(sep=" "),
+                start_iso,
+                end_iso,
                 round(dur, 1),
                 c["state"],
                 ev.reason,
                 ev.alarms[0][1],
+                ev_prio,
                 len(ev.alarms),
                 int(ev.flood),
                 None,
@@ -385,7 +484,7 @@ def export_bronze_csv(events: list[Event]) -> str:
     w = csv.writer(buf)
     w.writerow(["machine", "timestamp", "alarm"])
     for ev in events:
-        for ts, code, _ in ev.alarms:
+        for ts, code, _, _ in ev.alarms:
             w.writerow([f"S{ev.station}", ts.isoformat(), code])
     return buf.getvalue()
 
@@ -395,6 +494,16 @@ if __name__ == "__main__":
     evs = generate(dec)
     Path("data/bronze/alarms_raw.csv").write_text(export_bronze_csv(evs), encoding="utf-8")
     write_sqlite(dec, evs, "data/gold/mes.sqlite")
-    avg = sum((e.end - e.start).total_seconds() / 60 for e in evs) / len(evs)
-    flood_share = sum(e.flood for e in evs) / len(evs)
-    print(f"{len(evs)} Ereignisse, Ø {avg:.1f} min, Alarmflut-Anteil {flood_share:.0%}")
+    kurz = dec["ereignis"]["kurzstillstand_min"]
+    gold = [
+        e
+        for e in evs
+        if (dec["ereignis"]["prio1_immer_ereignis"] and _event_prio(e) == 1)
+        or (e.end - e.start).total_seconds() / 60 >= kurz
+    ]
+    avg = sum((e.end - e.start).total_seconds() / 60 for e in gold) / len(gold)
+    flood_share = sum(e.flood for e in gold) / len(gold)
+    print(
+        f"{len(gold)} Ereignisse (+{len(evs) - len(gold)} Kurzstillstände), "
+        f"Ø {avg:.1f} min, Alarmflut-Anteil {flood_share:.0%}"
+    )

@@ -196,6 +196,11 @@ def check_binary_placement(files: list[str], root: Path = ROOT) -> list[str]:
     return errs
 
 
+def d6_applies(files: list[str]) -> bool:
+    """D6 prüft den Projektstatus nur, wenn überhaupt etwas gestaged ist (leerer Index → kein D6)."""
+    return bool(files)
+
+
 def check_precommit_entries(text: str) -> list[str]:
     """K5: jede entry-Zeile beginnt mit .venv/bin/python."""
     errs = []
@@ -494,8 +499,8 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
     if "docs/status/index.html" not in readme:
         errors.append("D5 README.md verlinkt docs/status/index.html nicht")
 
-    # D6 Projektstatus gestaged, frisch, commit == HEAD
-    if os.environ.get("GUARDIAN_SKIP_D6") != "1":
+    # D6 Projektstatus gestaged, frisch, commit == HEAD (nur bei nicht-leerem Index)
+    if d6_applies(files) and os.environ.get("GUARDIAN_SKIP_D6") != "1":
         sj = "docs/status/status.json"
         if sj not in files:
             errors.append("D6 docs/status/status.json nicht gestaged (status.py --stage im Hook?)")
@@ -571,7 +576,7 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
         for e in errors:
             print(" -", e)
         return 1
-    print(f"GUARDIAN ok ({len(files)} Dateien geprüft)")
+    print("GUARDIAN ok (0 Dateien)" if not files else f"GUARDIAN ok ({len(files)} Dateien geprüft)")
     return 0
 
 

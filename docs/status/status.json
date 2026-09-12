@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-11T15:03:44",
-  "commit": "adc6b6a51bc4805bf1d6e84bb701a905e2738af9",
+  "generated_at": "2026-09-12T09:18:35",
+  "commit": "b481400aed821b41186808211ca3b4fdfac72e03",
   "branch": "main",
   "packages": [
     {
@@ -469,11 +469,17 @@
     "percent": 0,
     "hours_agent": 0.0,
     "cost_usd": 0,
-    "tests": 49,
+    "tests": 59,
     "coverage_total": 92,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-11T15:03:30+02:00",
+      "kind": "commit",
+      "ref": "b481400",
+      "text": "feat(autopilot): Status+Marker, Coverage-Gate, Guardian S7/S9/D6-D9/K4-K5"
+    },
     {
       "at": "2026-09-11T12:29:13+02:00",
       "kind": "commit",
@@ -495,7 +501,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 23,
+      "tests": 26,
       "coverage": 100
     },
     {
@@ -507,8 +513,8 @@
     {
       "path": "src/production_agent/data/",
       "files": 2,
-      "tests": 6,
-      "coverage": 89
+      "tests": 9,
+      "coverage": 90
     },
     {
       "path": "src/production_agent/graph/",
@@ -520,7 +526,7 @@
       "path": "src/production_agent/mcp/",
       "files": 2,
       "tests": 2,
-      "coverage": 86
+      "coverage": 85
     },
     {
       "path": "src/production_agent/security/",

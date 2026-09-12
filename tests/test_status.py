@@ -79,3 +79,8 @@ def test_marker_wrong_value_is_d7_red_falsification():
 def test_precommit_entry_without_venv_is_k5_red_falsification():
     text = "      - id: x\n        entry: python autopilot/guardian.py\n"
     assert any("K5" in e for e in guardian.check_precommit_entries(text))
+
+
+def test_empty_index_does_not_trigger_d6_falsification():
+    assert guardian.d6_applies([]) is False
+    assert guardian.d6_applies(["docs/status/status.json"]) is True

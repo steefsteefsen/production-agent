@@ -23,6 +23,7 @@ ALLOWED_TABLES: frozenset[str] = frozenset(
         "downtime_reason_codes",
         "incident_history",
         "ai4i_snapshots",
+        "short_stops",
     }
 )
 
