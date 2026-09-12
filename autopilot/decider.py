@@ -17,6 +17,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cc  # noqa: E402
 
 SCHEMA = {
     "type": "object",
@@ -52,8 +54,9 @@ def interpret(result: dict) -> dict:
 
 
 def decide(
-    wp: str, question: str, gate_tail: str, spec: str, model: str = "opus", timeout: int = 600
+    wp: str, question: str, gate_tail: str, spec: str, model: str | None = None, timeout: int = 600
 ) -> dict:
+    model = model or cc.model("decider")
     context = (
         f"# WP {wp}\n## Reviewer-Frage / Anlass\n{question}\n\n## Gate-Ausgabe\n{gate_tail[:2000]}\n\n"
         f"## WP-Spezifikation\n{spec[:2000]}\n\n## decisions.yaml\n"
@@ -80,7 +83,13 @@ def decide(
     ]
     try:
         p = subprocess.run(
-            cmd, cwd=ROOT, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=timeout
+            cmd,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=timeout,
+            env=cc.env(),
         )
     except subprocess.TimeoutExpired:
         return {"action": "escalate", "reason": "Decider-Timeout", "risk": "high"}

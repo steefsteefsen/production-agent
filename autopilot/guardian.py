@@ -587,6 +587,8 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
 
     # optional LLM-Konsistenz (manuell)
     if use_llm and src_changed and not errors:
+        import cc  # noqa: PLC0415
+
         diff = sh(["git", "diff", "--cached"])[:30000]
         try:
             r = subprocess.run(
@@ -611,6 +613,7 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
                 text=True,
                 stdin=subprocess.DEVNULL,
                 timeout=600,
+                env=cc.env(),
             )
             if "VERALTET" in r.stdout:
                 warn.append("LLM-Konsistenz: " + r.stdout.strip()[:800])

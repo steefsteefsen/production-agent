@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cc  # noqa: E402
 
 SCHEMA = {
     "type": "object",
@@ -68,8 +71,9 @@ def build_packet(wp_id: str, checklist: list[str], files: list[str], gate_tail: 
 
 
 def review(
-    wp_id: str, checklist: list[str], files: list[str], gate_tail: str, model: str = "opus"
+    wp_id: str, checklist: list[str], files: list[str], gate_tail: str, model: str | None = None
 ) -> dict:
+    model = model or cc.model("reviewer")
     packet = build_packet(wp_id, checklist, files, gate_tail)
     cmd = [
         "claude",
@@ -98,6 +102,7 @@ def review(
             text=True,
             stdin=subprocess.DEVNULL,
             timeout=600,
+            env=cc.env(),
         )
     except subprocess.TimeoutExpired:
         return {

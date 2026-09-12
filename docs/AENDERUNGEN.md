@@ -3,6 +3,18 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## Abo-Betrieb für Claude Code (Max 5×)
+**Was:** autopilot/cc.py bündelt den Abo-Betrieb: claude-Subprozesse ohne ANTHROPIC_API_KEY (nur mit
+--api-billing mit Key und Budget), Modelle aus settings.env (CC_MODEL_BUILDER/REVIEWER/DECIDER =
+sonnet/sonnet/opus), Preflight auf Abo-Login, Quota-Erkennung (429). Eingehängt in run.py, reviewer.py,
+decider.py, journal.py und guardian --llm. Der Orchestrator pausiert bei Quota alle Lanes (Prüfung alle
+15 min, --quota-wait-hours 8, danach Exit 3) und begrenzt die Parallelität (--max-parallel 3);
+Journal-Kosten stehen als „abo". evals/run_evals.py schätzt die Kosten und verlangt --live.
+Zusätzlich: die WP-Gates laufen jetzt zuerst über die Abnahmetests und gate_no_skip.
+**Warum:** Die Bau-Läufe sollen das Abo nutzen statt die API abzurechnen; nur die Evals kosten bewusst Geld.
+**Alternativen:** API-Abrechnung mit Budget-Deckel – verworfen, weil das Fenster teuer würde; ohne
+Quota-Pause – verworfen, weil ein leeres Kontingent den ganzen Lauf abbräche.
+
 ## Orchestrator, Präsentation, Doku-Index (Block 7/11, Teil B/C)
 **Was:** `autopilot/orchestrate.py` (Lane-Scheduler, dauerhafter Zustand `orchestrator.json`, Worktrees, Merge
 `--no-ff` mit Guardian und Rollback, Budget, `--dry-run`/`--retry`/`--skip`/`--push`) und `autopilot/plan.yaml`

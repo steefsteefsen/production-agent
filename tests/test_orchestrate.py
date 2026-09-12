@@ -44,8 +44,59 @@ class FakeRunner:
         pass
 
 
+class QuotaRunner:
+    """Fake, der bei bestimmten WPs eine Quota (429) meldet – ohne Loop zu verbrauchen."""
+
+    def __init__(self, quota_times: dict | None = None, persist: bool = False):
+        self.quota_times = dict(quota_times or {})
+        self.persist = persist
+        self.merged: list[str] = []
+
+    def budget_ok(self, state):
+        return True
+
+    def run_wp(self, wp, state):
+        if self.persist or self.quota_times.get(wp, 0) > 0:
+            if not self.persist:
+                self.quota_times[wp] -= 1
+            state["_quota"] = True
+            state["wp"][wp]["status"] = "quota"  # kein loops += 1
+            return
+        state["wp"][wp]["loops"] += 1
+        state["wp"][wp]["status"] = "review_pass"
+
+    def merge_wp(self, wp, state):
+        state["wp"][wp]["status"] = "merged"
+        self.merged.append(wp)
+
+    def push(self, state):
+        pass
+
+
 def _state():
     return orchestrate.init_state(PLAN, 40.0, "test")
+
+
+def test_quota_pauses_then_resumes_without_loop_consumption(tmp_path, monkeypatch):
+    monkeypatch.setattr(orchestrate, "STATE_PATH", tmp_path / "o.json")
+    runner = QuotaRunner({"WP1": 1})  # WP1 einmal Quota, dann normal
+    slept = []
+    rc = orchestrate.orchestrate(
+        PLAN, _state(), runner, quota_interval=900, sleep=lambda s: slept.append(s)
+    )
+    assert rc == 0
+    assert "WP1" in runner.merged and slept  # pausiert und danach fortgesetzt
+    st = orchestrate.load_state(PLAN, 40.0, "test")
+    assert st["wp"]["WP1"]["loops"] == 1  # Quota hat keinen Loop verbraucht
+
+
+def test_persistent_quota_exits_3_falsification(tmp_path, monkeypatch):
+    monkeypatch.setattr(orchestrate, "STATE_PATH", tmp_path / "o.json")
+    runner = QuotaRunner(persist=True)
+    rc = orchestrate.orchestrate(
+        PLAN, _state(), runner, quota_wait_hours=0.001, quota_interval=1, sleep=lambda s: None
+    )
+    assert rc == 3 and runner.merged == []
 
 
 def test_wp1_and_wp2a_start_concurrently():

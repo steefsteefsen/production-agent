@@ -21,6 +21,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cc  # noqa: E402
 import journal  # noqa: E402
 import reviewer  # noqa: E402
 
@@ -64,23 +65,31 @@ def preflight_claude() -> tuple[bool, str]:
 
 
 def claude(
-    prompt: str, agent: str, max_turns: int, budget: float, log: Path, timeout: int = 1800
+    prompt: str,
+    agent: str,
+    max_turns: int,
+    budget: float,
+    log: Path,
+    timeout: int = 1800,
+    api_billing: bool = False,
 ) -> tuple[int, dict | None]:
     cmd = [
         "claude",
         "-p",
         prompt,
+        "--model",
+        cc.model("builder"),
         "--append-system-prompt",
         f"Arbeite als Subagent '{agent}' nach .claude/agents/{agent}.md. Schließe mit ruff check . && pytest -q.",
         "--permission-mode",
         "dontAsk",
         "--max-turns",
         str(max_turns),
-        "--max-budget-usd",
-        str(budget),
         "--output-format",
         "json",
     ]
+    if api_billing:  # nur mit bewusster API-Abrechnung ein Budget; sonst läuft alles übers Abo
+        cmd += ["--max-budget-usd", str(budget)]
     with log.open("a", encoding="utf-8") as fh:
         fh.write(f"\n===== {time.strftime('%H:%M:%S')} claude -p ({agent}) =====\n{prompt}\n")
         try:
@@ -91,15 +100,21 @@ def claude(
                 text=True,
                 stdin=subprocess.DEVNULL,
                 timeout=timeout,
+                env=cc.env(api_billing),
             )
         except subprocess.TimeoutExpired:
             fh.write(f"\n[TIMEOUT nach {timeout}s – Loop gezählt]\n")
             return 124, {"timeout": True}
         fh.write(p.stdout + "\n" + p.stderr)
+        if cc.is_quota(p.returncode, p.stdout + p.stderr):
+            fh.write("\n[QUOTA erreicht – pausieren, kein Loop-Verbrauch]\n")
+            return 429, {"quota": True}
         out = None
         try:
             out = json.loads(p.stdout)
-            fh.write(f"\n[cost_usd={out.get('total_cost_usd')} turns={out.get('num_turns')}]\n")
+            fh.write(
+                f"\n[cost={out.get('total_cost_usd') or 'abo'} turns={out.get('num_turns')}]\n"
+            )
         except json.JSONDecodeError:
             pass
     return p.returncode, out
@@ -140,7 +155,9 @@ def main() -> int:
         help="auto: kontextfreier Claude-Reviewer, eskaliert nur bei fail/escalate an dich; human: du; both: beide; off: kein Review",
     )
     ap.add_argument(
-        "--review-model", default="opus", help="Modell des Reviewers (anders als der Builder)"
+        "--review-model",
+        default=cc.model("reviewer"),
+        help="Modell des Reviewers (Standard aus settings.env)",
     )
     ap.add_argument(
         "--narrate",
@@ -148,6 +165,11 @@ def main() -> int:
         help="Journal-Eintrag zusätzlich von Haiku in drei Sätzen erzählen lassen",
     )
     ap.add_argument("--no-commit", action="store_true", help="keinen Commit je WP")
+    ap.add_argument(
+        "--api-billing",
+        action="store_true",
+        help="claude bewusst über die API abrechnen (Budget aktiv); Standard ist Abo-Betrieb ohne API-Key",
+    )
     args = ap.parse_args()
     max_loops = (args.retries + 1) if args.retries is not None else args.max_loops
 
@@ -158,9 +180,9 @@ def main() -> int:
     )
     LOGS.mkdir(exist_ok=True)
     if not args.dry_run:
-        ready, msg = preflight_claude()
+        ready, msg = cc.preflight(args.api_billing)
         if not ready:
-            print(f"Abbruch: claude nicht einsatzbereit – {msg}")
+            print(f"Abbruch: {msg}")
             return 1
     t_start = time.time()
 
@@ -181,8 +203,18 @@ def main() -> int:
         for attempt in range(1, max_loops + 1):
             print(f"{t['id']} Versuch {attempt}/{max_loops} ({t['agent']}) …", flush=True)
             _, cj = claude(
-                prompt, t["agent"], args.max_turns, args.budget, log, args.claude_timeout
+                prompt,
+                t["agent"],
+                args.max_turns,
+                args.budget,
+                log,
+                args.claude_timeout,
+                args.api_billing,
             )
+            if cj and cj.get("quota"):
+                print(f"{t['id']}: Quota erreicht – Abbruch dieses WP (kein Loop-Verbrauch)")
+                out = "Quota erreicht"
+                break
             if cj and cj.get("timeout"):
                 out = f"Claude-Timeout nach {args.claude_timeout}s (zählt als Loop)"
                 print(f"{t['id']}: {out}")
@@ -216,6 +248,7 @@ def main() -> int:
                     args.budget,
                     log,
                     args.claude_timeout,
+                    args.api_billing,
                 )
                 rc, out = gate(t["gate"], log)
                 ok = rc == 0

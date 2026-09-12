@@ -32,7 +32,7 @@ ESCALATION_PATH = ROOT / "ESCALATION.md"
 STEEF_LANE = "steef"  # P/A/WP0 – von Stefan, gelten als Voraussetzung (merged)
 DONE = "merged"
 NEEDS_RETRY = ("exhausted", "escalated")
-NOT_STARTABLE = (DONE, "running", "gate_green", "review_pass", *NEEDS_RETRY)
+NOT_STARTABLE = (DONE, "running", "gate_green", "review_pass", "quota", *NEEDS_RETRY)
 
 
 # --- Plan / reine Helfer (testbar) -------------------------------------------------------
@@ -190,17 +190,49 @@ def save_state(state: dict) -> None:
 # --- Kernablauf (Runner injizierbar) -----------------------------------------------------
 
 
-def orchestrate(plan: dict, state: dict, runner, push: bool = False) -> int:
-    """Rundenbasiert: startbereite WPs (eine je freie Lane) starten, dann fertige mergen.
-    Exit 0 = alles merged, 2 = mindestens ein WP wartet (eskaliert/erschöpft/blockiert)."""
+def _resume_quota(state: dict, plan: dict) -> None:
+    state["_quota"] = False
+    for pid in buildable(plan):
+        if _status(state, pid) == "quota":
+            state["wp"][pid]["status"] = "pending"
+
+
+def orchestrate(
+    plan: dict,
+    state: dict,
+    runner,
+    push: bool = False,
+    max_parallel: int = 3,
+    quota_wait_hours: float = 8.0,
+    quota_interval: int = 900,
+    sleep=None,
+) -> int:
+    """Rundenbasiert: startbereite WPs (max_parallel, eine je freie Lane) starten, dann fertige mergen.
+    Quota (429) pausiert ALLE Lanes: alle quota_interval Sekunden erneut versuchen, bis quota_wait_hours
+    erreicht sind → Exit 3. Exit 0 = alles merged, 2 = mindestens ein WP wartet."""
+    import time as _time
+
+    sleep = sleep or _time.sleep
+    waited = 0
     while True:
+        if state.get("_quota"):  # Abo-Quote erschöpft → alle Lanes pausiert
+            if waited >= quota_wait_hours * 3600:
+                _resume_quota(state, plan)
+                save_state(state)
+                return 3
+            sleep(quota_interval)
+            waited += quota_interval
+            _resume_quota(state, plan)
+            continue
         if not runner.budget_ok(state):
             break
-        rdy = ready_packages(state, plan)
+        rdy = ready_packages(state, plan)[:max_parallel]
         if not rdy:
             break
         for wp in rdy:
             runner.run_wp(wp, state)
+            if state.get("_quota"):  # Quota mitten in der Runde → Rest pausieren
+                break
         for wp in rdy:
             if _status(state, wp) == "review_pass":
                 runner.merge_wp(wp, state)
@@ -247,9 +279,18 @@ class Runner:
             "4",
             cwd=worktree,
         )
-        w["loops"] += 1
+        import cc  # noqa: PLC0415
+
         w["last_gate_tail"] = (r.stdout + r.stderr)[-600:]
         w["worktree"] = str(worktree)
+        if cc.is_quota(
+            r.returncode, r.stdout + r.stderr
+        ):  # Abo-Quote erschöpft: pausieren, kein Loop
+            w["status"] = "quota"
+            state["_quota"] = True
+            save_state(state)
+            return
+        w["loops"] += 1
         w["status"] = "review_pass" if r.returncode == 0 else "escalated"
         if w["status"] == "escalated" and self.auto_decide:
             import decider  # noqa: PLC0415
@@ -328,6 +369,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--auto-decide", action="store_true", help="Rückfragen von decider.py entscheiden lassen"
     )
+    ap.add_argument("--max-parallel", type=int, default=3, help="max. gleichzeitig laufende WPs")
+    ap.add_argument(
+        "--quota-wait-hours", type=float, default=8.0, help="max. Wartezeit bei Quota, dann Exit 3"
+    )
     ap.add_argument("--run-id", default="run")
     args = ap.parse_args(argv)
 
@@ -358,7 +403,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if all_merged(state, plan) else 2
 
     runner = Runner(plan, push=args.push, auto_decide=args.auto_decide)
-    return orchestrate(plan, state, runner, push=args.push)
+    return orchestrate(
+        plan,
+        state,
+        runner,
+        push=args.push,
+        max_parallel=args.max_parallel,
+        quota_wait_hours=args.quota_wait_hours,
+    )
 
 
 if __name__ == "__main__":

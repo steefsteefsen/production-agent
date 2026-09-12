@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-12T10:55:24",
-  "commit": "247f30cab67940214777cf221dc2748527f450c5",
+  "generated_at": "2026-09-12T11:15:59",
+  "commit": "5c54d09244ea53fe1f9859cb9f2d06e468517ba0",
   "branch": "main",
   "packages": [
     {
@@ -631,11 +631,17 @@
     "percent": 13,
     "hours_agent": 0.0,
     "cost_usd": 0,
-    "tests": 99,
+    "tests": 105,
     "coverage_total": 92,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-12T10:55:13+02:00",
+      "kind": "commit",
+      "ref": "5c54d09",
+      "text": "feat(autopilot): Infra-Pakete, Abnahmetests/K7, Decider, Timeouts"
+    },
     {
       "at": "2026-09-12T10:17:25+02:00",
       "kind": "commit",

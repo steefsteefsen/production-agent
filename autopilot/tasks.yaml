@@ -3,7 +3,7 @@
 - id: WP1
   agent: data-agent
   group: 1
-  gate: python -m production_agent.data.simulator && pytest tests/test_replay.py tests/test_pipeline.py -q
+  gate: python -m pytest tests/acceptance/test_wp1.py -q -rs && python autopilot/gate_no_skip.py WP1 && python -m production_agent.data.simulator && pytest tests/test_replay.py tests/test_pipeline.py -q
   prompt: |
     Der Simulator src/production_agent/data/simulator.py und replay.py existieren und laufen (python -m production_agent.data.simulator).
     Aufgabe: Mache die Datenschicht vollständig und belegbar.
@@ -29,7 +29,7 @@
 - id: WP2a
   agent: mcp-agent
   group: 1
-  gate: pytest tests/test_mes_tools.py tests/test_security.py -q && ruff check . && python -c "import json;c=json.load(open('docs/contracts/mes_tools.json'));assert
+  gate: python -m pytest tests/acceptance/test_wp2a.py -q -rs && python autopilot/gate_no_skip.py WP2a && pytest tests/test_mes_tools.py tests/test_security.py -q && ruff check . && python -c "import json;c=json.load(open('docs/contracts/mes_tools.json'));assert
     len(c)==6"
   prompt: |
     Stelle den MES-MCP-Server fertig, ohne neue Werkzeuge hinzuzufügen.
@@ -54,7 +54,7 @@
 - id: WP2b
   agent: mcp-agent
   group: 2
-  gate: pytest tests/test_rag.py -q
+  gate: python -m pytest tests/acceptance/test_wp2b.py -q -rs && python autopilot/gate_no_skip.py WP2b && pytest tests/test_rag.py -q
   prompt: |
     RAG-Server fertigstellen.
     1. Erzeuge 12–16 deutsche Markdown-Dokumente in data/docs/: je Station aus decisions.yaml eine Wartungsanleitung
@@ -78,7 +78,7 @@
 - id: WP3
   agent: graph-agent
   group: 2
-  gate: pytest tests/test_workflow.py -q && ruff check .
+  gate: python -m pytest tests/acceptance/test_wp3.py -q -rs && python autopilot/gate_no_skip.py WP3 && pytest tests/test_workflow.py -q && ruff check .
   prompt: |
     LangGraph-Ablauf vollständig machen (src/production_agent/graph/workflow.py).
     1. MCP-Tools über langchain-mcp-adapters MultiServerMCPClient (Server mes und maintenance_docs, stdio). Für Tests:
@@ -109,7 +109,7 @@
 - id: WP4
   agent: graph-agent
   group: 3
-  gate: pytest tests/test_rules.py tests/test_cbr.py tests/test_workflow.py -q
+  gate: python -m pytest tests/acceptance/test_wp4.py -q -rs && python autopilot/gate_no_skip.py WP4 && pytest tests/test_rules.py tests/test_cbr.py tests/test_workflow.py -q
   prompt: |
     Regeln, Case-Based Reasoning, Konfidenz.
     1. graph/rules.py: AI4I-Regeln als reine Funktionen über einen Snapshot aus ai4i_snapshots: TWF (tool_wear 200–240), HDF (process−air < 8.6 K und rpm < 1380),
@@ -132,7 +132,7 @@
 - id: WP5
   agent: ui-agent
   group: 3
-  gate: cd frontend && npm install --silent && npm run build --silent
+  gate: python -m pytest tests/acceptance/test_wp5.py -q -rs && python autopilot/gate_no_skip.py WP5 && cd frontend && npm install --silent && npm run build --silent
   prompt: |
     Baue frontend/ mit Vite + React 18 + TypeScript + Tailwind + shadcn/ui + Recharts, Sprache Deutsch.
     Farben: Kopf/Zustände Teal #0b4f6c→#005a64→#006252; #5d0a1f nur Freigeben/Ablehnen und Priorität 1; #679881 Hinweise. Schrift Source Sans 3.
@@ -156,7 +156,7 @@
 - id: WP6
   agent: qa-agent
   group: 4
-  gate: python evals/run_evals.py && test -f evals/report.md
+  gate: python -m pytest tests/acceptance/test_wp6.py -q -rs && python autopilot/gate_no_skip.py WP6 && python evals/run_evals.py && test -f evals/report.md
   prompt: |
     Replay-Eval und Tracing (bewusst minimal, ehrlich als erster Berührungspunkt mit MLOps/AIOps).
     1. evals/run_evals.py: wählt {{simulation.replay_testfaelle}} Replay-Fälle über replay.select_replay_cases (Offset {{simulation.replay_uhr_offset_min}} min),
@@ -179,7 +179,7 @@
 - id: WP7
   agent: qa-agent
   group: 5
-  gate: make lint test && test -f docs/demo_script.md
+  gate: python -m pytest tests/acceptance/test_wp7.py -q -rs && python autopilot/gate_no_skip.py WP7 && make lint test && test -f docs/demo_script.md
   prompt: |
     Integration und Demo.
     1. Prüfe docs/adr/ auf Vollständigkeit (Orchestrierung, MCP-Werkzeuge, RAG, Daten/Replay, Modell, Konfidenz, Observability, Frontend); fehlende ADRs aus Code und Tests ableiten, offene Punkte als offen markieren.
@@ -261,7 +261,7 @@
   - docs/BACKLOG.md
 - id: WP-B
   agent: ui-agent
-  gate: pytest tests/acceptance/test_wpb.py -q && cd frontend && npm run build --silent
+  gate: python -m pytest tests/acceptance/test_wpb.py -q -rs && python autopilot/gate_no_skip.py WP-B && cd frontend && npm run build --silent
   prompt: |
     Grundaufbau Live-MES, Medallion-Lineage und React-Cockpit (Phase-2 Block 10, Lane ui).
     1. docs/adr/0010-mes-nachrichtenformat.md: OPC UA Alarms and Conditions plus ISA-95 als JSON-Event

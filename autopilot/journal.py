@@ -15,6 +15,9 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cc  # noqa: E402
+
 JOURNAL_MD = ROOT / "autopilot" / "journal.md"
 JOURNAL_JSON = ROOT / "autopilot" / "journal.json"
 JOURNAL_DIR = (
@@ -61,7 +64,7 @@ def entry(
         "ok": ok,
         "attempts": attempts,
         "minutes": round(seconds / 60, 1),
-        "cost_usd": (claude_json or {}).get("total_cost_usd"),
+        "cost_usd": (claude_json or {}).get("total_cost_usd") or "abo",  # Abo-Betrieb: keine USD
         "turns": (claude_json or {}).get("num_turns"),
         "files": files,
         "agent_summary": summary,
@@ -90,6 +93,7 @@ def entry(
                 cwd=ROOT,
                 stdin=subprocess.DEVNULL,
                 timeout=600,
+                env=cc.env(),
             )
             e["narrative"] = p.stdout.strip()[:600]
         except subprocess.TimeoutExpired:
