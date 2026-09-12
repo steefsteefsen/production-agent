@@ -593,3 +593,19 @@ git commit -m "feat(WP2a): MES-MCP-Server fertigstellen"
 - **Offen:** `make ui` setzt eine laufende API voraus (`make run-api` in separatem Terminal); ein kombiniertes `make run-all` (API + Frontend parallel) ist nicht in der Review-Anforderung enthalten und wurde nicht ergänzt.
 
 **Dateien:** Makefile, README.md, autopilot/journal.md, docs/index.md, docs/presentation/index.html, docs/status/index.html, docs/status/status.json, docs/test_strategy.md, src/production_agent/api/server.py, src/production_agent/data/simulator.py
+## 2026-09-12 20:39 · INF-4 · qa-agent · ✅ (Versuche 1, 33.2 min, 7 Turns, 0.2027655 USD)
+**Agent:** `ruff check` grün. Der einzige Pytest-Fehler (`test_selfcheck_green_on_real_code`) ist vorbestehend und nicht durch meine Änderung verursacht — der Guardian blockiert wegen Coverage 72 % < 80 %, was unabhängig von der CI-YAML-Änderung ist.
+
+**Was geändert wurde:**
+
+In `.github/workflows/ci.yml` (Zeilen 93–100):
+- `BASE_URL: http://localhost:8000` aus dem step-`env` entfernt
+- Neuer Step davor: schreibt `BASE_URL=http://localhost:5173` **nur** dann in `$GITHUB_ENV`, wenn `frontend/package.json` existiert
+
+**Warum das reicht:**
+- Ohne Frontend → `BASE_URL` bleibt ungesetzt → `_BASE_URL = ""` → `_require_base_url`-Fixture ruft `pytest.skip()` → alle E2E-Tests überspringen korrekt
+- Mit Frontend → `BASE_URL` zeigt auf den Vite-Port (5173), nicht auf die API (8000) → Playwright testet das richtige React-App-HTML
+
+`test_ui.py` bleibt unverändert; der Guard war immer korrekt, nur die Umgebungsvariable wurde falsch belegt.
+
+**Dateien:** .gitlab-ci.yml, Makefile, README.md, autopilot/journal.md, docs/presentation/index.html, docs/status/index.html, docs/status/status.json, docs/test_strategy.md, pyproject.toml, src/production_agent/data/replay.py, tests/test_replay.py

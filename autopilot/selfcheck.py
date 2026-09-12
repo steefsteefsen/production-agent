@@ -169,8 +169,26 @@ def check_worktree_commit() -> tuple[bool, str]:
         # guardian-neutrale Builder-Änderung (kein .md/src/autopilot-Python): eine Datei im Hauptverzeichnis
         (wt / ".selfcheck-worktree-probe").write_text("Worktree-Commit-Probe des Selbstchecks.\n")
         _git("add", ".selfcheck-worktree-probe", cwd=wt)
+        # INF-3 verlangt (D4/D5), dass die erste Commit-Zeile dem obersten AENDERUNGEN.md-Eintrag von HEUTE
+        # gleicht. Deshalb schreibt die Probe selbst einen passenden Eintrag – sonst scheitert der commit-msg-Hook.
+        import time as _time  # noqa: PLC0415
+
+        probe_title = "chore(autopilot): Selbstcheck-Worktree-Probe"
+        entry = (
+            f"\n## {_time.strftime('%Y-%m-%d')} · {probe_title}\n"
+            "**Was:** Wegwerf-Probe-Commit im Worktree.\n"
+            "**Warum (Problem oder Anlass):** Beweist, dass die pre-commit-Kette im Worktree greift.\n"
+            "**Alternativen (verworfen, weil ...):** –\n"
+            "**Auswirkung (Verträge, ADR, Tests):** –\n"
+            "**Bezug (WP, ADR):** SELFCHECK\n"
+        )
+        ae = wt / "docs" / "AENDERUNGEN.md"
+        if ae.exists():
+            head_line, _, rest = ae.read_text(encoding="utf-8").partition("\n")
+            ae.write_text(head_line + "\n" + entry + rest, encoding="utf-8")
+            _git("add", "docs/AENDERUNGEN.md", cwd=wt)
         msg = (
-            "chore(autopilot): Selbstcheck-Worktree-Probe\n\n"
+            f"{probe_title}\n\n"
             "Gebaut: Probe-Commit. Getestet: pre-commit im Worktree. Offen: keine.\n\n"
             "Gate: grün | Review: pass | Guardian: ok\n"
         )

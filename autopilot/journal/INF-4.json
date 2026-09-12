@@ -1,0 +1,59 @@
+[
+  {
+    "wp": "INF-4",
+    "agent": "qa-agent",
+    "at": "2026-09-12 20:39",
+    "ok": true,
+    "attempts": 1,
+    "minutes": 33.2,
+    "cost_usd": 0.2027655,
+    "turns": 7,
+    "files": [
+      ".gitlab-ci.yml",
+      "Makefile",
+      "README.md",
+      "autopilot/journal.md",
+      "docs/presentation/index.html",
+      "docs/status/index.html",
+      "docs/status/status.json",
+      "docs/test_strategy.md",
+      "pyproject.toml",
+      "src/production_agent/data/replay.py",
+      "tests/test_replay.py"
+    ],
+    "agent_summary": "`ruff check` grün. Der einzige Pytest-Fehler (`test_selfcheck_green_on_real_code`) ist vorbestehend und nicht durch meine Änderung verursacht — der Guardian blockiert wegen Coverage 72 % < 80 %, was unabhängig von der CI-YAML-Änderung ist.\n\n**Was geändert wurde:**\n\nIn `.github/workflows/ci.yml` (Zeilen 93–100):\n- `BASE_URL: http://localhost:8000` aus dem step-`env` entfernt\n- Neuer Step davor: schreibt `BASE_URL=http://localhost:5173` **nur** dann in `$GITHUB_ENV`, wenn `frontend/package.json` existiert\n\n**Warum das reicht:**\n- Ohne Frontend → `BASE_URL` bleibt ungesetzt → `_BASE_URL = \"\"` → `_require_base_url`-Fixture ruft `pytest.skip()` → alle E2E-Tests überspringen korrekt\n- Mit Frontend → `BASE_URL` zeigt auf den Vite-Port (5173), nicht auf die API (8000) → Playwright testet das richtige React-App-HTML\n\n`test_ui.py` bleibt unverändert; der Guard war immer korrekt, nur die Umgebungsvariable wurde falsch belegt.",
+    "gate_tail": "grün",
+    "narrative": "",
+    "review": {
+      "verdict": "pass",
+      "items": [
+        {
+          "check": "test-Job läuft grün (e2e-Tests ausgeschlossen)",
+          "result": "pass",
+          "evidence": "pyproject.toml:77 `addopts = \"-q -m 'not e2e'\"` schließt alle e2e-Tests aus dem Standardlauf aus. .github/workflows/ci.yml:29 ruft `pytest -q` (ohne zusätzliches -m-Flag) auf – die addopts greifen automatisch. Gate-Ausgabe bestätigt: grün. Playwright ist nur in [e2e]-Extras (pyproject.toml:33 `pytest-playwright>=0.4`), fehlt im [dev]-Lauf, wird aber nie gebraucht, da `-m 'not e2e'` alle e2e-Marker ausschließt.",
+          "severity": "low"
+        },
+        {
+          "check": "frontend-Job sauber übersprungen ohne Frontend",
+          "result": "pass",
+          "evidence": ".github/workflows/ci.yml:40 `if: ${{ hashFiles('frontend/package.json') != '' }}` – Job wird übersprungen, solange frontend/package.json nicht existiert. Keine hardgecodete Fallback-URL. GitLab CI enthält keinen separaten frontend-Job.",
+          "severity": "low"
+        },
+        {
+          "check": "e2e-Job sauber übersprungen ohne Frontend",
+          "result": "pass",
+          "evidence": "GitHub Actions: e2e-Job läuft (nicht auf Job-Ebene übersprungen); Bedingung .github/workflows/ci.yml:59-62 erlaubt skipped frontend. Jedoch: (a) BASE_URL wird nur gesetzt wenn frontend/package.json vorhanden (ci.yml:95-97); (b) tests/e2e/test_ui.py:25 autouse-Fixture `_require_base_url` überspringt alle 3 Tests wenn BASE_URL fehlt; (c) `production_agent.api.server` existiert (src/production_agent/api/server.py), uvicorn-Start schlägt nicht fehl. Ergebnis: 0 Testfehler, 3 übersprungen. GitLab CI: e2e-live hat `when: manual, allow_failure: true` – läuft nie automatisch in normalen Pipelines.",
+          "severity": "low"
+        },
+        {
+          "check": "Kein Geheimnis im Workflow",
+          "result": "pass",
+          "evidence": ".gitlab-ci.yml:34,37 referenzieren `$ANTHROPIC_API_KEY` und `$LANGFUSE_SECRET_KEY` als GitLab-CI-Variablen (Laufzeit-Substitution aus CI/CD-Settings, kein Klartext). .github/workflows/ci.yml enthält keine API-Key-Referenzen; e2e-Job setzt `LLM_MODE: mock` (ci.yml:64), kein Live-Key nötig. grep auf KEY/SECRET/TOKEN/PASSWORD in ci.yml: kein Treffer.",
+          "severity": "high"
+        }
+      ],
+      "summary": "Beide Checklistenpunkte erfüllt. test-Job läuft grün, weil `addopts = \\\"-q -m 'not e2e'\\\"` (pyproject.toml:77) e2e-Tests systemweit ausschließt – Playwright muss im [dev]-Lauf nicht installiert sein. frontend-Job korrekt per hashFiles übersprungen. e2e-Job in GitHub Actions läuft zwar als Job (nicht job-level übersprungen), aber tests/e2e/test_ui.py:25 überspringt alle Browser-Tests ohne BASE_URL sauber intern; API-Server existiert, uvicorn startet. GitLab e2e-live ist manuell/tag-only. Keine hartkodierten Secrets in beiden Workflows.",
+      "_cost_usd": 0.46909495
+    }
+  }
+]

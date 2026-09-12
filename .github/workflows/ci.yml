@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Abhängigkeiten installieren
+        run: pip install -e ".[dev]"
+
+      - name: Linter
+        run: ruff check .
+
+      - name: Simulator (Testdaten erzeugen)
+        run: python -m production_agent.data.simulator
+
+      - name: Testsuite
+        run: pytest -q
+
+      - name: Statische Sicherheitsanalyse
+        run: bandit -c pyproject.toml -r src
+
+      - name: Abhängigkeits-Audit
+        run: pip-audit
+
+  frontend:
+    needs: test
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('frontend/package.json') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Frontend-Abhängigkeiten installieren
+        run: npm ci
+        working-directory: frontend
+
+      - name: Frontend bauen
+        run: npm run build
+        working-directory: frontend
+
+  e2e:
+    needs: [test, frontend]
+    runs-on: ubuntu-latest
+    if: |
+      always() &&
+      needs.test.result == 'success' &&
+      (needs.frontend.result == 'success' || needs.frontend.result == 'skipped')
+    env:
+      LLM_MODE: mock
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Abhängigkeiten inkl. Playwright installieren
+        run: pip install -e ".[dev,e2e]"
+
+      - name: Playwright-Browser installieren
+        run: playwright install chromium --with-deps
+
+      - name: Simulator (Testdaten erzeugen)
+        run: python -m production_agent.data.simulator
+
+      - name: API im Hintergrund starten
+        run: uvicorn production_agent.api.server:app --host 0.0.0.0 --port 8000 &
+
+      - name: Frontend (Vite) im Hintergrund starten
+        run: |
+          if [ -f frontend/package.json ]; then
+            cd frontend && npm run dev &
+          fi
+
+      - name: Auf API warten
+        run: timeout 30 bash -c 'until curl -sf http://localhost:8000/docs; do sleep 1; done'
+
+      - name: BASE_URL setzen (nur wenn Frontend gestartet)
+        run: |
+          if [ -f frontend/package.json ]; then
+            echo "BASE_URL=http://localhost:5173" >> "$GITHUB_ENV"
+          fi
+
+      - name: E2E-Tests
+        run: pytest -q -m e2e tests/e2e
+
+      - name: Playwright-Traces als Artefakt sichern
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-traces
+          path: playwright-traces/
+          if-no-files-found: ignore

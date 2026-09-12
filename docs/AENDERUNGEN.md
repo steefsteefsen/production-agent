@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · feat(INF-4): CI/CD-Pipeline und E2E-Smoke nach main
+**Was:** GitHub-/GitLab-CI mit E2E-Job (LLM_MODE=mock), Makefile-Ziel e2e, tests/e2e-Smoke, replay-Erweiterung.
+**Warum (Problem oder Anlass):** Der PoC brauchte einen reproduzierbaren CI-Lauf ohne API-Schlüssel und einen End-to-End-Rauchtest.
+**Alternativen (verworfen, weil ...):** Nur Unit-Tests in CI – deckt das Zusammenspiel UI/Server nicht ab.
+**Auswirkung (Verträge, ADR, Tests):** .github/workflows/ci.yml, Makefile, tests/e2e, src/production_agent/data/replay.py.
+**Bezug (WP, ADR):** INF-4
+
 ## 2026-09-13 · fix(INF-3): Integration von WP2b/WP-B/INF-3 nach main
 **Was:** Änderungsprotokoll-Pflicht (D4/D5, changelog_entry) mit den bisherigen Merges vereinigt; journal.commit behält Rückgabe-Prüfung und Rettungs-Commit, ruft zusätzlich changelog_entry.
 **Warum (Problem oder Anlass):** Nachtlauf-Rückstand: die gebauten Stränge mussten nach main, dabei kollidierte die neue Begründungspflicht mit der Commit-Prüfung.

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T00:03:43",
-  "commit": "6026adc68ce603bf0b5e4717c61188d403f84299",
+  "generated_at": "2026-09-13T00:23:13",
+  "commit": "f3798ae48c8eb44a66099049ed22e827fa756260",
   "branch": "main",
   "packages": [
     {
@@ -493,8 +493,8 @@
       "name": "INF-3",
       "agent": "qa-agent",
       "deps": [],
-      "percent": 70,
-      "state": "review_pass",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
@@ -505,6 +505,51 @@
           "name": "Review",
           "done": true,
           "at": "2026-09-12 20:02"
+        },
+        {
+          "name": "Commit",
+          "done": true,
+          "at": "2026-09-12T22:58:02+02:00"
+        },
+        {
+          "name": "Tag",
+          "done": true,
+          "at": null
+        },
+        {
+          "name": "Sync-Paket",
+          "done": false,
+          "at": null
+        }
+      ],
+      "attempts": 1,
+      "cost_usd": 2.38,
+      "last_at": "2026-09-12 20:02",
+      "commits": [
+        {
+          "sha": "e33ec04",
+          "title": "feat(INF-3): Builder-Ergebnis gesichert (Rettungs-Commit)",
+          "at": "2026-09-12T22:58:02+02:00"
+        }
+      ]
+    },
+    {
+      "id": "INF-4",
+      "name": "INF-4",
+      "agent": "qa-agent",
+      "deps": [],
+      "percent": 70,
+      "state": "review_pass",
+      "steps": [
+        {
+          "name": "Gate grün",
+          "done": true,
+          "at": "2026-09-12 20:39"
+        },
+        {
+          "name": "Review",
+          "done": true,
+          "at": "2026-09-12 20:39"
         },
         {
           "name": "Commit",
@@ -523,47 +568,8 @@
         }
       ],
       "attempts": 1,
-      "cost_usd": 2.38,
-      "last_at": "2026-09-12 20:02",
-      "commits": []
-    },
-    {
-      "id": "INF-4",
-      "name": "INF-4",
-      "agent": "qa-agent",
-      "deps": [],
-      "percent": 0,
-      "state": "offen",
-      "steps": [
-        {
-          "name": "Gate grün",
-          "done": false,
-          "at": null
-        },
-        {
-          "name": "Review",
-          "done": false,
-          "at": null
-        },
-        {
-          "name": "Commit",
-          "done": false,
-          "at": null
-        },
-        {
-          "name": "Tag",
-          "done": false,
-          "at": null
-        },
-        {
-          "name": "Sync-Paket",
-          "done": false,
-          "at": null
-        }
-      ],
-      "attempts": 0,
-      "cost_usd": 0,
-      "last_at": null,
+      "cost_usd": 0.2,
+      "last_at": "2026-09-12 20:39",
       "commits": []
     },
     {
@@ -691,14 +697,20 @@
     }
   ],
   "totals": {
-    "percent": 42,
-    "hours_agent": 2.78,
-    "cost_usd": 9.41,
-    "tests": 242,
-    "coverage_total": 86,
+    "percent": 48,
+    "hours_agent": 3.34,
+    "cost_usd": 9.61,
+    "tests": 247,
+    "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T00:03:29+02:00",
+      "kind": "commit",
+      "ref": "f3798ae",
+      "text": "Merge wp/INF-3: Änderungsprotokoll mit Begründungspflicht (--no-ff)"
+    },
     {
       "at": "2026-09-12T23:51:37+02:00",
       "kind": "commit",
@@ -716,6 +728,12 @@
       "kind": "commit",
       "ref": "462a89b",
       "text": "fix(infra): Commit-Prüfung, Post-Merge-Guardian, WP3-Platzhalter, K10"
+    },
+    {
+      "at": "2026-09-12T22:58:02+02:00",
+      "kind": "commit",
+      "ref": "e33ec04",
+      "text": "feat(INF-3): Builder-Ergebnis gesichert (Rettungs-Commit)"
     },
     {
       "at": "2026-09-12T22:58:01+02:00",
@@ -796,6 +814,18 @@
       "text": "adr(WP0): Entscheidungen festgeschrieben, Simulator auf UP1/14 Codes"
     },
     {
+      "at": "2026-09-12 20:39",
+      "kind": "journal",
+      "ref": "INF-4",
+      "text": "INF-4 ok (1 Versuche)"
+    },
+    {
+      "at": "2026-09-12 20:39",
+      "kind": "review",
+      "ref": "INF-4",
+      "text": "Review pass"
+    },
+    {
       "at": "2026-09-12 20:02",
       "kind": "journal",
       "ref": "INF-3",
@@ -870,6 +900,12 @@
     {
       "at": "",
       "kind": "tag",
+      "ref": "wp/INF-3",
+      "text": "Tag wp/INF-3"
+    },
+    {
+      "at": "",
+      "kind": "tag",
       "ref": "wp/WP-B",
       "text": "Tag wp/WP-B"
     },
@@ -894,7 +930,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 124,
+      "tests": 126,
       "coverage": 100
     },
     {
@@ -906,7 +942,7 @@
     {
       "path": "src/production_agent/data/",
       "files": 4,
-      "tests": 75,
+      "tests": 77,
       "coverage": 83
     },
     {
