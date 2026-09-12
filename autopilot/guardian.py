@@ -267,6 +267,14 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
     errors: list[str] = []
     warn: list[str] = []
     tracked = [f for f in sh(["git", "ls-files"]).splitlines() if f] + files
+    # D7-Schnappschuss VOR K4: K4 erzeugt coverage.json, was marker_values() verändert.
+    # Marker wurden von status-refresh mit den Werten VOR K4 geschrieben – hier dieselben nutzen.
+    try:
+        import status as _status_mod  # noqa: PLC0415
+
+        _marker_vals: dict[str, str] | None = _status_mod.marker_values()
+    except Exception:
+        _marker_vals = None
 
     def get_text(f: str) -> str:
         try:
@@ -602,12 +610,10 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
         if f == "README.md" or (f.startswith("docs/") and "/" not in f[len("docs/") :])
     }
     errors += check_doc_facts(doc_scope)
-    try:
-        import status  # noqa: PLC0415
-
-        errors += check_markers(md_files, status.marker_values())
-    except Exception as exc:  # noqa: BLE001
-        warn.append(f"D7 status.marker_values nicht auswertbar: {exc}")
+    if _marker_vals is not None:
+        errors += check_markers(md_files, _marker_vals)
+    else:
+        warn.append("D7 status.marker_values nicht auswertbar")
     m = re.search(r"## Stand\b.*?<!-- auto:stand -->(.*?)<!-- /auto:stand -->", readme, re.S)
     if not m:
         errors.append("D9 README.md ohne Abschnitt '## Stand' mit auto:stand-Marker")
