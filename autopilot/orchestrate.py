@@ -214,9 +214,10 @@ def orchestrate(plan: dict, state: dict, runner, push: bool = False) -> int:
 class Runner:
     """Live-Runner: Worktree je WP, Subprozess run.py, Merge auf main mit Guardian-Gate."""
 
-    def __init__(self, plan: dict, push: bool = False):
+    def __init__(self, plan: dict, push: bool = False, auto_decide: bool = False):
         self.plan = plan
         self.push = push
+        self.auto_decide = auto_decide
 
     def budget_ok(self, state: dict) -> bool:
         return state["budget_used"] < state["budget_total"]
@@ -250,6 +251,22 @@ class Runner:
         w["last_gate_tail"] = (r.stdout + r.stderr)[-600:]
         w["worktree"] = str(worktree)
         w["status"] = "review_pass" if r.returncode == 0 else "escalated"
+        if w["status"] == "escalated" and self.auto_decide:
+            import decider  # noqa: PLC0415
+
+            spec = next(
+                (
+                    p.get("spec", {}).get("prompt_ref", "")
+                    for p in self.plan["packages"]
+                    if p["id"] == wp
+                ),
+                "",
+            )
+            d = decider.decide(wp, "Builder-/Reviewer-Eskalation", w["last_gate_tail"], spec)
+            w["last_review"] = d
+            if d.get("action") == "apply":  # automatisch entschieden – bitte prüfen
+                w["status"] = "review_pass"
+                w["auto_decided"] = True
         if w["status"] == "escalated":
             self._escalate(wp, w)
         save_state(state)
@@ -308,6 +325,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--retry", metavar="WP")
     ap.add_argument("--skip", metavar="WP")
     ap.add_argument("--budget-total-usd", type=float, default=40.0)
+    ap.add_argument(
+        "--auto-decide", action="store_true", help="Rückfragen von decider.py entscheiden lassen"
+    )
     ap.add_argument("--run-id", default="run")
     args = ap.parse_args(argv)
 
@@ -337,7 +357,8 @@ def main(argv: list[str] | None = None) -> int:
         _print_dry_run(plan, state)
         return 0 if all_merged(state, plan) else 2
 
-    return orchestrate(plan, state, Runner(plan, push=args.push), push=args.push)
+    runner = Runner(plan, push=args.push, auto_decide=args.auto_decide)
+    return orchestrate(plan, state, runner, push=args.push)
 
 
 if __name__ == "__main__":

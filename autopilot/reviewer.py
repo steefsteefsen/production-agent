@@ -90,7 +90,22 @@ def review(
         "--json-schema",
         json.dumps(SCHEMA),
     ]
-    p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    try:
+        p = subprocess.run(
+            cmd,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=600,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "verdict": "escalate",
+            "items": [],
+            "summary": "Reviewer-Timeout nach 600s",
+            "_cost_usd": None,
+        }
     try:
         out = json.loads(p.stdout)
         verdict = out.get("structured_output") or json.loads(out.get("result", "{}"))

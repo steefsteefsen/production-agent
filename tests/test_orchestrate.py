@@ -107,3 +107,24 @@ def test_cycle_is_k6_error_falsification():
     assert orchestrate.deps_cycle({"A": ["B"], "B": ["A"]})
     bad_plan = {"packages": [{"id": "A", "deps": ["B"]}, {"id": "B", "deps": ["A"]}]}
     assert any("K6" in e and "zyklus" in e.lower() for e in orchestrate.check_plan(set(), bad_plan))
+
+
+def test_orchestrate_run_flags_are_covered_by_run_help():
+    """Jedes run.py-Flag, das orchestrate.py --dry-run ausgibt, muss run.py --help kennen."""
+    import re
+    import subprocess
+
+    dry = subprocess.run(
+        [sys.executable, "autopilot/orchestrate.py", "--dry-run"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    ).stdout
+    help_txt = subprocess.run(
+        [sys.executable, "autopilot/run.py", "--help"], cwd=ROOT, capture_output=True, text=True
+    ).stdout
+    invocations = re.findall(r"run\.py[^\n]*", dry)
+    used = set(re.findall(r"--[a-z][a-z-]+", " ".join(invocations)))
+    assert used, "dry-run nennt keine run.py-Befehle"
+    for flag in used:
+        assert flag in help_txt, f"{flag} fehlt in run.py --help"

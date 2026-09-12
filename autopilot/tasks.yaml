@@ -196,3 +196,92 @@
   - docs/demo_script.md
   - README.md
   - docs/CHANGELOG.md
+- id: INF-3
+  agent: qa-agent
+  gate: pytest tests/test_changelog.py -q
+  prompt: |
+    Führe ein Änderungsprotokoll mit Begründungspflicht ein (Phase-2 Block 3).
+    1. docs/AENDERUNGEN.md: ein Eintrag je Commit, neueste oben, Format exakt
+       "## <Datum> · <typ>(<scope>): <Titel>" mit den Feldern Was / Warum (Problem oder Anlass) /
+       Alternativen (verworfen, weil ...) / Auswirkung (Verträge, ADR, Tests) / Bezug (WP, ADR).
+    2. autopilot/journal.py: changelog_entry(wp_id, e) schreibt den Eintrag vor dem Commit
+       (Was aus der ersten Zeile der Meldung, Warum aus der Zeile "Warum:").
+    3. Guardian D4: bei Änderungen an src/, autopilot/, docs/adr/, docs/contracts/ oder decisions.yaml
+       muss AENDERUNGEN.md gestaged sein, der oberste Eintrag mit heutigem Datum und allen fünf Feldern,
+       kein Platzhalter. D5: Titel des obersten Eintrags gleich der ersten Zeile der Commit-Message
+       (Prüfung in autopilot/commit_check.py).
+    4. tests/test_changelog.py mit check_changelog(staged_files, changelog_text, commit_title, today):
+       Verifikation gültiger Eintrag; Falsifikation altes Datum, fehlendes Feld, Platzhalter,
+       Titel ungleich Commit-Titel.
+    CLAUDE.md-Abschnitt "Änderungen begründen"; jede .claude/agents/*.md endet mit "Warum:".
+  review_gate:
+  - Enthält jeder Eintrag eine verworfene Alternative mit Begründung?
+  - Wird ein Commit ohne Eintrag von D4 abgelehnt?
+  review_files:
+  - docs/AENDERUNGEN.md
+  - tests/test_changelog.py
+- id: INF-4
+  agent: qa-agent
+  gate: test -f .github/workflows/ci.yml && test -f .gitlab-ci.yml
+  prompt: |
+    Ergänze CI/CD und ein E2E-Gerüst (Phase-2 Block 4).
+    1. .github/workflows/ci.yml (push und pull_request auf main): Job test (Python 3.11) mit
+       pip install -e ".[dev]", ruff check ., Simulator, pytest, bandit, pip-audit; Job frontend
+       (needs test, Node 20, nur wenn frontend/package.json existiert) npm ci und npm run build;
+       Job e2e (needs frontend) Playwright chromium, LLM_MODE=mock, uvicorn und vite im Hintergrund,
+       pytest tests/e2e, Traces als Artefakt. Kein Geheimnis in der Datei. README-Badge oben.
+    2. .gitlab-ci.yml: Stufe e2e-live nur bei Tags wp/* oder manuell; Variablen ANTHROPIC_API_KEY,
+       LANGFUSE_*; python evals/run_evals.py --live und pytest tests/e2e mit LLM_MODE=live.
+    3. src/production_agent/data/replay.py: CLI --latest gibt die Replay-Uhr des jüngsten Falls aus;
+       Test in tests/test_replay.py (Format YYYY-MM-DD HH:MM:SS).
+    4. tests/e2e/test_ui.py (Playwright, Marker e2e, ohne BASE_URL übersprungen). Makefile-Ziel e2e.
+  review_gate:
+  - Läuft der Job test grün, frontend und e2e sauber übersprungen ohne Frontend?
+  - Steht kein Geheimnis im Workflow?
+  review_files:
+  - .github/workflows/ci.yml
+  - .gitlab-ci.yml
+  - tests/e2e/test_ui.py
+- id: INF-9
+  agent: qa-agent
+  gate: test -f docs/BACKLOG.md
+  prompt: |
+    Lege docs/BACKLOG.md an (Phase-2 Block 9): je Eintrag Priorität, Titel, Warum, Umfang, Akzeptanz,
+    frühestens nach.
+    Eintrag 1 (nach WP7): kausaler Simulator – drei Stationen mit Eigenschaften, Grenzen, Alarmen und
+    Ausbreitung (Folienwickler, Schneidstation, Kartonierer); drei E2E-Szenarien (Folienriss mit
+    Alarmflut; Verschleiß vor Alarm mit Regel als Evidenz; Rückstau mit Wurzelstation stromabwärts).
+    Akzeptanz: die Replay-Eval trennt "erste Station mit Alarm" von "Wurzelstation".
+    Eintrag 2 (nach WP5): E2E-Szenarien 1 bis 3 als Playwright-Fälle.
+    Eintrag 3 (nach WP6): Langfuse-Trace je Szenario als Referenz archivieren. Kein Code ändern.
+  review_gate:
+  - Ist jede Akzeptanz messbar formuliert?
+  - Ist "frühestens nach" je Eintrag gesetzt?
+  review_files:
+  - docs/BACKLOG.md
+- id: WP-B
+  agent: ui-agent
+  gate: pytest tests/acceptance/test_wpb.py -q && cd frontend && npm run build --silent
+  prompt: |
+    Grundaufbau Live-MES, Medallion-Lineage und React-Cockpit (Phase-2 Block 10, Lane ui).
+    1. docs/adr/0010-mes-nachrichtenformat.md: OPC UA Alarms and Conditions plus ISA-95 als JSON-Event
+       (gewählt) gegen Sparkplug B und proprietäres CSV, Quellen mit Datum.
+    2. src/production_agent/data/messages.py (Pydantic): AlarmEvent, StateChange, OrderProgress; Topic
+       plant/<line>/<station>/<alarm|state|order>; Priorität 1 bis 4 aus Severity-Bändern.
+    3. Simulator-Stream: python -m production_agent.data.simulator --stream --speed 60 gibt die
+       Nachrichten des Demo-Ereignisses zeitgetreu als JSON-Zeilen aus; data/pipeline_view.py zeigt die
+       Herkunftskette Bronze nach Silber (Regel-Chips) nach Gold mit Begründung je Übergang.
+    4. api/server.py: GET /mes/stream (SSE), /mes/events, /mes/lineage/{event_id}, /mes/line/{line_id};
+       nur lesend, über den Guard, auditiert.
+    5. frontend/ (Vite, React, TypeScript, Tailwind, shadcn/ui, Recharts, Deutsch) mit Tabs Live-MES,
+       Medallion, Agent, Status; Farben Teal, Wein nur für Freigabe und Priorität 1, Salbei für Hinweise.
+    6. tests/acceptance/test_wpb.py (Schema, Stream liefert das Demo-Ereignis, Lineage enthält nur die
+       eigenen Bronze-IDs, Severity zu Priorität, Endpunkte liefern 200; Falsifikation: ohne source_node
+       422, fremde Bronze-IDs nie in der Lineage).
+  review_gate:
+  - Zeigt make ui den Strom und die Kette Bronze nach Silber nach Gold?
+  - Erscheint keine fremde Bronze-ID in der Lineage?
+  review_files:
+  - src/production_agent/data/messages.py
+  - docs/adr/0010-mes-nachrichtenformat.md
+  - tests/acceptance/test_wpb.py

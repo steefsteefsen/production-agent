@@ -41,8 +41,30 @@ def render(prompt: str, dec: dict) -> str:
     return re.sub(r"\{\{([a-z_.]+)\}\}", lookup, prompt)
 
 
+def preflight_claude() -> tuple[bool, str]:
+    """Vor dem ersten Lauf: claude erreichbar und angemeldet? Sonst klarer Abbruch statt Hänger."""
+    for args in (["claude", "--version"], ["claude", "auth", "status"]):
+        try:
+            r = subprocess.run(
+                args,
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=60,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+            return False, f"{' '.join(args)}: {e}"
+        if r.returncode != 0:
+            return (
+                False,
+                f"{' '.join(args)} → Exit {r.returncode}: {(r.stdout + r.stderr).strip()[:200]}",
+            )
+    return True, "ok"
+
+
 def claude(
-    prompt: str, agent: str, max_turns: int, budget: float, log: Path
+    prompt: str, agent: str, max_turns: int, budget: float, log: Path, timeout: int = 1800
 ) -> tuple[int, dict | None]:
     cmd = [
         "claude",
@@ -61,7 +83,18 @@ def claude(
     ]
     with log.open("a", encoding="utf-8") as fh:
         fh.write(f"\n===== {time.strftime('%H:%M:%S')} claude -p ({agent}) =====\n{prompt}\n")
-        p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)  # noqa: S603
+        try:
+            p = subprocess.run(  # noqa: S603
+                cmd,
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            fh.write(f"\n[TIMEOUT nach {timeout}s – Loop gezählt]\n")
+            return 124, {"timeout": True}
         fh.write(p.stdout + "\n" + p.stderr)
         out = None
         try:
@@ -82,7 +115,21 @@ def gate(cmd: str, log: Path) -> tuple[int, str]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", nargs="*", help="nur diese WP-IDs")
-    ap.add_argument("--retries", type=int, default=2)
+    ap.add_argument(
+        "--max-loops",
+        type=int,
+        default=4,
+        help="Builder-Versuche und Reviewer-fail-Nachbesserungen zusammen (Standard 4)",
+    )
+    ap.add_argument(
+        "--retries",
+        type=int,
+        default=None,
+        help="Alias für --max-loops (retries = max-loops − 1)",
+    )
+    ap.add_argument(
+        "--claude-timeout", type=int, default=1800, help="Timeout je claude-Aufruf in Sekunden"
+    )
     ap.add_argument("--max-turns", type=int, default=60)
     ap.add_argument("--budget", type=float, default=4.0, help="USD je Versuch")
     ap.add_argument("--dry-run", action="store_true", help="nur Prompts rendern")
@@ -102,6 +149,7 @@ def main() -> int:
     )
     ap.add_argument("--no-commit", action="store_true", help="keinen Commit je WP")
     args = ap.parse_args()
+    max_loops = (args.retries + 1) if args.retries is not None else args.max_loops
 
     dec = yaml.safe_load(DECISIONS.read_text(encoding="utf-8"))
     tasks = yaml.safe_load(TASKS.read_text(encoding="utf-8"))
@@ -109,6 +157,11 @@ def main() -> int:
         json.loads(STATUS.read_text()) if STATUS.exists() else {"wp": {}, "hours": 0, "runs": {}}
     )
     LOGS.mkdir(exist_ok=True)
+    if not args.dry_run:
+        ready, msg = preflight_claude()
+        if not ready:
+            print(f"Abbruch: claude nicht einsatzbereit – {msg}")
+            return 1
     t_start = time.time()
 
     for t in tasks:
@@ -125,9 +178,15 @@ def main() -> int:
         ok = False
         t0 = time.time()
         cj = None
-        for attempt in range(1, args.retries + 2):
-            print(f"{t['id']} Versuch {attempt} ({t['agent']}) …", flush=True)
-            _, cj = claude(prompt, t["agent"], args.max_turns, args.budget, log)
+        for attempt in range(1, max_loops + 1):
+            print(f"{t['id']} Versuch {attempt}/{max_loops} ({t['agent']}) …", flush=True)
+            _, cj = claude(
+                prompt, t["agent"], args.max_turns, args.budget, log, args.claude_timeout
+            )
+            if cj and cj.get("timeout"):
+                out = f"Claude-Timeout nach {args.claude_timeout}s (zählt als Loop)"
+                print(f"{t['id']}: {out}")
+                continue
             rc, out = gate(t["gate"], log)
             if rc == 0:
                 ok = True
@@ -156,6 +215,7 @@ def main() -> int:
                     args.max_turns,
                     args.budget,
                     log,
+                    args.claude_timeout,
                 )
                 rc, out = gate(t["gate"], log)
                 ok = rc == 0

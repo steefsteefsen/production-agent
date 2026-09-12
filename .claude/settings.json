@@ -6,10 +6,15 @@
   "permissions": {
     "allow": [
       "Read", "Edit", "Write", "Grep", "Glob",
-      "Bash(pytest:*)", "Bash(python:*)", "Bash(python3:*)", "Bash(ruff:*)", "Bash(bandit:*)",
-      "Bash(pip install:*)", "Bash(npm:*)", "Bash(npx:*)", "Bash(git add:*)", "Bash(git commit:*)",
-      "Bash(git status:*)", "Bash(git diff:*)", "Bash(ls:*)", "Bash(cat:*)", "Bash(mkdir:*)", "Bash(make:*)"
+      "Bash(pytest:*)", "Bash(python:*)", "Bash(python3:*)", "Bash(python -m:*)", "Bash(ruff:*)",
+      "Bash(bandit:*)", "Bash(pip install:*)", "Bash(pip-audit:*)", "Bash(npm:*)", "Bash(npx:*)",
+      "Bash(node:*)", "Bash(uvicorn:*)", "Bash(playwright:*)", "Bash(docker compose:*)",
+      "Bash(git add:*)", "Bash(git commit:*)", "Bash(git status:*)", "Bash(git diff:*)",
+      "Bash(git log:*)", "Bash(git show:*)", "Bash(git tag:*)", "Bash(git worktree list:*)",
+      "Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)", "Bash(find:*)",
+      "Bash(mkdir:*)", "Bash(cp:*)", "Bash(mv:*)", "Bash(rm -f:*)", "Bash(make:*)", "Bash(sqlite3:*)",
+      "Bash(cmp:*)", "Bash(wc:*)", "Bash(cd:*)"
     ],
-    "deny": ["Bash(git push:*)", "Bash(rm -rf:*)", "Bash(curl:*)", "Read(.env)", "Edit(.env)", "Edit(decisions.yaml)", "Edit(LICENSE)"]
+    "deny": ["Bash(git push:*)", "Bash(rm -rf:*)", "Bash(curl:*)", "Read(.env)", "Edit(.env)", "Edit(decisions.yaml)", "Edit(LICENSE)", "Edit(tests/acceptance/**)", "Write(tests/acceptance/**)"]
   }
 }

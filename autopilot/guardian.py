@@ -3,7 +3,7 @@
 Dokumentationsaktualität verletzt sind. Deterministisch, ohne LLM, in Sekunden. Mit --llm zusätzlich
 ein kontextfreier Doku-Konsistenz-Check über claude -p (manuell, nicht im Hook – Kosten/Nichtdeterminismus).
 
-Regeln (S1–S9, K1–K6, D1–D11), je eine Zeile – hieraus erzeugt status.py den Marker auto:guardian_rules:
+Regeln (S1–S9, K1–K7, D1–D11), je eine Zeile – hieraus erzeugt status.py den Marker auto:guardian_rules:
  S1  keine Secrets, keine .env committet
  S2  keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
  S3  MES-Server genau 6 Werkzeuge, RAG genau 1, kein Werkzeug *sql/query/write/exec*
@@ -19,6 +19,7 @@ Regeln (S1–S9, K1–K6, D1–D11), je eine Zeile – hieraus erzeugt status.py
  K4  Coverage: gesamt >=80, security >=95, mes_server/workflow >=85
  K5  jede entry-Zeile in .pre-commit-config.yaml beginnt mit .venv/bin/python
  K6  tasks.yaml-WPs stehen in plan.yaml, Abhaengigkeiten sind aufloesbar und azyklisch
+ K7  tests/acceptance/ nur mit GUARDIAN_ALLOW_ACCEPTANCE=1 aenderbar (Abnahmetests = Spezifikation)
  D1  jedes src-Modul ist in README oder docs/ namentlich erwaehnt
  D2  jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
  D3  src geaendert -> auch docs/, README oder tests/ geaendert
@@ -418,7 +419,19 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
                     f"K1 {cands[0].name}: kein Falsifikationstest markiert (Wort 'falsif')"
                 )
 
-    # K2 Lint / Bandit
+    # K2 Lint / Bandit – zuerst gestagte Python-Dateien formatieren und autofixen, dann neu stagen,
+    # damit der nachgelagerte ruff-format-Hook nicht mehr blockiert; danach erst prüfen.
+    py_staged = [f for f in files if f.endswith(".py") and (ROOT / f).exists()]
+    if py_staged:
+        subprocess.run(
+            [sys.executable, "-m", "ruff", "format", *py_staged], cwd=ROOT, capture_output=True
+        )
+        subprocess.run(
+            [sys.executable, "-m", "ruff", "check", "--fix", *py_staged],
+            cwd=ROOT,
+            capture_output=True,
+        )
+        subprocess.run(["git", "add", *py_staged], cwd=ROOT)
     for tool, cmd in (
         ("ruff", [sys.executable, "-m", "ruff", "check", "."]),
         ("bandit", [sys.executable, "-m", "bandit", "-q", "-c", "pyproject.toml", "-r", "src"]),
@@ -467,6 +480,13 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
             errors += orchestrate.check_plan(tids, orchestrate.load_plan())
         except Exception as exc:  # noqa: BLE001
             warn.append(f"K6 plan.yaml nicht auswertbar: {exc}")
+
+    # K7 Abnahmetests sind Spezifikation – Änderung nur mit ausdrücklicher Freigabe
+    if os.environ.get("GUARDIAN_ALLOW_ACCEPTANCE") != "1":
+        modified = sh(["git", "diff", "--cached", "--name-only", "--diff-filter=M"]).splitlines()
+        for f in modified:
+            if f.startswith("tests/acceptance/") and f.endswith(".py"):
+                errors.append(f"K7 {f} geändert – Abnahmetest, nur mit GUARDIAN_ALLOW_ACCEPTANCE=1")
 
     # D1 Modul in Doku erwähnt
     doc_text = (ROOT / "README.md").read_text(encoding="utf-8") + "".join(
@@ -568,29 +588,34 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
     # optional LLM-Konsistenz (manuell)
     if use_llm and src_changed and not errors:
         diff = sh(["git", "diff", "--cached"])[:30000]
-        r = subprocess.run(
-            [
-                "claude",
-                "-p",
-                "Prüfe kontextfrei, ob dieser Diff Aussagen in README.md oder docs/ veraltet macht. "
-                "Antworte nur mit 'OK' oder Liste 'VERALTET: <Datei>: <Aussage>'.\n" + diff,
-                "--model",
-                "haiku",
-                "--max-turns",
-                "6",
-                "--allowedTools",
-                "Read,Grep",
-                "--permission-mode",
-                "dontAsk",
-                "--output-format",
-                "text",
-            ],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-        )
-        if "VERALTET" in r.stdout:
-            warn.append("LLM-Konsistenz: " + r.stdout.strip()[:800])
+        try:
+            r = subprocess.run(
+                [
+                    "claude",
+                    "-p",
+                    "Prüfe kontextfrei, ob dieser Diff Aussagen in README.md oder docs/ veraltet macht. "
+                    "Antworte nur mit 'OK' oder Liste 'VERALTET: <Datei>: <Aussage>'.\n" + diff,
+                    "--model",
+                    "haiku",
+                    "--max-turns",
+                    "6",
+                    "--allowedTools",
+                    "Read,Grep",
+                    "--permission-mode",
+                    "dontAsk",
+                    "--output-format",
+                    "text",
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                stdin=subprocess.DEVNULL,
+                timeout=600,
+            )
+            if "VERALTET" in r.stdout:
+                warn.append("LLM-Konsistenz: " + r.stdout.strip()[:800])
+        except subprocess.TimeoutExpired:
+            warn.append("LLM-Konsistenz: Timeout nach 600s")
 
     for w in warn:
         print("WARNUNG", w)

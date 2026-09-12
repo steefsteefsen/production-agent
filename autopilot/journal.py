@@ -70,25 +70,30 @@ def entry(
     }
     if narrate and files:
         diff = _git("diff", "HEAD")[:12000]
-        p = subprocess.run(  # noqa: S603, S607
-            [
-                "claude",
-                "-p",
-                f"Fasse diese Änderung in drei deutschen Sätzen für ein Projektjournal zusammen (was, warum, offen):\n{diff}",
-                "--model",
-                "haiku",
-                "--max-turns",
-                "1",
-                "--output-format",
-                "text",
-                "--permission-mode",
-                "dontAsk",
-            ],
-            capture_output=True,
-            text=True,
-            cwd=ROOT,
-        )
-        e["narrative"] = p.stdout.strip()[:600]
+        try:
+            p = subprocess.run(  # noqa: S603, S607
+                [
+                    "claude",
+                    "-p",
+                    f"Fasse diese Änderung in drei deutschen Sätzen für ein Projektjournal zusammen (was, warum, offen):\n{diff}",
+                    "--model",
+                    "haiku",
+                    "--max-turns",
+                    "1",
+                    "--output-format",
+                    "text",
+                    "--permission-mode",
+                    "dontAsk",
+                ],
+                capture_output=True,
+                text=True,
+                cwd=ROOT,
+                stdin=subprocess.DEVNULL,
+                timeout=600,
+            )
+            e["narrative"] = p.stdout.strip()[:600]
+        except subprocess.TimeoutExpired:
+            e["narrative"] = "(Narrativ-Timeout nach 600s)"
     return e
 
 

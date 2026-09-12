@@ -151,7 +151,7 @@ def render_html(data: dict) -> str:
     )
     panels = "".join(
         f'<section class="panel{" active" if i == 0 else ""}" id="panel-{key}">'
-        f"<h2>{label}</h2><div class=\"body\"></div></section>"
+        f'<h2>{label}</h2><div class="body"></div></section>'
         for i, (key, label) in enumerate(TABS)
     )
     return f"""<!doctype html>
@@ -173,7 +173,7 @@ h2{{font-size:16px;color:var(--teal)}}
 </style></head>
 <body>
 <script id="data" type="application/json">{payload}</script>
-<header><h1>Production Agent – Ablauf aus Fakten · Stand {data['generated_at']}</h1></header>
+<header><h1>Production Agent – Ablauf aus Fakten · Stand {data["generated_at"]}</h1></header>
 <div class="tabs">{tabbar}</div>
 <main>{panels}</main>
 <script>

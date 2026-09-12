@@ -33,8 +33,10 @@ DOC_SECTIONS = [
     ("Entscheidungen (ADRs)", lambda rel: rel.startswith("adr/")),
     (
         "Betrieb",
-        lambda rel: rel.startswith("betriebsanweisung/")
-        or rel in ("guardian.md", "orchestrator.md", "chat_interface.md"),
+        lambda rel: (
+            rel.startswith("betriebsanweisung/")
+            or rel in ("guardian.md", "orchestrator.md", "chat_interface.md")
+        ),
     ),
     ("Tests", lambda rel: rel in ("test_strategy.md", "test_cases.md")),
     ("Verlauf", lambda rel: rel.startswith("sessions/") or rel == "AENDERUNGEN.md"),
