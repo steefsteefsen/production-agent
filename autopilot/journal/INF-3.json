@@ -1,0 +1,48 @@
+[
+  {
+    "wp": "INF-3",
+    "agent": "qa-agent",
+    "at": "2026-09-12 20:02",
+    "ok": true,
+    "attempts": 1,
+    "minutes": 26.7,
+    "cost_usd": 2.3770480000000003,
+    "turns": 61,
+    "files": [
+      "CLAUDE.md",
+      "README.md",
+      "autopilot/commit_check.py",
+      "autopilot/guardian.py",
+      "autopilot/journal.md",
+      "autopilot/journal.py",
+      "docs/AENDERUNGEN.md",
+      "docs/guardian.md",
+      "docs/presentation/index.html",
+      "docs/status/index.html",
+      "docs/status/status.json",
+      "docs/test_strategy.md"
+    ],
+    "agent_summary": "",
+    "gate_tail": "grün",
+    "narrative": "",
+    "review": {
+      "verdict": "pass",
+      "summary": "INF-3 führt das Änderungsprotokoll mit Begründungspflicht ein. Alle sieben aktuellen Einträge in docs/AENDERUNGEN.md enthalten eine verworfene Alternative mit Begründung; der D4-Mechanismus (pre-commit über guardian.py + commit-msg über commit_check.py) ist implementiert und durch 13 Tests abgedeckt. Ein strukturelles Gap bleibt: journal.py changelog_entry() schreibt für das Feld „Alternativen\" fest den Platzhalter „–\", den check_changelog() (Feldlabel-Prüfung, keine Inhaltsprüfung) durchlässt – zukünftige auto-generierte Einträge enthalten daher keine echten Alternativen.",
+      "items": [
+        {
+          "check": "Enthält jeder Eintrag eine verworfene Alternative mit Begründung?",
+          "result": "pass",
+          "evidence": "Alle 7 Einträge in docs/AENDERUNGEN.md enthalten das Feld **Alternativen (verworfen, weil ...):** mit inhaltlicher Begründung (INF-3-Eintrag: Zeile 8 der Datei – zwei Alternativen mit je einem Warum). Gap: autopilot/journal.py:174 erzeugt für auto-generierte Einträge fest '–' als Inhalt; check_changelog() (guardian.py:257-259) prüft nur das Vorhandensein des Feldlabels, nicht ob der Wert != '–' ist – zukünftige Agenten-Commits würden eine leere Alternative durchlassen.",
+          "severity": "medium"
+        },
+        {
+          "check": "Wird ein Commit ohne Eintrag von D4 abgelehnt?",
+          "result": "pass",
+          "evidence": "autopilot/commit_check.py:55-65 ruft check_changelog() mit gestagten Dateien auf; guardian.py:238-242 meldet Fehler 'D4 docs/AENDERUNGEN.md nicht gestaged', wenn src/autopilot/adr/contracts/decisions geändert aber AENDERUNGEN.md nicht gestaged. Beleg: tests/test_changelog.py::test_changelog_not_staged_with_src_fails_falsification bestätigt genau diesen Pfad. Gate-Ausgabe: grün.",
+          "severity": "low"
+        }
+      ],
+      "_cost_usd": 0.36929865
+    }
+  }
+]

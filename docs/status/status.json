@@ -1,46 +1,52 @@
 {
-  "generated_at": "2026-09-12T15:52:17",
-  "commit": "1f46d3d2dd879eabe380b89cdf636b1fe911b992",
-  "branch": "main",
+  "generated_at": "2026-09-12T20:03:19",
+  "commit": "1b6d17f01a3d2c96712e6a6fdb4806c3844e992d",
+  "branch": "wp/INF-3",
   "packages": [
     {
       "id": "P",
       "name": "Planung",
       "agent": "—",
       "deps": [],
-      "percent": 0,
-      "state": "offen",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
           "name": "Review",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
           "name": "Commit",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
           "name": "Tag",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
           "name": "Sync-Paket",
-          "done": false,
+          "done": true,
           "at": null
         }
       ],
       "attempts": 0,
       "cost_usd": 0,
       "last_at": null,
-      "commits": []
+      "commits": [
+        {
+          "sha": "1b6d17f",
+          "title": "docs(P): Nachtlauf-Stand veröffentlichen (WP2a, Blocker)",
+          "at": "2026-09-12T15:52:03+02:00"
+        }
+      ]
     },
     {
       "id": "A",
@@ -481,18 +487,18 @@
       "name": "INF-3",
       "agent": "qa-agent",
       "deps": [],
-      "percent": 0,
-      "state": "offen",
+      "percent": 70,
+      "state": "review_pass",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 20:02"
         },
         {
           "name": "Review",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12 20:02"
         },
         {
           "name": "Commit",
@@ -510,9 +516,9 @@
           "at": null
         }
       ],
-      "attempts": 0,
-      "cost_usd": 0,
-      "last_at": null,
+      "attempts": 1,
+      "cost_usd": 2.38,
+      "last_at": "2026-09-12 20:02",
       "commits": []
     },
     {
@@ -673,14 +679,20 @@
     }
   ],
   "totals": {
-    "percent": 19,
-    "hours_agent": 0.67,
-    "cost_usd": 4.37,
-    "tests": 170,
-    "coverage_total": 94,
-    "coverage_security": 100
+    "percent": 29,
+    "hours_agent": 1.11,
+    "cost_usd": 6.75,
+    "tests": 183,
+    "coverage_total": null,
+    "coverage_security": null
   },
   "timeline": [
+    {
+      "at": "2026-09-12T15:52:03+02:00",
+      "kind": "commit",
+      "ref": "1b6d17f",
+      "text": "docs(P): Nachtlauf-Stand veröffentlichen (WP2a, Blocker)"
+    },
     {
       "at": "2026-09-12T15:47:45+02:00",
       "kind": "commit",
@@ -742,6 +754,18 @@
       "text": "adr(WP0): Entscheidungen festgeschrieben, Simulator auf UP1/14 Codes"
     },
     {
+      "at": "2026-09-12 20:02",
+      "kind": "journal",
+      "ref": "INF-3",
+      "text": "INF-3 ok (1 Versuche)"
+    },
+    {
+      "at": "2026-09-12 20:02",
+      "kind": "review",
+      "ref": "INF-3",
+      "text": "Review pass"
+    },
+    {
       "at": "2026-09-12 14:47",
       "kind": "journal",
       "ref": "WP2a",
@@ -792,38 +816,38 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 52,
-      "coverage": 100
+      "tests": 65,
+      "coverage": null
     },
     {
       "path": "src/production_agent/api/",
       "files": 1,
       "tests": 2,
-      "coverage": 83
+      "coverage": null
     },
     {
       "path": "src/production_agent/data/",
       "files": 2,
       "tests": 29,
-      "coverage": 95
+      "coverage": null
     },
     {
       "path": "src/production_agent/graph/",
       "files": 2,
       "tests": 5,
-      "coverage": 100
+      "coverage": null
     },
     {
       "path": "src/production_agent/mcp/",
       "files": 2,
       "tests": 2,
-      "coverage": 86
+      "coverage": null
     },
     {
       "path": "src/production_agent/security/",
       "files": 4,
       "tests": 8,
-      "coverage": 100
+      "coverage": null
     }
   ]
 }

@@ -25,12 +25,13 @@ Regeln (S1–S9, K1–K9, D1–D11), je eine Zeile – hieraus erzeugt status.py
  D1  jedes src-Modul ist in README oder docs/ namentlich erwaehnt
  D2  jede ADR hat Kontext / Optionen / Entscheidung / Konsequenzen
  D3  src geaendert -> auch docs/, README oder tests/ geaendert
- D4  docs/AENDERUNGEN.md vorhanden und nicht leer
- D5  README.md verlinkt docs/status/index.html
+ D4  Aenderungen in src/autopilot/adr/contracts/decisions: AENDERUNGEN.md gestaged, Datum heute, alle fuenf Felder, kein Platzhalter
+ D5  Titel oberster AENDERUNGEN.md-Eintrag gleich erster Commit-Zeile (Pruefung commit_check.py)
  D6  docs/status/status.json gestaged, frisch (<10 min), commit leer oder == HEAD
  D7  jeder auto-Marker in getrackten *.md hat den von status.py berechneten Wert
  D8  ausserhalb Markern keine getippten Zahlen/Regelbereiche/Coverage in README.md und docs/*.md
  D9  README.md hat Abschnitt "## Stand" mit nicht-leerem auto:stand-Marker
+ D10 README.md verlinkt docs/status/index.html
  D11 jede Datei unter docs/ steht in docs/index.md
 
 GUARDIAN_ENV_FILE (Standard .env) waehlt die Geheimnis-Datei (Selbsttest nutzt eine Kopie).
@@ -204,6 +205,72 @@ def check_binary_placement(files: list[str], root: Path = ROOT) -> list[str]:
 def d6_applies(files: list[str]) -> bool:
     """D6 prüft den Projektstatus nur, wenn überhaupt etwas gestaged ist (leerer Index → kein D6)."""
     return bool(files)
+
+
+CHANGELOG_TRIGGERS = ("src/", "autopilot/", "docs/adr/", "docs/contracts/")
+CHANGELOG_FIELDS = [
+    "**Was:**",
+    "**Warum (Problem oder Anlass):**",
+    "**Alternativen (verworfen, weil ...):**",
+    "**Auswirkung (Verträge, ADR, Tests):**",
+    "**Bezug (WP, ADR):**",
+]
+
+
+def check_changelog(
+    staged_files: list[str],
+    changelog_text: str,
+    commit_title: str | None,
+    today: str,
+) -> list[str]:
+    """D4/D5: AENDERUNGEN.md-Prüfung (importierbar für tests/test_changelog.py und commit_check.py).
+
+    staged_files: Liste gestagter Dateipfade.
+    changelog_text: Inhalt von docs/AENDERUNGEN.md (gestagt oder aus dem Dateisystem).
+    commit_title: erste Commit-Zeile (None → D5 überspringen, da im pre-commit nicht verfügbar).
+    today: ISO-Datum YYYY-MM-DD des Commit-Tags.
+    """
+    errs = []
+    source_changed = any(
+        f.startswith(CHANGELOG_TRIGGERS) or f == "decisions.yaml" for f in staged_files
+    )
+    cl_staged = "docs/AENDERUNGEN.md" in staged_files
+    if source_changed and not cl_staged:
+        errs.append(
+            "D4 docs/AENDERUNGEN.md nicht gestaged"
+            " – bei src/autopilot/adr/contracts/decisions-Änderung Pflicht"
+        )
+    if not changelog_text.strip():
+        errs.append("D4 AENDERUNGEN.md ist leer")
+        return errs
+    # obersten Eintrag isolieren
+    parts = re.split(r"(?m)^## ", changelog_text)
+    if len(parts) < 2:
+        errs.append("D4 AENDERUNGEN.md hat keinen Eintrag (## Zeile fehlt)")
+        return errs
+    top = "## " + parts[1]
+    heading = top.splitlines()[0]
+    # Datum heute
+    if not re.search(rf"\b{re.escape(today)}\b", heading):
+        errs.append(f"D4 oberster Eintrag ohne heutiges Datum ({today}): '{heading[:70]}'")
+    # alle fünf Pflichtfelder
+    for field in CHANGELOG_FIELDS:
+        if field not in top:
+            errs.append(f"D4 Pflichtfeld fehlt im obersten Eintrag: {field}")
+    # kein Platzhalter
+    if re.search(r"\{\{[^}]+\}\}", top):
+        errs.append("D4 Platzhalter {{...}} im obersten Eintrag vorhanden – ersetzen")
+    # D5: Commit-Titel = Changelog-Titel (nur wenn commit_title übergeben)
+    if commit_title is not None:
+        m = re.match(r"^## \S+\s+·\s+(.+)$", heading)
+        cl_title = m.group(1).strip() if m else ""
+        if not cl_title:
+            errs.append(f"D5 Changelog-Heading ohne '· Titel'-Muster: '{heading[:70]}'")
+        elif commit_title.strip() != cl_title:
+            errs.append(
+                f"D5 Commit-Titel '{commit_title.strip()[:50]}' ≠ Changelog-Titel '{cl_title[:50]}'"
+            )
+    return errs
 
 
 def check_precommit_entries(text: str) -> list[str]:
@@ -561,15 +628,20 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
     ):
         errors.append("D3 src/ geändert, aber weder docs/, README.md noch tests/ – nachziehen")
 
-    # D4 Änderungshistorie
-    ae = ROOT / "docs/AENDERUNGEN.md"
-    if not ae.exists() or not ae.read_text(encoding="utf-8").strip():
-        errors.append("D4 docs/AENDERUNGEN.md fehlt oder ist leer")
+    # D4 Änderungsprotokoll: gestaged, Datum heute, alle fünf Felder, kein Platzhalter
+    ae_path = ROOT / "docs" / "AENDERUNGEN.md"
+    if "docs/AENDERUNGEN.md" in files:
+        ae_text = staged_text("docs/AENDERUNGEN.md")
+    elif ae_path.exists():
+        ae_text = ae_path.read_text(encoding="utf-8", errors="ignore")
+    else:
+        ae_text = ""
+    errors += check_changelog(files, ae_text, None, datetime.now().strftime("%Y-%m-%d"))
 
-    # D5 Statusseite verlinkt
+    # D10 Statusseite verlinkt
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     if "docs/status/index.html" not in readme:
-        errors.append("D5 README.md verlinkt docs/status/index.html nicht")
+        errors.append("D10 README.md verlinkt docs/status/index.html nicht")
 
     # D6 Projektstatus gestaged, frisch, commit == HEAD (nur bei nicht-leerem Index)
     if d6_applies(files) and os.environ.get("GUARDIAN_SKIP_D6") != "1":

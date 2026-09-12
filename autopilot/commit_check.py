@@ -40,7 +40,32 @@ def check(msg: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    errs = check(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    import subprocess
+    from datetime import datetime
+
+    sys.path.insert(0, str(Path(__file__).parent))
+    from guardian import check_changelog  # noqa: PLC0415
+
+    msg = Path(sys.argv[1]).read_text(encoding="utf-8")
+    errs = check(msg)
+
+    # D5: Titel des obersten AENDERUNGEN.md-Eintrags muss gleich der ersten Commit-Zeile sein
+    first_lines = [ln for ln in msg.splitlines() if not ln.startswith("#")]
+    commit_title = first_lines[0].strip() if first_lines else ""
+    if commit_title and not commit_title.startswith(("Merge ", "Revert ")):
+        staged = subprocess.run(  # noqa: S603, S607
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+            capture_output=True,
+            text=True,
+        ).stdout.splitlines()
+        cl_proc = subprocess.run(  # noqa: S603, S607
+            ["git", "show", ":docs/AENDERUNGEN.md"],
+            capture_output=True,
+            text=True,
+        )
+        cl_text = cl_proc.stdout if cl_proc.returncode == 0 else ""
+        errs += check_changelog(staged, cl_text, commit_title, datetime.now().strftime("%Y-%m-%d"))
+
     if errs:
         print("COMMIT-MSG abgelehnt:\n - " + "\n - ".join(errs) + f"\n\nBeispiel:\n{EXAMPLE}")
         sys.exit(1)

@@ -9,6 +9,7 @@ Ausgabe: autopilot/journal.md (lesbar) und autopilot/journal.json (Import im Coc
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import time
@@ -135,6 +136,9 @@ def write(e: dict) -> None:
         fh.write(block)
 
 
+AENDERUNGEN = ROOT / "docs" / "AENDERUNGEN.md"
+
+
 def _commit_type(files: list[str]) -> str:
     if files and all(f.startswith("docs/adr/") for f in files):
         return "adr"
@@ -147,6 +151,40 @@ def _commit_type(files: list[str]) -> str:
     return "feat"
 
 
+def changelog_entry(wp_id: str, e: dict) -> None:
+    """Schreibt einen AENDERUNGEN.md-Eintrag (neueste oben) vor dem Commit.
+
+    Was: erste Zeile von agent_summary.
+    Warum: Zeile, die mit 'Warum:' beginnt (Agents werden in ihrer Instruction dazu aufgefordert).
+    """
+    summary = e.get("agent_summary", "")
+    first = (summary.splitlines() or [""])[0].strip()
+    warum = ""
+    for line in summary.splitlines():
+        if re.match(r"warum\s*:", line.strip(), re.I):
+            warum = line.strip().split(":", 1)[1].strip()
+            break
+    ctype = _commit_type(e["files"])
+    heading_title = f"{ctype}({wp_id}): {first[:60] or 'Arbeitspaket abgeschlossen'}"
+    today = time.strftime("%Y-%m-%d")
+    block = (
+        f"\n## {today} · {heading_title}\n"
+        f"**Was:** {first}\n"
+        f"**Warum (Problem oder Anlass):** {warum or '–'}\n"
+        f"**Alternativen (verworfen, weil ...):** –\n"
+        f"**Auswirkung (Verträge, ADR, Tests):** –\n"
+        f"**Bezug (WP, ADR):** {wp_id}\n"
+    )
+    if AENDERUNGEN.exists():
+        original = AENDERUNGEN.read_text(encoding="utf-8")
+        first_line, _, rest = original.partition("\n")
+        AENDERUNGEN.write_text(first_line + "\n" + block + rest, encoding="utf-8")
+    else:
+        AENDERUNGEN.write_text(
+            "# Änderungen (Was / Warum / Alternativen)\n" + block, encoding="utf-8"
+        )
+
+
 def commit(wp_id: str, e: dict) -> None:
     """Commit nach Konvention (CLAUDE.md) auf dem aktuellen Branch. Tag wp/<id> setzt der
     Orchestrator erst nach dem Merge auf main (Block 7)."""
@@ -154,6 +192,7 @@ def commit(wp_id: str, e: dict) -> None:
     title = f"{_commit_type(e['files'])}({wp_id}): {first[:60] or 'Arbeitspaket abgeschlossen'}"
     review = (e.get("review") or {}).get("verdict", "human")
     footer = f"Gate: {'grün' if e['ok'] else 'rot'} | Review: {review} | Guardian: ok"
+    changelog_entry(wp_id, e)
     subprocess.run([sys.executable, str(ROOT / "autopilot" / "status.py"), "--stage"], cwd=ROOT)
     subprocess.run([sys.executable, "-m", "ruff", "format", "."], cwd=ROOT)  # ruff_pre_commit
     subprocess.run([sys.executable, "-m", "ruff", "check", "--fix", "-q", "."], cwd=ROOT)

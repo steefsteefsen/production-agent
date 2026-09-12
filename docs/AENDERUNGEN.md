@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-12 · feat(INF-3): Änderungsprotokoll mit Begründungspflicht eingeführt
+**Was:** Änderungsprotokoll mit Begründungspflicht eingeführt (Phase-2 Block 3)
+**Warum (Problem oder Anlass):** Bisher fehlte eine strukturierte Begründungspflicht für Änderungen; Entscheidungen waren nicht maschinell prüfbar nachvollziehbar.
+**Alternativen (verworfen, weil ...):** Freitext-Kommentare in Commits – verworfen, weil nicht maschinell prüfbar; keine Pflicht – verworfen, weil Entscheidungen undokumentiert bleiben.
+**Auswirkung (Verträge, ADR, Tests):** Guardian D4/D5 verschärft (D5 ehemals README-Link → D10); commit_check.py um D5-Check erweitert; journal.py changelog_entry() vor commit(); tests/test_changelog.py neu; alle agent/*.md enden mit Warum-Pflicht.
+**Bezug (WP, ADR):** INF-3
+
 ## Abo-Betrieb für Claude Code (Max 5×)
 **Was:** autopilot/cc.py bündelt den Abo-Betrieb: claude-Subprozesse ohne ANTHROPIC_API_KEY (nur mit
 --api-billing mit Key und Budget), Modelle aus settings.env (CC_MODEL_BUILDER/REVIEWER/DECIDER =
