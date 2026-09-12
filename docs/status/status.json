@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-12T15:47:59",
-  "commit": "08d775f64b008b7920cd8443bcd129faf705cf10",
+  "generated_at": "2026-09-12T15:52:17",
+  "commit": "1f46d3d2dd879eabe380b89cdf636b1fe911b992",
   "branch": "main",
   "packages": [
     {
@@ -185,8 +185,8 @@
       "name": "WP2a",
       "agent": "mcp-agent",
       "deps": [],
-      "percent": 70,
-      "state": "review_pass",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
@@ -200,12 +200,12 @@
         },
         {
           "name": "Commit",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-12T15:23:23+02:00"
         },
         {
           "name": "Tag",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
@@ -217,7 +217,13 @@
       "attempts": 1,
       "cost_usd": 2.51,
       "last_at": "2026-09-12 14:47",
-      "commits": []
+      "commits": [
+        {
+          "sha": "5a5a838",
+          "title": "feat(WP2a): sechs fachliche MES-Werkzeuge mit Zeilenlimits",
+          "at": "2026-09-12T15:23:23+02:00"
+        }
+      ]
     },
     {
       "id": "WP2b",
@@ -667,7 +673,7 @@
     }
   ],
   "totals": {
-    "percent": 17,
+    "percent": 19,
     "hours_agent": 0.67,
     "cost_usd": 4.37,
     "tests": 170,
@@ -676,10 +682,22 @@
   },
   "timeline": [
     {
+      "at": "2026-09-12T15:47:45+02:00",
+      "kind": "commit",
+      "ref": "1f46d3d",
+      "text": "Merge wp/WP2a: sechs fachliche MES-Werkzeuge (WP2a übernommen)"
+    },
+    {
       "at": "2026-09-12T15:45:00+02:00",
       "kind": "commit",
       "ref": "08d775f",
       "text": "fix(infra): Nachtlauf-Blocker – Worktree-Commit, Quota-Probe, K2"
+    },
+    {
+      "at": "2026-09-12T15:23:23+02:00",
+      "kind": "commit",
+      "ref": "5a5a838",
+      "text": "feat(WP2a): sechs fachliche MES-Werkzeuge mit Zeilenlimits"
     },
     {
       "at": "2026-09-12T13:27:35+02:00",
@@ -758,6 +776,12 @@
       "kind": "commit",
       "ref": "31eda13",
       "text": "chore(A): Basisprojekt – Sicherheitsfundament, Simulator, MCP, Graph, Autopilot"
+    },
+    {
+      "at": "",
+      "kind": "tag",
+      "ref": "wp/WP2a",
+      "text": "Tag wp/WP2a"
     }
   ],
   "guardian": {
