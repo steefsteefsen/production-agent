@@ -1,0 +1,4 @@
+{"ts": 1789224587.3359344, "event": "approval", "decision": {"approved": false, "comment": "nein"}, "line_id": "L1"}
+{"ts": 1789224587.3933077, "event": "approval", "decision": {"approved": true, "comment": "ok"}, "line_id": "L1"}
+{"ts": 1789224700.1678832, "event": "approval", "decision": {"approved": false, "comment": "nein"}, "line_id": "L1"}
+{"ts": 1789224700.2173364, "event": "approval", "decision": {"approved": true, "comment": "ok"}, "line_id": "L1"}

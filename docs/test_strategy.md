@@ -30,7 +30,7 @@ sind: gesamt mindestens achtzig Prozent, jede Datei unter `security/` mindestens
 `mcp/mes_server.py` und `graph/workflow.py` je mindestens fünfundachtzig Prozent. Der aktuelle Stand wird automatisch
 gefüllt (nicht von Hand tippen):
 
-- gesamt: <!-- auto:coverage_total -->94 %<!-- /auto:coverage_total -->
+- gesamt: <!-- auto:coverage_total -->89 %<!-- /auto:coverage_total -->
 - security: <!-- auto:coverage_security -->100 %<!-- /auto:coverage_security -->
 
 Die Werte stammen aus `coverage.json` (pytest-cov). CI hebt den Bericht als Artefakt; der GitLab-Coverage-Regex bleibt.
