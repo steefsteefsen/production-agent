@@ -3,6 +3,21 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## Ops-Cockpit (INF-E)
+**Was:** `autopilot/ops/app.py` – FastAPI-App auf Port 8010 (`make ops`), eine HTML-Seite ohne Build-Schritt
+(Vanilla JS, 5-s-Polling, Farben Teal/Wein/Salbei). Vier Tabs: Ablauf (WP-Kacheln in Zustandsfarbe, Live-Log,
+Journal, Kacheln klickbar → Gate/Review/Sync), Stand (Kennzahlen aus status.json, ESCALATION.md, Aktionen
+Start/Stop/Retry/Skip/Sync/Dry-Run), Konfiguration (decisions.yaml read-only; drei Felder per Dropdown/Slider
+editierbar → config/runtime.yaml + Audit; Aktive Constraints), Präsentation (iframe). Sicherheit: nur 127.0.0.1,
+keine Freitextbefehle, jede Aktion in config/ops_audit.jsonl. tests/test_ops.py: Verifikation (Tabs, Lanes,
+Config-Felder, runtime.yaml + Audit) + Falsifikation (403 auf nicht-konfigurierbar, decisions.yaml unverändert,
+404 auf unbekanntes WP). Makefile: `ops`. docs/ops.md.
+**Warum:** Stefan braucht eine lokale Oberfläche zum Beobachten und Eingreifen in den Nachtlauf; die drei
+konfigurierbaren Felder (Konfidenz-Schwelle, Priorisierungsverfahren, Personenbezug) sollen zur Laufzeit
+umschaltbar sein, ohne decisions.yaml anzutasten (Guardian S5).
+**Alternativen:** Direkte CLI-Aufrufe – verworfen, kein Lanes-Überblick. Eigenes React-Frontend –
+verworfen, Build-Schritt unnötig für lokalen Einzelnutzer.
+
 ## Abo-Betrieb für Claude Code (Max 5×)
 **Was:** autopilot/cc.py bündelt den Abo-Betrieb: claude-Subprozesse ohne ANTHROPIC_API_KEY (nur mit
 --api-billing mit Key und Budget), Modelle aus settings.env (CC_MODEL_BUILDER/REVIEWER/DECIDER =
