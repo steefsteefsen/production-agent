@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T23:17:21",
-  "commit": "c6b668672adf6a0efe4a642f7feaaca839277be0",
+  "generated_at": "2026-09-13T23:32:10",
+  "commit": "ee7c2cdfc8bb967bf7a46508e7380c5bb15319ac",
   "branch": "main",
   "packages": [
     {
@@ -462,7 +462,7 @@
         {
           "name": "Commit",
           "done": true,
-          "at": "2026-09-13T14:05:05+02:00"
+          "at": "2026-09-13T23:17:08+02:00"
         },
         {
           "name": "Tag",
@@ -479,6 +479,11 @@
       "cost_usd": 0,
       "last_at": null,
       "commits": [
+        {
+          "sha": "ee7c2cd",
+          "title": "feat(WP6): Replay-Eval, Langfuse-Tracing und Observability-ADR",
+          "at": "2026-09-13T23:17:08+02:00"
+        },
         {
           "sha": "3d9e3c2",
           "title": "feat(WP6): Testmatrix, zweiter Fall, Freigabe- und Ablehnungspfad",
@@ -762,6 +767,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T23:17:08+02:00",
+      "kind": "commit",
+      "ref": "ee7c2cd",
+      "text": "feat(WP6): Replay-Eval, Langfuse-Tracing und Observability-ADR"
+    },
     {
       "at": "2026-09-13T22:46:27+02:00",
       "kind": "commit",

@@ -276,8 +276,8 @@ def build_report(results: list[CaseResult], *, live: bool) -> str:
     lines.append("|---|---|---|---|---|---|---|---|---|---|")
     for r in results:
         conf = f"{r.confidence:.2f}" if r.confidence is not None else "–"
-        checks_ok = "alle grün" if r.ok else "rot: " + ",".join(
-            k for k, v in r.checks.items() if not v
+        checks_ok = (
+            "alle grün" if r.ok else "rot: " + ",".join(k for k, v in r.checks.items() if not v)
         )
         lines.append(
             f"| {r.event_id} | {r.line_id} | {r.gold_reason_code} | {r.reason_code} | "
@@ -330,9 +330,7 @@ def run_eval(*, live: bool = False) -> tuple[list[CaseResult], str]:
 
     write_scenarios(cases, ROOT / "evals" / "scenarios.json")
 
-    results = [
-        run_case(c.event_id, c.line_id, c.now, c.truth, live=live) for c in cases
-    ]
+    results = [run_case(c.event_id, c.line_id, c.now, c.truth, live=live) for c in cases]
     report = build_report(results, live=live)
     return results, report
 
@@ -348,9 +346,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--live", action="store_true", help="kostenpflichtigen Live-Lauf über die API (nur Stefan)"
     )
-    ap.add_argument(
-        "--estimate-only", action="store_true", help="nur die Kostenschätzung ausgeben"
-    )
+    ap.add_argument("--estimate-only", action="store_true", help="nur die Kostenschätzung ausgeben")
     args = ap.parse_args(argv)
 
     if args.estimate_only:
@@ -378,8 +374,7 @@ def main(argv: list[str] | None = None) -> int:
     hits = sum(1 for r in results if r.reason_hit)
     all_ok = sum(1 for r in results if r.ok)
     print(
-        f"Replay-Eval fertig: {n} Fälle, Trefferquote {hits}/{n}, "
-        f"alle Prüfungen grün {all_ok}/{n}."
+        f"Replay-Eval fertig: {n} Fälle, Trefferquote {hits}/{n}, alle Prüfungen grün {all_ok}/{n}."
     )
     print("Bericht: evals/report.md · Fallauswahl: evals/scenarios.json")
 
