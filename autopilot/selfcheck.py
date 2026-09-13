@@ -309,6 +309,46 @@ def check_merge_post_guardian_green() -> tuple[bool, str]:
     )
 
 
+def check_headless_escalation() -> tuple[bool, str]:
+    """run.py ruft im Headless-Betrieb (kein TTY) bei Reviewer-'escalate' den Decider statt input().
+
+    Genau der Nachtlauf-Blocker, bei dem run.py in input(\"Abnehmen?\") mit EOFError abstürzte. Ohne Modell –
+    Decider/Reviewer werden gefälscht, geprüft wird nur die Verdrahtung (kein input, Eskalation protokolliert)."""
+    import run  # noqa: PLC0415
+
+    calls = {"decide": 0}
+    orig_decide, orig_esc = run.decider.decide, run.ESCALATION_PATH
+    tmp = Path(tempfile.mkdtemp(prefix="selfcheck-esc-"))
+
+    class _Args:
+        review_model = "sonnet"
+
+    def fake_decide(*a, **k):
+        calls["decide"] += 1
+        return {"action": "escalate", "risk": "high", "reason": "Risiko hoch – Mensch entscheidet"}
+
+    try:
+        run.decider.decide = fake_decide
+        run.ESCALATION_PATH = tmp / "ESCALATION.md"
+        t = {"id": "PROBE", "prompt": "p", "review_gate": [], "review_files": []}
+        ok, escalate_exit, _ = run._resolve_headless_escalation(
+            t, {"verdict": "escalate", "question_for_human": "q"}, _Args(), tmp / "log.txt"
+        )
+        if calls["decide"] != 1:
+            return False, "Decider wurde nicht statt input() aufgerufen"
+        if ok or not escalate_exit:
+            return False, "Headless-'escalate' nicht als Eskalation (Exit 2) behandelt"
+        if not (tmp / "ESCALATION.md").exists():
+            return False, "ESCALATION.md nicht geschrieben"
+        return (
+            True,
+            "Headless Reviewer-'escalate' → Decider (kein input/EOFError), Eskalation protokolliert",
+        )
+    finally:
+        run.decider.decide, run.ESCALATION_PATH = orig_decide, orig_esc
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 CHECKS = [
     ("Imports", check_imports),
     ("run.py-Flags", check_run_cli),
@@ -318,6 +358,7 @@ CHECKS = [
     ("Worktree-Commit (echte Hooks)", check_worktree_commit),
     ("Rettungs-Commit bei Hook-Fehler", check_rescue_commit_on_hook_failure),
     ("Merge + Post-Merge-Guardian grün", check_merge_post_guardian_green),
+    ("Headless Reviewer-escalate → Decider", check_headless_escalation),
 ]
 
 

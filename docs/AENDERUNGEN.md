@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · fix(infra): Headless-Review über Decider statt input()
+**Was:** run.py ruft im Nachtlauf (kein TTY) bei Reviewer-'escalate' den Decider (auch ohne --auto-decide): risk≤medium anwenden + Reviewer erneut, risk high → ESCALATION.md + Exit 2, nie input(). --review human/both bricht ohne TTY sauber ab. WP3-Prompt um Stefans Zusatzentscheidungen (Vorfall-ID, RAG-Audit) ergänzt.
+**Warum (Problem oder Anlass):** run.py stürzte headless in input("Abnehmen?") mit EOFError ab und blockierte den ganzen Lauf an WP3.
+**Alternativen (verworfen, weil ...):** Review im Nachtlauf abschalten – verwirft die unabhängige Kontrolle; blindes Auto-Abnehmen – umgeht die Eskalation bei echten Risiken.
+**Auswirkung (Verträge, ADR, Tests):** autopilot/run.py, autopilot/selfcheck.py (neuer Fall), tests/test_run_cli.py (Falsifikation), autopilot/tasks.yaml (WP3).
+**Bezug (WP, ADR):** infra/WP3
+
 ## 2026-09-13 · docs(P): Nachtlauf-Integration – sechs Pakete nach main
 **Was:** WP2b, WP-B, INF-3, INF-4, INF-9, INF-E nach main gemergt; Statusseite, Präsentation und Doku-Marker aufgefrischt; WP3 neu eingereiht.
 **Warum (Problem oder Anlass):** Der Nachtlauf hatte die Stränge gebaut, aber die Worktree-Commits/Merges scheiterten still; die Arbeit lag nur auf Rettungs-Branches.

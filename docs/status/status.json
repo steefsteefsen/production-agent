@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T00:51:25",
-  "commit": "5c835b7e094c4e7a92fc3f166b82cd98cab56d94",
+  "generated_at": "2026-09-13T07:39:59",
+  "commit": "b9a17ae4e4ad2941393f9b532d118cf760825b9a",
   "branch": "main",
   "packages": [
     {
@@ -41,6 +41,11 @@
       "cost_usd": 0,
       "last_at": null,
       "commits": [
+        {
+          "sha": "b9a17ae",
+          "title": "docs(P): Nachtlauf-Integration – sechs Pakete nach main",
+          "at": "2026-09-13T00:51:11+02:00"
+        },
         {
           "sha": "1b6d17f",
           "title": "docs(P): Nachtlauf-Stand veröffentlichen (WP2a, Blocker)",
@@ -718,11 +723,17 @@
     "percent": 62,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 277,
+    "tests": 278,
     "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T00:51:11+02:00",
+      "kind": "commit",
+      "ref": "b9a17ae",
+      "text": "docs(P): Nachtlauf-Integration – sechs Pakete nach main"
+    },
     {
       "at": "2026-09-13T00:37:48+02:00",
       "kind": "commit",

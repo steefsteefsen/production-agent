@@ -61,6 +61,56 @@ def test_green_gate_logs_review_start_quickly_falsification(tmp_path, monkeypatc
     assert called.get("at", t0 + 999) - t0 < 2
 
 
+def test_reviewer_escalate_headless_uses_decider_no_eof_falsification(tmp_path, monkeypatch):
+    """Headless (kein TTY) + Reviewer-'escalate': run.py ruft den Decider, NIE input() → kein EOFError.
+
+    Falsifikation des Nachtlauf-Blockers, bei dem run.py in input("Abnehmen?") mit EOFError abstürzte."""
+
+    class _NoTTY:
+        def isatty(self):
+            return False
+
+    monkeypatch.setattr(run.sys, "stdin", _NoTTY())
+    monkeypatch.setattr(run, "LOGS", tmp_path)
+    monkeypatch.setattr(run, "STATUS", tmp_path / "status.json")
+    monkeypatch.setattr(run, "ESCALATION_PATH", tmp_path / "ESCALATION.md")
+    monkeypatch.setattr(run.cc, "preflight", lambda *a, **k: (True, "ok"))
+    monkeypatch.setattr(run, "claude", lambda *a, **k: (0, {"result": "ok"}))
+    monkeypatch.setattr(run, "gate", lambda *a, **k: (0, "grün"))
+    monkeypatch.setattr(
+        run.reviewer,
+        "review",
+        lambda *a, **k: {
+            "verdict": "escalate",
+            "items": [],
+            "summary": "s",
+            "question_for_human": "Frage?",
+        },
+    )
+    called = {"decide": 0}
+
+    def fake_decide(*a, **k):
+        called["decide"] += 1
+        return {"action": "escalate", "risk": "high", "reason": "Risiko hoch – Mensch entscheidet"}
+
+    monkeypatch.setattr(run.decider, "decide", fake_decide)
+    monkeypatch.setattr(
+        run.journal,
+        "entry",
+        lambda *a, **k: {"wp": "WP1", "ok": False, "agent_summary": "x", "files": []},
+    )
+    monkeypatch.setattr(run.journal, "write", lambda e: None)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["run.py", "--only", "WP1", "--review", "auto", "--no-commit", "--max-loops", "1"],
+    )
+    rc = run.main()  # darf NICHT mit EOFError abstürzen
+    assert called["decide"] == 1  # Decider statt input()
+    assert rc == 2  # Eskalation (kein Gate-Fehler) → Exit 2
+    assert (tmp_path / "ESCALATION.md").exists()
+
+
 def test_claude_timeout_returns_timeout_not_hang_falsification(tmp_path, monkeypatch):
     fake = tmp_path / "claude"
     fake.write_text("#!/usr/bin/env bash\nsleep 30\n")

@@ -96,6 +96,10 @@
     6. api/server.py: /investigations streamt Knotenergebnisse per SSE (sse-starlette), Event je Knoten {node, payload, trace}; docs/contracts/api.md mit Beispiel-Events.
     7. tests/test_workflow.py mit gemocktem LLM (FakeListChatModel/Monkeypatch) und Fixture-Tools: endet am Freigabeknoten mit >= 1 Maßnahme
        und Konfidenz; verbotene Maßnahme gefiltert; Alarmflut → RAG-Zweig. Keine echten API-Aufrufe in Tests.
+    8. Zusatz-Entscheidungen (Stefan, verbindlich, je mit Abnahmetest in tests/acceptance/test_wp3.py):
+       (a) Jede RecommendedAction.rationale nennt mindestens eine Vorfall-ID (incident_id), die in downtime_events_gold existiert.
+           Knoten 6 erzwingt diese Nachbedingung: fehlt eine gültige Vorfall-ID, ist die Maßnahme ungültig (Fehler/erneute Generierung).
+       (b) rag_server.search_maintenance_docs schreibt je Aufruf einen AuditLog-Eintrag (tool_call) – mit Verifikations- und Falsifikationstest.
     Tests: Für jede neue Funktion je einen Verifikationstest (tut sie das Richtige) und einen Falsifikationstest (ein Fehler, der sie brechen müsste, macht den Test rot). Benenne Falsifikationstests mit Suffix _falsification oder Kommentar. Nutze die Fixtures aus tests/conftest.py (small_db, replay_env).
     Trajektorien-Tests mit agentevals (create_trajectory_match_evaluator) wie in tests/test_trajectory.py; Referenztrajektorien für Alarmflut, ruhige Linie, Held.
   review_gate:
