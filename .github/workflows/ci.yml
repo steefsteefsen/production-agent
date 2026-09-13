@@ -37,19 +37,32 @@ jobs:
   frontend:
     needs: test
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('frontend/package.json') != '' }}
     steps:
       - uses: actions/checkout@v4
 
+      # hashFiles wertet das Runner-Workspace aus und ist erst nach dem Checkout gültig –
+      # auf Job-Ebene (if:) liefert es immer '' und übersprang den Job stillschweigend.
+      - name: Frontend vorhanden?
+        id: check
+        run: |
+          if [ -n "${{ hashFiles('frontend/package.json') }}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.check.outputs.present == 'true'
         with:
           node-version: "20"
 
       - name: Frontend-Abhängigkeiten installieren
+        if: steps.check.outputs.present == 'true'
         run: npm ci
         working-directory: frontend
 
       - name: Frontend bauen
+        if: steps.check.outputs.present == 'true'
         run: npm run build
         working-directory: frontend
 

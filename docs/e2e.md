@@ -29,6 +29,12 @@ Ende-zu-Ende-Lauf zutage:
 
 `build_graph(llm=…)` sticht den Schalter (Tests injizieren eigene Chains).
 
+Die konkreten Modell-IDs stehen zentral in `config.py` und sind über Umgebungsvariablen
+überschreibbar: `LLM_MODEL_MAIN` (Knoten 4/6, Default `claude-sonnet-5`) und `LLM_MODEL_JUDGE`
+(LLM-as-Judge/Klassifikation, Default `claude-haiku-4-5-20251001`). **Kostenentscheidung:** Die
+Begründungsknoten laufen auf Sonnet statt Opus – Opus ist für die wiederholte Demo zu teuer, Sonnet
+trägt die Begründungsqualität (siehe ADR-0008). Der `live`-Lauf verbraucht API-Kontingent.
+
 ## Ausführen
 
 ```

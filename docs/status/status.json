@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T12:58:55",
-  "commit": "8d2e2966f754b2accc408888943266dd02932718",
+  "generated_at": "2026-09-13T13:25:11",
+  "commit": "d39209c1243bfe94a8609231ec604e8b2194381f",
   "branch": "main",
   "packages": [
     {
@@ -739,6 +739,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T12:58:39+02:00",
+      "kind": "commit",
+      "ref": "d39209c",
+      "text": "fix(graph): E2E gegen echte Werkzeuge, Modell-Schalter mock/live"
+    },
     {
       "at": "2026-09-13T08:23:24+02:00",
       "kind": "commit",

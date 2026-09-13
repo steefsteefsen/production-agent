@@ -95,4 +95,4 @@ def approve(req: ApprovalRequest) -> dict:
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True, "model": settings.anthropic_model, "langfuse": settings.langfuse_enabled}
+    return {"ok": True, "model": settings.llm_model_main, "langfuse": settings.langfuse_enabled}

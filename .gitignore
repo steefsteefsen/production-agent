@@ -25,3 +25,4 @@ coverage.json
 .coverage
 .idea/
 .venv
+prompt_followup.md

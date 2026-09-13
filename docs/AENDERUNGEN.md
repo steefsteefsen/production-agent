@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · fix(config): Knoten 4/6 auf Sonnet, CI-hashFiles je Step
+**Was:** Modell-IDs zentral in config.py als ENV-überschreibbare Felder llm_model_main (Knoten 4/6, Default claude-sonnet-5) und llm_model_judge (Judge/Klassifikation, claude-haiku-4-5-20251001); frühere anthropic_model/anthropic_model_fast ersetzt, workflow.py und api/server.py sowie settings.env und docs/contracts/api.md nachgezogen. CI: hashFiles vom Job-if der frontend-Stage auf eine Erkennungs-Step-Ausgabe verschoben, Folge-Steps daran gekoppelt. docs/e2e.md um die Kostenentscheidung ergänzt.
+**Warum (Problem oder Anlass):** Opus in den Begründungsknoten ist für die wiederholte Demo zu teuer (ADR-0008 nennt Sonnet als Default); hashFiles ist auf Job-Ebene ungültig (Workspace noch nicht ausgecheckt) und übersprang den frontend-Job stillschweigend.
+**Alternativen (verworfen, weil ...):** Opus behalten – zu teuer und gegen ADR-0008; job-if nur entfernen – ließe die npm-Steps ohne Frontend fehlschlagen; decisions.yaml ändern – eingefroren (S5), nur lesen.
+**Auswirkung (Verträge, ADR, Tests):** src/production_agent/config.py, graph/workflow.py, api/server.py, settings.env, docs/contracts/api.md, docs/e2e.md, .github/workflows/ci.yml; ADR-0008. Health-Endpunkt liefert nun claude-sonnet-5.
+**Bezug (WP, ADR):** ADR-0008
+
 ## 2026-09-13 · fix(graph): E2E gegen echte Werkzeuge, Modell-Schalter mock/live
 **Was:** _parse löst die <tool_data>-Hülle auf, _extract_packml_state nimmt die stehende Station und {"rows": …}, _top_alarm_codes enthält den Erstalarm (frühester ts), derive_actions stellt Vorfälle vor Dokumente; mes_server._now() liest SIM_NOW aus der Umgebung (kein Leck, ADR-0002). Neu: graph/mock_llm.py, scripts/e2e_replay.py, LLM_MODE (mock/live), build_graph-Schalter, docs/e2e.md, tests/test_e2e_replay.py, Makefile-Ziele e2e-mock/e2e-live, CI-E2E-Schritt.
 **Warum (Problem oder Anlass):** Unit-Tests mit Fixture-Werkzeugen (rohes JSON, keine Replay-Uhr) sahen fünf Integrationsfehler nicht; erst der Lauf gegen die echten MCP-Werkzeuge deckte sie auf.

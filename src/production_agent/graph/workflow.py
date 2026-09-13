@@ -488,7 +488,7 @@ def build_graph(
 
             settings = _get_settings()
             base_llm = ChatAnthropic(
-                model=settings.anthropic_model,
+                model=settings.llm_model_main,
                 api_key=settings.anthropic_api_key.get_secret_value(),
             )
         chain_narrow = base_llm.with_structured_output(Hypothesis)

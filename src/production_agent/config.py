@@ -5,6 +5,13 @@ from functools import lru_cache
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Modell-IDs zentral und über Umgebungsvariablen überschreibbar (LLM_MODEL_MAIN / LLM_MODEL_JUDGE).
+# Default = Sonnet 5 für die Begründungsknoten 4 (Ursache) und 6 (Maßnahmen): Kostenentscheidung,
+# Opus bleibt für die Demo zu teuer, Sonnet trägt die Begründungsqualität (ADR-0008, docs/e2e.md).
+# Der Judge/Klassifikation bleibt Haiku 4.5.
+DEFAULT_MODEL_MAIN = "claude-sonnet-5"
+DEFAULT_MODEL_JUDGE = "claude-haiku-4-5-20251001"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -12,8 +19,10 @@ class Settings(BaseSettings):
     )
 
     anthropic_api_key: SecretStr = SecretStr("")
-    anthropic_model: str = "claude-opus-5"
-    anthropic_model_fast: str = "claude-haiku-4-5-20251001"
+    # Knoten 4 (Ursache) und 6 (Maßnahmen). ENV: LLM_MODEL_MAIN
+    llm_model_main: str = DEFAULT_MODEL_MAIN
+    # LLM-as-Judge und Klassifikation. ENV: LLM_MODEL_JUDGE
+    llm_model_judge: str = DEFAULT_MODEL_JUDGE
     # LLM-Schalter für Knoten 4/6: "mock" = deterministisches Mock-LLM ohne API-Schlüssel
     # (E2E/CI), "live" = ChatAnthropic. build_graph(llm=...) sticht diesen Schalter.
     llm_mode: str = "mock"

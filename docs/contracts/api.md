@@ -93,7 +93,7 @@ Gibt Maßnahmen frei oder lehnt sie ab. Setzt den Graphen am `approval_gate`-Kno
 ## GET /health
 
 ```json
-{"ok": true, "model": "claude-opus-5", "langfuse": false}
+{"ok": true, "model": "claude-sonnet-5", "langfuse": false}
 ```
 
 ---
