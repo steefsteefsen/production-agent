@@ -18,6 +18,33 @@ python autopilot/run.py --dry-run       # Prompts der Arbeitspakete ansehen, dan
 
 Konfiguration steht in `settings.env` (committet), Geheimnisse in `.env` (gitignored). `.env` enthält nur Schlüssel, die auf KEY/SECRET/TOKEN/PASSWORD enden.
 
+## Demo-App starten (5 Befehle)
+```bash
+make install                                       # 1. Abhängigkeiten + pre-commit
+python -m production_agent.data.simulator          # 2. Störungshistorie simulieren → Gold-SQLite
+python -m production_agent.mcp.rag_server --ingest # 3. Wartungsdokumente in den RAG-Index laden
+make run-api                                        # 4. FastAPI + SSE (uvicorn, Port 8000)
+make ui                                             # 5. React-Cockpit (Vite, Port 5173)
+```
+Der Modus (mock/live) kommt aus `LLM_MODE`/`.env` und wird im Cockpit nur angezeigt. Ohne API-Key läuft der Mock-Pfad; der kostenpflichtige Live-Lauf ist manuell.
+
+## Architektur
+```mermaid
+flowchart LR
+    Sim[Simulator<br/>Seed 42] --> DB[(SQLite<br/>Bronze→Silber→Gold)]
+    subgraph Backend
+      API[FastAPI + SSE] --> Graph[LangGraph-Workflow<br/>interrupt am Freigabeknoten]
+      Graph --> MES[MCP mes<br/>Werkzeuge über SQL-Guard]
+      Graph --> RAG[MCP maintenance_docs<br/>BM25 + Vektor, RRF]
+    end
+    MES --> DB
+    RAG --> Qdrant[(Qdrant-Index)]
+    API <--> Cockpit[React-Cockpit / Vite]
+    Graph -.optional.-> Langfuse[(Langfuse-Tracing)]
+    Graph -.Freigabe.-> Mensch((Mensch))
+```
+Der Agent empfiehlt, er führt nicht aus: jede Maßnahme läuft durch die Action-Policy, der Freigabeknoten ist immer ein `interrupt()`. Details in [docs/adr/](docs/adr/).
+
 ## Ops-Cockpit
 
 ```bash
@@ -64,7 +91,7 @@ Die Arbeitspakete WP0–WP7 stehen in `autopilot/tasks.yaml`; die Entscheidungsg
 <!-- auto:stand -->
 - fertig: 13 von 16 Paketen
 - offen: WP4, WP6, WP7
-- Fortschritt: 84 % — siehe [Statusseite](docs/status/index.html)
+- Fortschritt: 85 % — siehe [Statusseite](docs/status/index.html)
 <!-- /auto:stand -->
 
 Guardian-Regeln (automatisch aus dem Guardian-Docstring):

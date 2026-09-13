@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T23:32:10",
-  "commit": "ee7c2cdfc8bb967bf7a46508e7380c5bb15319ac",
+  "generated_at": "2026-09-13T23:38:04",
+  "commit": "b8a3d73f2ef455022fb1ebc480cc00f856c47cf7",
   "branch": "main",
   "packages": [
     {
@@ -498,8 +498,8 @@
       "deps": [
         "WP6"
       ],
-      "percent": 0,
-      "state": "offen",
+      "percent": 20,
+      "state": "läuft",
       "steps": [
         {
           "name": "Gate grün",
@@ -513,8 +513,8 @@
         },
         {
           "name": "Commit",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-13T23:31:59+02:00"
         },
         {
           "name": "Tag",
@@ -530,7 +530,13 @@
       "attempts": 0,
       "cost_usd": 0,
       "last_at": null,
-      "commits": []
+      "commits": [
+        {
+          "sha": "b8a3d73",
+          "title": "docs(WP7): Demo-Skript 60 min, ADR-Vollständigkeit bestätigt",
+          "at": "2026-09-13T23:31:59+02:00"
+        }
+      ]
     },
     {
       "id": "INF-3",
@@ -759,7 +765,7 @@
     }
   ],
   "totals": {
-    "percent": 84,
+    "percent": 85,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
     "tests": 388,
@@ -767,6 +773,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T23:31:59+02:00",
+      "kind": "commit",
+      "ref": "b8a3d73",
+      "text": "docs(WP7): Demo-Skript 60 min, ADR-Vollständigkeit bestätigt"
+    },
     {
       "at": "2026-09-13T23:17:08+02:00",
       "kind": "commit",

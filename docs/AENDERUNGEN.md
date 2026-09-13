@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · docs(WP7): README-Demostart, Architekturbild und CHANGELOG
+**Was:** Den in WP7 offen gebliebenen Doku-Rest ergänzt: In `README.md` einen Abschnitt „Demo-App starten (5 Befehle)" mit den echten Befehlen (make install, Simulator, RAG-Ingest `--ingest`, make run-api, make ui) sowie einen Abschnitt „Architektur" mit einem Mermaid-Diagramm (Simulator→Medallion, FastAPI/SSE, LangGraph mit Freigabe-Interrupt, MCP mes/maintenance_docs, Qdrant, Cockpit, optional Langfuse, Mensch am Freigabeknoten). Neu `docs/CHANGELOG.md`, aus den Commits je Arbeitspaket abgeleitet. Auto-Marker unberührt, keine getippten veränderlichen Zahlen.
+**Warum (Problem oder Anlass):** Der WP7-Bauagent hat README und `docs/CHANGELOG.md` wegen seiner engen Schreibzone nicht geliefert, obwohl beide zur WP7-Spezifikation gehören; ohne sie fehlt der Einstieg „in fünf Befehlen" und das Architekturbild fürs Interview.
+**Alternativen (verworfen, weil ...):** Den bestehenden Schnellstart überschreiben – verworfen, der zielt auf den Autopilot-Betrieb; einen „ingest"-Befehl erfinden – verworfen, stattdessen den realen `rag_server --ingest` aus dem Code übernommen; Zahlen ins Diagramm tippen – verworfen wegen D8 (Marker-Pflicht).
+**Auswirkung (Verträge, ADR, Tests):** `README.md` (zwei neue Abschnitte, außerhalb der auto-Marker), neu `docs/CHANGELOG.md`. Keine Code-/Vertrags-/ADR-Änderung; Gate unverändert grün.
+**Bezug (WP, ADR):** WP7
+
 ## 2026-09-13 · docs(WP7): Demo-Skript 60 min, ADR-Vollständigkeit bestätigt
 **Was:** `docs/demo_script.md` für die 60-Minuten-Demo angelegt: 12 min Live-Demo (Start mit Panel 7 Freigabe, dann rückwärts 1→6 entlang der echten sieben Graph-Knoten aus `graph/workflow.py`), 30 min Entscheidungen (ADR-0001 bis ADR-0010, je ein Satz), 18 min Fragen mit drei wahrscheinlichen Nachfragen und den wörtlichen Ehrlichkeitsgrenzen (kein ML-Training/MLOps, RAG prototypisch, kein Beratungsumfeld, Simulator kennt seine Ursachen – Konfidenz ist Obergrenze), fünf frei sprechbare Kernsätze und eine Zeit-Sicherung, damit der Demo-Teil sicher unter 12 min bleibt. Veränderliche Zahlen bewusst nicht getippt, sondern per Verweis auf `evals/report.md` und die Statusseite. Zusätzlich `evals/run_evals.py` mit `ruff format` normalisiert, damit `make lint` grün ist.
 **Warum (Problem oder Anlass):** WP7 verlangt ein Demo-Kernartefakt und eine Prüfung der ADR-Vollständigkeit; `docs/demo_script.md` fehlte und der WP7-Abnahmetest blieb übersprungen. `make lint` scheiterte an einer unformatierten Zeile in `evals/run_evals.py` aus dem WP6-Commit.

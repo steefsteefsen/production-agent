@@ -30,6 +30,7 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 
 ## Weiteres
 - [BACKLOG.md](BACKLOG.md) – Backlog – Phase 2 (Block 9): Fachliche Erweiterungen nach Abschluss der Kernarbeitspakete WP0–WP7.
+- [CHANGELOG.md](CHANGELOG.md) – Changelog: Aus den Commits abgeleiteter Überblick über die gelieferten Arbeitspakete. Feinkörnige Begründungen
 - [architecture.md](architecture.md) – Architektur – Zielbild und Verträge: ```mermaid
 - [contracts/api.md](contracts/api.md) – API-Vertrag: Production Agent – SSE-Stream und Freigabe: Alle Pfade unterhalb von `http://localhost:8000`.
 - [data_layer.md](data_layer.md) – Datenschicht Bronze→Silber→Gold: Technische Referenz für `src/production_agent/data/` (Simulator, Replay, Schema).
