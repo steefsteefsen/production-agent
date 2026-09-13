@@ -11,7 +11,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("Live-MES");
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" data-testid="cockpit">
       {/* Kopfzeile */}
       <header className="bg-gray-900 border-b border-gray-700 px-6 py-3 flex items-center gap-6">
         <span className="text-teal-600 font-bold text-base tracking-wide">

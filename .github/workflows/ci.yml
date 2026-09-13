@@ -93,6 +93,25 @@ jobs:
       - name: Playwright-Browser installieren
         run: playwright install chromium --with-deps
 
+      - name: Frontend vorhanden?
+        id: check
+        run: |
+          if [ -f frontend/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.present == 'true'
+        with:
+          node-version: "20"
+
+      - name: Frontend-Abhängigkeiten installieren
+        if: steps.check.outputs.present == 'true'
+        run: npm ci
+        working-directory: frontend
+
       - name: Simulator (Testdaten erzeugen)
         run: python -m production_agent.data.simulator
 
@@ -103,19 +122,21 @@ jobs:
         run: uvicorn production_agent.api.server:app --host 0.0.0.0 --port 8000 &
 
       - name: Frontend (Vite) im Hintergrund starten
-        run: |
-          if [ -f frontend/package.json ]; then
-            cd frontend && npm run dev &
-          fi
+        if: steps.check.outputs.present == 'true'
+        run: cd frontend && npm run dev &
 
       - name: Auf API warten
         run: timeout 30 bash -c 'until curl -sf http://localhost:8000/docs; do sleep 1; done'
 
+      - name: Auf Frontend warten (nur wenn gestartet)
+        # Der Vite-Dev-Server (Port 5173) braucht nach dem Start einen Moment; ohne dieses Warten
+        # lief Playwright gegen ERR_CONNECTION_REFUSED. Erst wenn 5173 antwortet, wird BASE_URL gesetzt.
+        if: steps.check.outputs.present == 'true'
+        run: timeout 60 bash -c 'until curl -sf http://localhost:5173/ >/dev/null; do sleep 1; done'
+
       - name: BASE_URL setzen (nur wenn Frontend gestartet)
-        run: |
-          if [ -f frontend/package.json ]; then
-            echo "BASE_URL=http://localhost:5173" >> "$GITHUB_ENV"
-          fi
+        if: steps.check.outputs.present == 'true'
+        run: echo "BASE_URL=http://localhost:5173" >> "$GITHUB_ENV"
 
       - name: E2E-Tests
         run: pytest -q -m e2e tests/e2e

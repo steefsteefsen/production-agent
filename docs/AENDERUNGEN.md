@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · feat(WP6): Testmatrix, zweiter Fall, Freigabe- und Ablehnungspfad
+**Was:** docs/testplan_e2e.md mit Testmatrix (vier Achsen Diagnose/Aktionspfad/Guards/Robustheit, Status-Spalte). scripts/e2e_replay.py um --event-id (Default jüngstes, 360) und --decision none|approve|reject erweitert, run() liefert ein deterministisches Ergebnis-Dict; replay.py um case_for_event_id(). approve/reject setzen nach interrupt() über den SQLite-Checkpointer fort und protokollieren die Entscheidung rollenbasiert im Audit. Neuer E2-Fall 336 (STO-ANTRIEB). tests/test_e2e_replay.py um E2, approve, reject und D1 (drei bitidentische Läufe) ergänzt. CI-e2e-Job: npm ci + Warten auf Vite (5173) vor Playwright; App.tsx erhält data-testid="cockpit".
+**Warum (Problem oder Anlass):** Der E2E-Nachweis bestand nur aus einem Fall (STO-FOLIE, 360) und endete am Freigabeknoten; Freigabe/Ablehnung und ein zweiter, andersartiger Fall waren ungeprüft. Die Playwright-E2E scheiterten in CI, weil der Vite-Server ohne npm ci und ohne Readiness-Warten nicht erreichbar war und kein data-testid="cockpit" existierte.
+**Alternativen (verworfen, weil ...):** Nur InMemory-Checkpointer für den Resume – verworfen, der Aufgabenrahmen fordert den SQLite-Checkpointer; Playwright gegen den gebauten Build statt Dev-Server – aufwändiger ohne Mehrwert für den Smoke-Test; E2 aus STO-FOLIE wählen – verfehlt die geforderte andere Kategorie.
+**Auswirkung (Verträge, ADR, Tests):** scripts/e2e_replay.py, src/production_agent/data/replay.py, tests/test_e2e_replay.py, docs/testplan_e2e.md, .github/workflows/ci.yml, frontend/src/App.tsx. Keine Vertrags-/ADR-Änderung; interrupt/Checkpointer-Verhalten unverändert.
+**Bezug (WP, ADR):** WP6/ADR-0002
+
 ## 2026-09-13 · fix(ci): setuptools vor pip-audit auf Fix-Version heben
 **Was:** Der CI-Schritt „Abhängigkeits-Audit" hebt setuptools vor dem Lauf auf >=83.0.0, dann erst pip-audit.
 **Warum (Problem oder Anlass):** pip-audit meldete zwei bekannte CVEs (PYSEC-2026-3447) in setuptools 79.0.1 und brach mit Exit 1 ab; setuptools ist Build-Tool der Runner-Umgebung, keine deklarierte Laufzeit-Abhängigkeit des Projekts.

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T13:40:32",
-  "commit": "2afe060b9aa3afaf546cca79a1a2484b71030a40",
+  "generated_at": "2026-09-13T14:05:24",
+  "commit": "289e26a0445e75baee5a149246337363cad9476a",
   "branch": "main",
   "packages": [
     {
@@ -734,11 +734,17 @@
     "percent": 64,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 325,
+    "tests": 329,
     "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T13:40:16+02:00",
+      "kind": "commit",
+      "ref": "289e26a",
+      "text": "fix(ci): setuptools vor pip-audit auf Fix-Version heben"
+    },
     {
       "at": "2026-09-13T13:24:18+02:00",
       "kind": "commit",
@@ -1090,7 +1096,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 191,
+      "tests": 195,
       "coverage": 100
     },
     {
@@ -1102,13 +1108,13 @@
     {
       "path": "src/production_agent/data/",
       "files": 4,
-      "tests": 102,
+      "tests": 106,
       "coverage": 83
     },
     {
       "path": "src/production_agent/graph/",
       "files": 4,
-      "tests": 52,
+      "tests": 56,
       "coverage": 94
     },
     {

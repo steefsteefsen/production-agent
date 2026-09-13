@@ -36,3 +36,4 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [plan.md](plan.md) – Projektplan – Scope, Budget, Gates: Minimalanforderungen: stehende Linie untersuchen, Alarme zu Ereignissen aggregieren, historisches Wissen abrufen,
 - [references.md](references.md) – Externe Quellen: was übernommen wurde, wie und unter welcher Lizenz: Drei Stufen – nie „Repo klonen und anpassen":
 - [stack.md](stack.md) – Stack und Entscheidungsgrundlage: Jede Zeile verweist auf eine ADR mit Alternativen, Kriterien und Quellen. Versionen: Stand 11.09.2026, vor Nutzung mit `pip index versions` 
+- [testplan_e2e.md](testplan_e2e.md) – Testplan Ende-zu-Ende: Die Ende-zu-Ende-Fälle prüfen den kompletten LangGraph-Ablauf gegen die **echten** MES/RAG-Werkzeuge
