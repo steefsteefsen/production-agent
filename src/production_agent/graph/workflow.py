@@ -1,97 +1,416 @@
 """LangGraph-Workflow: 7 Knoten, Freigabe über interrupt(), SQLite-Checkpointer.
 
-Skelett mit vollständiger Sicherheits- und Ablaufstruktur. Die LLM-Aufrufe in Knoten
-4 und 6 werden in WP3 ergänzt; alle Knoten sind heute schon einzeln testbar.
+Knotenreihenfolge (decisions.yaml „einfachster Graph: keine Verzweigung"):
+  1 capture_status → 2 analyze_alarms → 3 retrieve_knowledge
+  → 4 narrow_cause (LLM) → 5 estimate_impact → 6 derive_actions (LLM) → 7 approval_gate
+
+Werkzeuge werden über build_graph(tools=...) injiziert:
+  dict[str, Callable[..., str]]  (Schlüssel = MCP-Werkzeugname)
+Für Tests: Python-Funktionen mit identischer Signatur.
+Für Produktion: via langchain-mcp-adapters MultiServerMCPClient geladen.
 """
 
 from __future__ import annotations
 
+import json
+import os
+from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, StateGraph
 from langgraph.types import Command, interrupt
+from pydantic import BaseModel
 
-from production_agent.config import get_settings
-from production_agent.graph.state import AgentState
+from production_agent.graph.prompts import SYSTEM_DERIVE_ACTIONS, SYSTEM_NARROW_CAUSE
+from production_agent.graph.state import AgentState, Hypothesis
 from production_agent.security.action_policy import RecommendedAction, apply_policy
 from production_agent.security.audit import AuditLog
 
-settings = get_settings()
-audit = AuditLog(settings.audit_log_path)
+_Tools = dict[str, Callable[..., str]]
+
+
+def _get_settings():
+    from production_agent.config import get_settings
+
+    return get_settings()
 
 
 def _log(state: AgentState, msg: str) -> list[str]:
     return [*state.get("trace", []), msg]
 
 
-# --- Knoten (Tools werden in WP3 über langchain-mcp-adapters injiziert) -----------------
+def _parse(raw: str) -> Any:
+    """JSON aus MCP-Werkzeugergebnis parsen; bei Fehler leere Liste."""
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        return []
 
 
-def capture_status(state: AgentState) -> dict[str, Any]:
-    return {"trace": _log(state, "1 Zustand erfasst (get_line_status)")}
+def _top_alarm_codes(alarms: list[dict], n: int = 3) -> list[str]:
+    """Häufigste alarm_code-Werte aus der Alarmliste."""
+    counts: dict[str, int] = {}
+    for a in alarms:
+        code = str(a.get("alarm_code", ""))
+        if code:
+            counts[code] = counts.get(code, 0) + 1
+    return [c for c, _ in sorted(counts.items(), key=lambda x: -x[1])][:n]
 
 
-def analyze_alarms(state: AgentState) -> dict[str, Any]:
-    alarms = state.get("alarms", [])
-    flood = len(alarms) >= 10  # ISA-18.2: ≥10 Alarme in 10 min → Alarmflut
-    return {"alarm_flood": flood, "trace": _log(state, f"2 Alarme analysiert, Flut={flood}")}
+def _extract_packml_state(line_status: dict | list) -> str:
+    """PackML-Zustand aus Linienstatus-Dict (erstes Equipment) oder 'Unknown'."""
+    if isinstance(line_status, list) and line_status:
+        return str(line_status[0].get("packml_state", "Unknown"))
+    if isinstance(line_status, dict):
+        return str(line_status.get("packml_state", "Unknown"))
+    return "Unknown"
 
 
-def retrieve_knowledge(state: AgentState) -> dict[str, Any]:
-    return {"trace": _log(state, "3 Wissen abgerufen (RAG + find_similar_incidents)")}
+def _flood_in_window(alarms: list[dict], window_min: int = 10, threshold: int = 10) -> bool:
+    """ISA-18.2: ≥threshold Alarme innerhalb window_min Minuten."""
+    sim_now = os.environ.get("SIM_NOW") or _get_settings().sim_now
+    if sim_now:
+        try:
+            now_dt = datetime.fromisoformat(sim_now.replace(" ", "T"))
+            if now_dt.tzinfo is None:
+                now_dt = now_dt.replace(tzinfo=UTC)
+        except ValueError:
+            now_dt = datetime.now(UTC)
+    else:
+        now_dt = datetime.now(UTC)
+
+    count = 0
+    for a in alarms:
+        ts_raw = a.get("ts", "")
+        if not ts_raw:
+            continue
+        try:
+            ts = datetime.fromisoformat(str(ts_raw).replace(" ", "T"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=UTC)
+            if (now_dt - ts).total_seconds() <= window_min * 60:
+                count += 1
+        except ValueError:
+            continue
+    return count >= threshold
 
 
-def narrow_cause(state: AgentState) -> dict[str, Any]:
-    return {"trace": _log(state, "4 Ursache eingegrenzt (LLM + Regeln)")}
+# ---------------------------------------------------------------------------
+# Knoten 1 – Linienstatus und Produktionsplan erfassen
+# ---------------------------------------------------------------------------
 
 
-def estimate_impact(state: AgentState) -> dict[str, Any]:
-    return {"trace": _log(state, "5 Wirkung geschätzt (estimate_impact)")}
+def _make_capture_status(tools: _Tools):
+    def capture_status(state: AgentState) -> dict[str, Any]:
+        line_id = state.get("line_id", "L1")
+        raw_status = tools["get_line_status"](line_id=line_id)
+        raw_plan = tools["get_production_plan"](line_id=line_id)
+        line_status = _parse(raw_status)
+        production_plan = _parse(raw_plan)
+        return {
+            "line_status": line_status if isinstance(line_status, dict) else {"rows": line_status},
+            "production_plan": production_plan if isinstance(production_plan, list) else [],
+            "trace": _log(state, "1 Linienstatus und Produktionsplan erfasst"),
+        }
+
+    return capture_status
 
 
-def derive_actions(state: AgentState) -> dict[str, Any]:
-    raw = [RecommendedAction(**a) for a in state.get("actions", [])]
-    safe = apply_policy(raw, settings.confidence_threshold_recommend)
-    return {
-        "actions": [a.model_dump() for a in safe],
-        "trace": _log(state, f"6 Maßnahmen abgeleitet, {len(safe)} nach Policy"),
-    }
+# ---------------------------------------------------------------------------
+# Knoten 2 – Alarme analysieren (30-min-Fenster, Alarmflut ISA-18.2)
+# ---------------------------------------------------------------------------
+
+
+def _make_analyze_alarms(tools: _Tools):
+    def analyze_alarms(state: AgentState) -> dict[str, Any]:
+        line_id = state.get("line_id", "L1")
+        raw = tools["get_active_alarms"](line_id=line_id, minutes=30)
+        alarms = _parse(raw)
+        if not isinstance(alarms, list):
+            alarms = []
+        flood = _flood_in_window(alarms, window_min=10, threshold=10)
+        return {
+            "alarms": alarms,
+            "alarm_flood": flood,
+            "trace": _log(state, f"2 Alarme analysiert ({len(alarms)}), Alarmflut={flood}"),
+        }
+
+    return analyze_alarms
+
+
+# ---------------------------------------------------------------------------
+# Knoten 3 – Wissen abrufen (RAG + ähnliche Vorfälle)
+# ---------------------------------------------------------------------------
+
+
+def _make_retrieve_knowledge(tools: _Tools):
+    def retrieve_knowledge(state: AgentState) -> dict[str, Any]:
+        alarms = state.get("alarms", [])
+        codes = _top_alarm_codes(alarms, n=3)
+        query = " ".join(codes) if codes else "Störung Verpackungslinie"
+
+        raw_docs = tools["search_maintenance_docs"](query=query, top_k=5)
+        docs = _parse(raw_docs)
+
+        packml = _extract_packml_state(state.get("line_status", {}))
+        raw_incidents = tools["find_similar_incidents"](
+            alarm_codes=codes or [""], packml_state=packml, limit=5
+        )
+        incidents = _parse(raw_incidents)
+
+        knowledge = (docs if isinstance(docs, list) else []) + (
+            incidents if isinstance(incidents, list) else []
+        )
+        return {
+            "knowledge": knowledge,
+            "trace": _log(
+                state,
+                f"3 Wissen abgerufen: {len(docs if isinstance(docs, list) else [])} Dokumente, "
+                f"{len(incidents if isinstance(incidents, list) else [])} ähnliche Vorfälle",
+            ),
+        }
+
+    return retrieve_knowledge
+
+
+# ---------------------------------------------------------------------------
+# Knoten 4 – Ursache eingrenzen (LLM, strukturierte Ausgabe: Hypothesis)
+# ---------------------------------------------------------------------------
+
+
+def _make_narrow_cause(llm_chain):
+    def narrow_cause(state: AgentState) -> dict[str, Any]:
+        context = json.dumps(
+            {
+                "line_status": state.get("line_status", {}),
+                "alarms": state.get("alarms", [])[:20],
+                "alarm_flood": state.get("alarm_flood", False),
+                "knowledge": state.get("knowledge", [])[:10],
+            },
+            ensure_ascii=False,
+            default=str,
+        )
+        messages = [
+            SystemMessage(content=SYSTEM_NARROW_CAUSE),
+            HumanMessage(content=f"Kontext:\n{context}"),
+        ]
+        hypo: Hypothesis = llm_chain.invoke(messages)
+        return {
+            "hypothesis": hypo.model_dump(),
+            "trace": _log(
+                state,
+                f"4 Hypothese: {hypo.reason_code} (Konfidenz {hypo.confidence:.2f}, "
+                f"Stillstand ~{hypo.expected_downtime_min} min)",
+            ),
+        }
+
+    return narrow_cause
+
+
+# ---------------------------------------------------------------------------
+# Knoten 5 – Wirkung schätzen (regelbasiert, MES-Werkzeug)
+# ---------------------------------------------------------------------------
+
+
+def _make_estimate_impact(tools: _Tools):
+    def estimate_impact(state: AgentState) -> dict[str, Any]:
+        line_id = state.get("line_id", "L1")
+        hypo = state.get("hypothesis", {})
+        expected_dt = float(hypo.get("expected_downtime_min", 30.0))
+        raw = tools["estimate_impact"](line_id=line_id, expected_downtime_min=expected_dt)
+        impact = _parse(raw)
+        return {
+            "impact": impact if isinstance(impact, dict) else {"raw": raw},
+            "trace": _log(state, f"5 Wirkung geschätzt: {expected_dt} min Stillstand"),
+        }
+
+    return estimate_impact
+
+
+# ---------------------------------------------------------------------------
+# Knoten 6 – Maßnahmen ableiten (LLM, strukturierte Ausgabe: RecommendedActions)
+# ---------------------------------------------------------------------------
+
+
+class _ActionsOutput(BaseModel):
+    """Strukturierte LLM-Ausgabe von Knoten 6: Liste empfohlener Maßnahmen."""
+
+    actions: list[RecommendedAction]
+
+
+def _make_derive_actions(llm_chain):
+    def derive_actions(state: AgentState) -> dict[str, Any]:
+        settings = _get_settings()
+        context = json.dumps(
+            {
+                "hypothesis": state.get("hypothesis", {}),
+                "impact": state.get("impact", {}),
+                "knowledge": state.get("knowledge", [])[:5],
+            },
+            ensure_ascii=False,
+            default=str,
+        )
+        messages = [
+            SystemMessage(content=SYSTEM_DERIVE_ACTIONS),
+            HumanMessage(content=f"Kontext:\n{context}"),
+        ]
+        out: _ActionsOutput = llm_chain.invoke(messages)
+        safe = apply_policy(out.actions, settings.confidence_threshold_recommend)
+        return {
+            "actions": [a.model_dump() for a in safe],
+            "trace": _log(state, f"6 Maßnahmen abgeleitet, {len(safe)} nach Policy"),
+        }
+
+    return derive_actions
+
+
+# ---------------------------------------------------------------------------
+# Knoten 7 – Freigabe (interrupt / Command)
+# ---------------------------------------------------------------------------
 
 
 def approval_gate(state: AgentState) -> Command:
     """Schritt 7: Der Graph hält an. Der Mensch entscheidet. Empfehlen ≠ Ausführen."""
+    settings = _get_settings()
+    audit = AuditLog(settings.audit_log_path)
     decision = interrupt(
         {
             "question": "Maßnahmen freigeben?",
             "actions": state.get("actions", []),
             "impact": state.get("impact", {}),
+            "hypothesis": state.get("hypothesis", {}),
         }
     )
     audit.record("approval", decision=decision, line_id=state.get("line_id"))
     return Command(
-        goto=END, update={"approval": decision, "trace": _log(state, "7 Freigabe erfasst")}
+        goto=END,
+        update={"approval": decision, "trace": _log(state, "7 Freigabe erfasst")},
     )
 
 
-def route_after_alarms(state: AgentState) -> str:
-    """Verzweigung: Bei Alarmflut zuerst Wissen abrufen; sonst direkt Ursache eingrenzen."""
-    return "retrieve_knowledge" if state.get("alarm_flood") else "narrow_cause"
+# ---------------------------------------------------------------------------
+# Graph-Builder
+# ---------------------------------------------------------------------------
 
 
-def build_graph(checkpoint_path: str | None = None):
+def _default_tools() -> _Tools:
+    """Direktimport der MES/RAG-Funktionen für lokale Nutzung ohne MCP-Subprocess."""
+    from production_agent.mcp.mes_server import (
+        estimate_impact as _estimate_impact,
+    )
+    from production_agent.mcp.mes_server import (
+        find_similar_incidents,
+        get_active_alarms,
+        get_line_status,
+        get_production_plan,
+    )
+    from production_agent.mcp.rag_server import search_maintenance_docs
+
+    return {
+        "get_line_status": lambda **kw: get_line_status(**kw),
+        "get_production_plan": lambda **kw: get_production_plan(**kw),
+        "get_active_alarms": lambda **kw: get_active_alarms(**kw),
+        "search_maintenance_docs": lambda **kw: search_maintenance_docs(**kw),
+        "find_similar_incidents": lambda **kw: find_similar_incidents(**kw),
+        "estimate_impact": lambda **kw: _estimate_impact(**kw),
+    }
+
+
+def build_tools_from_mcp(sim_now: str = "") -> _Tools:
+    """Werkzeuge aus laufenden MCP-Subprozessen (mes + maintenance_docs).
+
+    Da MultiServerMCPClient async ist, wrappen wir die invoke()-Methode
+    (synchron, langchain-mcp-adapters >= 0.1).
+    """
+    import asyncio
+
+    from langchain_mcp_adapters.client import MultiServerMCPClient
+
+    env: dict[str, str] = {}
+    if sim_now:
+        env["SIM_NOW"] = sim_now
+
+    async def _get():
+        cfg: dict[str, Any] = {
+            "mes": {
+                "command": "python",
+                "args": ["-m", "production_agent.mcp.mes_server"],
+                "transport": "stdio",
+            },
+            "maintenance_docs": {
+                "command": "python",
+                "args": ["-m", "production_agent.mcp.rag_server"],
+                "transport": "stdio",
+            },
+        }
+        if env:
+            cfg["mes"]["env"] = env
+            cfg["maintenance_docs"]["env"] = env
+        async with MultiServerMCPClient(cfg) as client:
+            tool_list = await client.get_tools()
+        return tool_list
+
+    def _wrap(tool):
+        return lambda **kw: tool.invoke(kw)
+
+    tool_list = asyncio.run(_get())
+    return {t.name: _wrap(t) for t in tool_list}
+
+
+def build_graph(
+    tools: _Tools | None = None,
+    checkpoint_path: str | None = None,
+    sim_now: str = "",
+    llm=None,
+):
+    """Graph kompilieren.
+
+    Args:
+        tools: Werkzeug-Dict {name: callable(**kwargs)->str}.
+               None → direkter Import aus MES/RAG-Modulen.
+        checkpoint_path: Pfad zur SQLite-Checkpointer-Datenbank (None → InMemory).
+        sim_now: ISO-Timestamp der Replay-Uhr; wird als SIM_NOW gesetzt.
+        llm: BaseChatModel für Knoten 4 und 6 (None → ChatAnthropic aus Settings).
+             Alternativ: dict {"narrow_cause": Runnable, "derive_actions": Runnable}
+             mit bereits gewrappten Chains (z. B. für Tests).
+    """
+    if sim_now:
+        os.environ["SIM_NOW"] = sim_now
+
+    resolved_tools = tools if tools is not None else _default_tools()
+
+    # LLM-Chains auflösen
+    if isinstance(llm, dict):
+        chain_narrow = llm["narrow_cause"]
+        chain_derive = llm["derive_actions"]
+    else:
+        base_llm = llm
+        if base_llm is None:
+            from langchain_anthropic import ChatAnthropic
+
+            settings = _get_settings()
+            base_llm = ChatAnthropic(
+                model=settings.anthropic_model,
+                api_key=settings.anthropic_api_key.get_secret_value(),
+            )
+        chain_narrow = base_llm.with_structured_output(Hypothesis)
+        chain_derive = base_llm.with_structured_output(_ActionsOutput)
+
     g = StateGraph(AgentState)
-    g.add_node("capture_status", capture_status)
-    g.add_node("analyze_alarms", analyze_alarms)
-    g.add_node("retrieve_knowledge", retrieve_knowledge)
-    g.add_node("narrow_cause", narrow_cause)
-    g.add_node("estimate_impact", estimate_impact)
-    g.add_node("derive_actions", derive_actions)
+    g.add_node("capture_status", _make_capture_status(resolved_tools))
+    g.add_node("analyze_alarms", _make_analyze_alarms(resolved_tools))
+    g.add_node("retrieve_knowledge", _make_retrieve_knowledge(resolved_tools))
+    g.add_node("narrow_cause", _make_narrow_cause(chain_narrow))
+    g.add_node("estimate_impact", _make_estimate_impact(resolved_tools))
+    g.add_node("derive_actions", _make_derive_actions(chain_derive))
     g.add_node("approval_gate", approval_gate)
 
     g.set_entry_point("capture_status")
     g.add_edge("capture_status", "analyze_alarms")
-    g.add_conditional_edges("analyze_alarms", route_after_alarms)
+    g.add_edge("analyze_alarms", "retrieve_knowledge")  # immer_wissen_abrufen: true
     g.add_edge("retrieve_knowledge", "narrow_cause")
     g.add_edge("narrow_cause", "estimate_impact")
     g.add_edge("estimate_impact", "derive_actions")
