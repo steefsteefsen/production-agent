@@ -118,3 +118,51 @@ def test_wp3_massnahme_ohne_vorfall_id_verworfen_falsification():
     rationales = [a["rationale"] for a in payload["actions"]]
     assert any("EVT-001" in r for r in rationales)
     assert all("EVT-001" in r for r in rationales)  # die unbelegte Massnahme wurde verworfen
+
+
+# --- (E2E) build_graph gegen die ECHTEN Werkzeuge über den jüngsten Replay-Fall, mock-LLM ---
+
+
+def test_wp3_e2e_gegen_echte_werkzeuge():
+    """Graph mit tools=None (echte MES/RAG-Werkzeuge) und mock_chains() über den jüngsten Replay-Fall:
+    mindestens ein ähnlicher Vorfall, mindestens eine mit Vorfall-ID belegte Massnahme, Freigabeknoten
+    erreicht. Deckt die vier Integrationsfehler ab, die Fixture-Werkzeuge verbargen."""
+    import sqlite3
+
+    import pytest as _pytest
+
+    from production_agent.config import get_settings
+    from production_agent.data.replay import select_replay_cases
+    from production_agent.graph.mock_llm import mock_chains
+    from production_agent.graph.workflow import build_graph
+
+    settings = get_settings()
+    db = ROOT / settings.mes_db_path
+    if not db.exists():
+        _pytest.skip("keine Gold-Datenbank – erst python -m production_agent.data.simulator")
+
+    conn = sqlite3.connect(str(db))
+    conn.row_factory = sqlite3.Row
+    cases = select_replay_cases(conn, n=1)
+    conn.close()
+    assert cases, "kein Replay-Fall in der Gold-Datenbank"
+    case = cases[-1]
+
+    graph = build_graph(tools=None, sim_now=case.now, llm=mock_chains())
+    result = graph.invoke(
+        {"line_id": case.line_id, "trace": []},
+        {"configurable": {"thread_id": f"wp3-e2e-{case.event_id}"}},
+    )
+
+    knowledge = result.get("knowledge", []) or []
+    incidents = [
+        k for k in knowledge if isinstance(k, dict) and k.get("event_id") not in (None, "")
+    ]
+    assert len(incidents) >= 1, "kein ähnlicher Vorfall aus downtime_events_gold gefunden"
+
+    interrupt = result.get("__interrupt__")
+    assert interrupt, "Freigabeknoten nicht erreicht"
+    actions = interrupt[0].value.get("actions", [])
+    valid = {str(k["event_id"]) for k in incidents}
+    grounded = [a for a in actions if any(v in (a.get("rationale") or "") for v in valid)]
+    assert len(grounded) >= 1, "keine mit Vorfall-ID belegte Massnahme in der Freigabe"

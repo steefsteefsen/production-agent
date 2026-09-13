@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · fix(graph): E2E gegen echte Werkzeuge, Modell-Schalter mock/live
+**Was:** _parse löst die <tool_data>-Hülle auf, _extract_packml_state nimmt die stehende Station und {"rows": …}, _top_alarm_codes enthält den Erstalarm (frühester ts), derive_actions stellt Vorfälle vor Dokumente; mes_server._now() liest SIM_NOW aus der Umgebung (kein Leck, ADR-0002). Neu: graph/mock_llm.py, scripts/e2e_replay.py, LLM_MODE (mock/live), build_graph-Schalter, docs/e2e.md, tests/test_e2e_replay.py, Makefile-Ziele e2e-mock/e2e-live, CI-E2E-Schritt.
+**Warum (Problem oder Anlass):** Unit-Tests mit Fixture-Werkzeugen (rohes JSON, keine Replay-Uhr) sahen fünf Integrationsfehler nicht; erst der Lauf gegen die echten MCP-Werkzeuge deckte sie auf.
+**Alternativen (verworfen, weil ...):** Weiter nur Fixture-Tests – verworfen, weil sie die Hülle, die stehende Station, den Erstalarm und die Replay-Uhr nie berührten.
+**Auswirkung (Verträge, ADR, Tests):** src/production_agent/graph/workflow.py, graph/mock_llm.py, graph/prompts.py, mcp/mes_server.py, config.py, settings.env, scripts/e2e_replay.py, tests/test_e2e_replay.py, tests/acceptance/test_wp3.py, .github/workflows/ci.yml, Makefile, docs/e2e.md.
+**Bezug (WP, ADR):** WP3/ADR-0002
+
 ## 2026-09-13 · docs(P): WP3 integriert – Ermittlungs-Workflow auf main
 **Was:** WP3 (LangGraph-Ablauf, LLM-Knoten, SSE, Vorfall-ID-Nachbedingung, RAG-Audit-Test) nach main gemergt; Statusseite/Präsentation/Marker aufgefrischt; WP4/WP5 startbereit.
 **Warum (Problem oder Anlass):** WP3 war gebaut und gate-grün, hing aber an der headless-Review-Eskalation; nach dem run.py-Fix und Stefans Zusatzentscheidungen ist es abnahmefähig.

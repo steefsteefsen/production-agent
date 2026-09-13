@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
@@ -42,30 +43,78 @@ def _log(state: AgentState, msg: str) -> list[str]:
     return [*state.get("trace", []), msg]
 
 
-def _parse(raw: str) -> Any:
-    """JSON aus MCP-Werkzeugergebnis parsen; bei Fehler leere Liste."""
+_TOOL_DATA_RE = re.compile(r"<tool_data\b[^>]*>(.*?)</tool_data>", re.S)
+_WARN_RE = re.compile(r"^\s*\[WARNUNG:[^\]]*\]\s*", re.S)
+_TRUNC_RE = re.compile(r"\s*\[\.\.\. gekürzt \.\.\.\]\s*$")
+
+
+def _parse(raw: Any) -> Any:
+    """JSON aus MCP-Werkzeugergebnis parsen. Echte Werkzeuge kapseln das Ergebnis in eine
+    <tool_data>-Hülle (injection_guard); Hülle, [WARNUNG:…]-Zeile und [... gekürzt ...]-Hinweis
+    werden zuerst entfernt, dann JSON. Bei Fehler leere Liste. (Fixture-Werkzeuge liefern rohes
+    JSON – das lief, verdeckte aber den Integrationsfehler.)"""
+    if isinstance(raw, (list, dict)):
+        return raw
+    if not isinstance(raw, str):
+        return []
+    body = raw
+    m = _TOOL_DATA_RE.search(raw)
+    if m:
+        body = m.group(1)
+    body = _WARN_RE.sub("", body.strip())
+    body = _TRUNC_RE.sub("", body).strip()
     try:
-        return json.loads(raw)
+        return json.loads(body)
     except (ValueError, TypeError):
         return []
 
 
+def _first_alarm_code(alarms: list[dict]) -> str:
+    """Erstalarm = der zeitlich früheste Alarm (kleinster ts). get_active_alarms sortiert DESC nach
+    ts, der Erstalarm ist also das letzte Element und fiele sonst aus den häufigsten Codes heraus.
+    (sequence_id ist die gemeinsame Ereignis-ID der Serie, nicht die Reihenfolge – daher ts.)"""
+    cand = [a for a in alarms if isinstance(a, dict) and a.get("alarm_code")]
+    if not cand:
+        return ""
+    return str(min(cand, key=lambda a: str(a.get("ts", "")))["alarm_code"])
+
+
 def _top_alarm_codes(alarms: list[dict], n: int = 3) -> list[str]:
-    """Häufigste alarm_code-Werte aus der Alarmliste."""
+    """Häufigste alarm_code-Werte aus der Alarmliste – der Erstalarm ist immer enthalten und
+    führt die Liste an (sonst sähe die Wissensabfrage den auslösenden Alarm nicht)."""
     counts: dict[str, int] = {}
     for a in alarms:
         code = str(a.get("alarm_code", ""))
         if code:
             counts[code] = counts.get(code, 0) + 1
-    return [c for c, _ in sorted(counts.items(), key=lambda x: -x[1])][:n]
+    ranked = [c for c, _ in sorted(counts.items(), key=lambda x: -x[1])]
+    first = _first_alarm_code(alarms)
+    ordered = ([first] if first else []) + [c for c in ranked if c != first]
+    return ordered[:n]
+
+
+_PACKML_STOPPED = ("Held", "Suspended", "Stopped", "Aborted")
 
 
 def _extract_packml_state(line_status: dict | list) -> str:
-    """PackML-Zustand aus Linienstatus-Dict (erstes Equipment) oder 'Unknown'."""
-    if isinstance(line_status, list) and line_status:
-        return str(line_status[0].get("packml_state", "Unknown"))
+    """PackML-Zustand der STEHENDEN Station. Akzeptiert {"rows": [...]}, eine Liste von Equipment-
+    Zuständen oder ein einzelnes Equipment-Dict; bevorzugt einen Stopp-Zustand (Held/Suspended/
+    Stopped/Aborted), da die Störung genau dort steht, nicht am ersten Equipment der Liste."""
+    rows: Any = None
     if isinstance(line_status, dict):
-        return str(line_status.get("packml_state", "Unknown"))
+        if "rows" in line_status:
+            rows = line_status.get("rows")
+        elif "packml_state" in line_status:
+            return str(line_status.get("packml_state", "Unknown"))
+    elif isinstance(line_status, list):
+        rows = line_status
+    if isinstance(rows, list) and rows:
+        for r in rows:
+            if isinstance(r, dict) and str(r.get("packml_state", "")) in _PACKML_STOPPED:
+                return str(r["packml_state"])
+        first = rows[0]
+        if isinstance(first, dict):
+            return str(first.get("packml_state", "Unknown"))
     return "Unknown"
 
 
@@ -262,11 +311,21 @@ def _make_derive_actions(llm_chain):
     def derive_actions(state: AgentState) -> dict[str, Any]:
         settings = _get_settings()
         knowledge = state.get("knowledge", [])
+        # Vorfälle (mit event_id) VOR Dokumenten in den Kontext – sonst füllt [:5] nur Dokumente und
+        # das LLM sieht keine Vorfall-ID, die es laut Nachbedingung zitieren muss.
+        incidents = [
+            k for k in knowledge if isinstance(k, dict) and k.get("event_id") not in (None, "")
+        ]
+        docs = [
+            k
+            for k in knowledge
+            if not (isinstance(k, dict) and k.get("event_id") not in (None, ""))
+        ]
         context = json.dumps(
             {
                 "hypothesis": state.get("hypothesis", {}),
                 "impact": state.get("impact", {}),
-                "knowledge": knowledge[:5],
+                "knowledge": (incidents + docs)[:5],
             },
             ensure_ascii=False,
             default=str,
@@ -413,7 +472,12 @@ def build_graph(
 
     resolved_tools = tools if tools is not None else _default_tools()
 
-    # LLM-Chains auflösen
+    # LLM-Chains auflösen. Ohne explizites llm entscheidet LLM_MODE: mock → deterministisches
+    # Mock-LLM (kein API-Schlüssel, für E2E/CI); live → ChatAnthropic aus den Settings.
+    if llm is None and _get_settings().llm_mode == "mock":
+        from production_agent.graph.mock_llm import mock_chains
+
+        llm = mock_chains()
     if isinstance(llm, dict):
         chain_narrow = llm["narrow_cause"]
         chain_derive = llm["derive_actions"]

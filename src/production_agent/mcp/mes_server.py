@@ -10,6 +10,7 @@ Start: python -m production_agent.mcp.mes_server   (stdio-Transport)
 from __future__ import annotations
 
 import json
+import os
 from datetime import UTC, datetime
 from typing import Any
 
@@ -30,8 +31,16 @@ _MAX_SIMILAR_INCIDENTS = 5
 
 
 def _now() -> str:
-    """Replay-Uhr: Historie ist alles VOR now, Gegenwart ist das Fenster BIS now (kein Leck)."""
-    return settings.sim_now or datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+    """Replay-Uhr: Historie ist alles VOR now, Gegenwart ist das Fenster BIS now (kein Leck).
+
+    Reihenfolge: SIM_NOW aus der Umgebung (setzt build_graph für die MCP-Server) vor dem – beim
+    Import eingefrorenen – settings.sim_now; sonst die echte Zeit. Ohne den Umgebungsvorrang sähe
+    der Live-Betrieb die Replay-Uhr nicht und leckte das laufende Ereignis (ADR-0002)."""
+    return (
+        os.environ.get("SIM_NOW")
+        or settings.sim_now
+        or datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+    )
 
 
 def _query(sql: str, params: tuple[Any, ...] = (), tool: str = "", limit: int | None = None) -> str:

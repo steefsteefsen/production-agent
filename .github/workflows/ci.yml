@@ -78,6 +78,9 @@ jobs:
       - name: Simulator (Testdaten erzeugen)
         run: python -m production_agent.data.simulator
 
+      - name: E2E-Replay gegen echte Werkzeuge (mock-LLM)
+        run: python scripts/e2e_replay.py
+
       - name: API im Hintergrund starten
         run: uvicorn production_agent.api.server:app --host 0.0.0.0 --port 8000 &
 

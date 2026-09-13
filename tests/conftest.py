@@ -14,6 +14,14 @@ from production_agent.data import simulator
 ROOT = Path(__file__).resolve().parent.parent
 
 
+@pytest.fixture(autouse=True)
+def _clear_sim_now_env():
+    """build_graph(sim_now=…) setzt os.environ['SIM_NOW'] als Replay-Uhr für die MCP-Server. Nach jedem
+    Test zurücksetzen, sonst leckt die Uhr in Folgetests (z. B. _flood_in_window)."""
+    yield
+    os.environ.pop("SIM_NOW", None)
+
+
 @pytest.fixture(scope="session")
 def small_db(tmp_path_factory) -> Path:
     """30 Tage Historie mit Seed 7 – klein, deterministisch, unabhängig von data/gold."""

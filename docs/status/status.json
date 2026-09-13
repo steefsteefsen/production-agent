@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T08:23:40",
-  "commit": "535921b9eae057e031ac929d86ba5871448781b2",
+  "generated_at": "2026-09-13T12:58:55",
+  "commit": "8d2e2966f754b2accc408888943266dd02932718",
   "branch": "main",
   "packages": [
     {
@@ -41,6 +41,11 @@
       "cost_usd": 0,
       "last_at": null,
       "commits": [
+        {
+          "sha": "8d2e296",
+          "title": "docs(P): WP3 integriert – Ermittlungs-Workflow auf main",
+          "at": "2026-09-13T08:23:24+02:00"
+        },
         {
           "sha": "b9a17ae",
           "title": "docs(P): Nachtlauf-Integration – sechs Pakete nach main",
@@ -729,11 +734,17 @@
     "percent": 64,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 319,
+    "tests": 325,
     "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T08:23:24+02:00",
+      "kind": "commit",
+      "ref": "8d2e296",
+      "text": "docs(P): WP3 integriert – Ermittlungs-Workflow auf main"
+    },
     {
       "at": "2026-09-13T08:09:56+02:00",
       "kind": "commit",
@@ -1067,7 +1078,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 185,
+      "tests": 191,
       "coverage": 100
     },
     {
@@ -1079,14 +1090,14 @@
     {
       "path": "src/production_agent/data/",
       "files": 4,
-      "tests": 95,
+      "tests": 102,
       "coverage": 83
     },
     {
       "path": "src/production_agent/graph/",
-      "files": 3,
-      "tests": 46,
-      "coverage": 96
+      "files": 4,
+      "tests": 52,
+      "coverage": 94
     },
     {
       "path": "src/production_agent/mcp/",
@@ -1097,7 +1108,7 @@
     {
       "path": "src/production_agent/security/",
       "files": 4,
-      "tests": 69,
+      "tests": 70,
       "coverage": 100
     }
   ]

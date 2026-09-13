@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr = SecretStr("")
     anthropic_model: str = "claude-opus-5"
     anthropic_model_fast: str = "claude-haiku-4-5-20251001"
+    # LLM-Schalter für Knoten 4/6: "mock" = deterministisches Mock-LLM ohne API-Schlüssel
+    # (E2E/CI), "live" = ChatAnthropic. build_graph(llm=...) sticht diesen Schalter.
+    llm_mode: str = "mock"
 
     mes_db_path: str = "data/gold/mes.sqlite"
     checkpoint_db_path: str = "data/checkpoints.sqlite"

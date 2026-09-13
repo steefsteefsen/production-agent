@@ -1,4 +1,4 @@
-.PHONY: install lint test security run-mes run-rag run-api ui e2e ops
+.PHONY: install lint test security run-mes run-rag run-api ui e2e e2e-mock e2e-live ops
 install: ; pip install -e ".[dev]" && pre-commit install && pre-commit install --hook-type commit-msg && python autopilot/guardian.py --init || true
 guardian: ; python autopilot/guardian.py
 lint: ; ruff check . && ruff format --check .
@@ -9,4 +9,6 @@ run-rag: ; python -m production_agent.mcp.rag_server
 run-api: ; uvicorn production_agent.api.server:app --reload
 ui: ; cd frontend && npm run dev
 e2e: ; pytest -q -m e2e tests/e2e
+e2e-mock: ; python scripts/e2e_replay.py
+e2e-live: ; LLM_MODE=live python scripts/e2e_replay.py
 ops: ; uvicorn autopilot.ops.app:app --host 127.0.0.1 --port 8010 --reload

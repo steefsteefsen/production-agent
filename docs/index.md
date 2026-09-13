@@ -31,6 +31,7 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [architecture.md](architecture.md) – Architektur – Zielbild und Verträge: ```mermaid
 - [contracts/api.md](contracts/api.md) – API-Vertrag: Production Agent – SSE-Stream und Freigabe: Alle Pfade unterhalb von `http://localhost:8000`.
 - [data_layer.md](data_layer.md) – Datenschicht Bronze→Silber→Gold: Technische Referenz für `src/production_agent/data/` (Simulator, Replay, Schema).
+- [e2e.md](e2e.md) – Ende-zu-Ende-Replay: Der Ende-zu-Ende-Lauf prüft den kompletten LangGraph-Ablauf gegen die **echten** MES- und
 - [ops.md](ops.md) – Ops-Cockpit: Lokale Steuerungsoberfläche für den Orchestrator-Betrieb. Unabhängig vom Produktionsleiter-Frontend.
 - [plan.md](plan.md) – Projektplan – Scope, Budget, Gates: Minimalanforderungen: stehende Linie untersuchen, Alarme zu Ereignissen aggregieren, historisches Wissen abrufen,
 - [references.md](references.md) – Externe Quellen: was übernommen wurde, wie und unter welcher Lizenz: Drei Stufen – nie „Repo klonen und anpassen":
