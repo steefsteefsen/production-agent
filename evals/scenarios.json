@@ -1,0 +1,75 @@
+{
+  "beschreibung": "Replay-Fallauswahl der WP6-Eval: n jüngste Gold-Ereignisse (ADR-0002).",
+  "faelle": [
+    {
+      "event_id": 351,
+      "line_id": "L1",
+      "sim_now": "2026-08-25 21:51:19",
+      "gold_reason_code": "STO-SIEGEL",
+      "gold_duration_min": 34.9
+    },
+    {
+      "event_id": 352,
+      "line_id": "L1",
+      "sim_now": "2026-08-26 04:15:33",
+      "gold_reason_code": "MAT-LEER",
+      "gold_duration_min": 10.3
+    },
+    {
+      "event_id": 353,
+      "line_id": "L1",
+      "sim_now": "2026-08-26 05:19:06",
+      "gold_reason_code": "QUAL-NIO",
+      "gold_duration_min": 23.8
+    },
+    {
+      "event_id": 354,
+      "line_id": "L1",
+      "sim_now": "2026-08-26 08:38:25",
+      "gold_reason_code": "STO-SENSOR",
+      "gold_duration_min": 16.7
+    },
+    {
+      "event_id": 355,
+      "line_id": "L1",
+      "sim_now": "2026-08-26 10:23:31",
+      "gold_reason_code": "QUAL-HOLD",
+      "gold_duration_min": 29.6
+    },
+    {
+      "event_id": 356,
+      "line_id": "L1",
+      "sim_now": "2026-08-27 03:44:11",
+      "gold_reason_code": "STO-FOLIE",
+      "gold_duration_min": 20.1
+    },
+    {
+      "event_id": 357,
+      "line_id": "L1",
+      "sim_now": "2026-08-27 05:39:35",
+      "gold_reason_code": "STO-ELEK",
+      "gold_duration_min": 21.2
+    },
+    {
+      "event_id": 358,
+      "line_id": "L1",
+      "sim_now": "2026-08-27 15:49:25",
+      "gold_reason_code": "STO-FOLIE",
+      "gold_duration_min": 11.9
+    },
+    {
+      "event_id": 359,
+      "line_id": "L1",
+      "sim_now": "2026-08-28 02:58:01",
+      "gold_reason_code": "MAT-LEER",
+      "gold_duration_min": 11.1
+    },
+    {
+      "event_id": 360,
+      "line_id": "L1",
+      "sim_now": "2026-08-28 07:23:44",
+      "gold_reason_code": "STO-FOLIE",
+      "gold_duration_min": 10.9
+    }
+  ]
+}

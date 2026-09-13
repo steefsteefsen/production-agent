@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T22:46:41",
-  "commit": "dd58a397d6438236938f8e925e81884f859f14ab",
+  "generated_at": "2026-09-13T23:17:21",
+  "commit": "c6b668672adf6a0efe4a642f7feaaca839277be0",
   "branch": "main",
   "packages": [
     {
@@ -350,8 +350,8 @@
         "WP2b",
         "WP3"
       ],
-      "percent": 0,
-      "state": "offen",
+      "percent": 20,
+      "state": "läuft",
       "steps": [
         {
           "name": "Gate grün",
@@ -365,8 +365,8 @@
         },
         {
           "name": "Commit",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-13T22:46:27+02:00"
         },
         {
           "name": "Tag",
@@ -382,7 +382,13 @@
       "attempts": 0,
       "cost_usd": 0,
       "last_at": null,
-      "commits": []
+      "commits": [
+        {
+          "sha": "c6b6686",
+          "title": "feat(WP4): CBR- und AI4I-Regelmodule mit Unit-Tests und ADR-0006",
+          "at": "2026-09-13T22:46:27+02:00"
+        }
+      ]
     },
     {
       "id": "WP5",
@@ -748,14 +754,20 @@
     }
   ],
   "totals": {
-    "percent": 82,
+    "percent": 84,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 375,
-    "coverage_total": 86,
+    "tests": 388,
+    "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T22:46:27+02:00",
+      "kind": "commit",
+      "ref": "c6b6686",
+      "text": "feat(WP4): CBR- und AI4I-Regelmodule mit Unit-Tests und ADR-0006"
+    },
     {
       "at": "2026-09-13T21:34:55+02:00",
       "kind": "commit",
@@ -1179,7 +1191,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 237,
+      "tests": 250,
       "coverage": 100
     },
     {
@@ -1197,8 +1209,8 @@
     {
       "path": "src/production_agent/graph/",
       "files": 6,
-      "tests": 98,
-      "coverage": 94
+      "tests": 100,
+      "coverage": 95
     },
     {
       "path": "src/production_agent/mcp/",

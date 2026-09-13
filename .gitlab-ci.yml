@@ -1,4 +1,4 @@
-stages: [lint, test, security, e2e]
+stages: [lint, test, security, evals, e2e]
 
 default:
   image: python:3.11-slim
@@ -23,6 +23,23 @@ security:
     - bandit -c pyproject.toml -r src
     - pip install pip-audit && pip-audit
   allow_failure: false
+
+# Replay-Eval im Mock-Modus: kostenlos, offline, ohne API-Schlüssel und ohne Langfuse.
+# Der kostenpflichtige Live-Lauf (--live) bleibt dem manuellen e2e-live-Job vorbehalten.
+evals:
+  stage: evals
+  variables:
+    LLM_MODE: mock
+  script:
+    - python -m production_agent.data.simulator
+    - python evals/run_evals.py
+    - test -s evals/report.md
+  artifacts:
+    when: always
+    paths:
+      - evals/report.md
+      - evals/scenarios.json
+    expire_in: 30 days
 
 e2e-live:
   stage: e2e
