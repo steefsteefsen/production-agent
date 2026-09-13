@@ -12,7 +12,7 @@ python -m venv .venv && source .venv/bin/activate
 make install                            # deps + pre-commit
 cp .env.example .env                    # API-Key eintragen
 python -m production_agent.data.simulator   # 360 Störungsereignisse → data/gold/mes.sqlite
-make test                               # Testsuite (<!-- auto:tests -->333<!-- /auto:tests --> Tests), läuft ohne API-Key
+make test                               # Testsuite (<!-- auto:tests -->375<!-- /auto:tests --> Tests), läuft ohne API-Key
 python autopilot/run.py --dry-run       # Prompts der Arbeitspakete ansehen, dann ohne --dry-run laufen lassen
 ```
 

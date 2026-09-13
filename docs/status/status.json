@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T21:35:16",
-  "commit": "27880ada1baf7c02c5c6afdf9d47d2de9bda5daa",
+  "generated_at": "2026-09-13T22:46:41",
+  "commit": "dd58a397d6438236938f8e925e81884f859f14ab",
   "branch": "main",
   "packages": [
     {
@@ -407,8 +407,8 @@
         },
         {
           "name": "Commit",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-13T21:34:55+02:00"
         },
         {
           "name": "Tag",
@@ -424,7 +424,13 @@
       "attempts": 1,
       "cost_usd": 0,
       "last_at": "2026-09-13 18:00",
-      "commits": []
+      "commits": [
+        {
+          "sha": "dd58a39",
+          "title": "feat(WP5): Agent-Tab – geführte Demo, Funktion und Ausblick je Schritt",
+          "at": "2026-09-13T21:34:55+02:00"
+        }
+      ]
     },
     {
       "id": "WP6",
@@ -745,11 +751,17 @@
     "percent": 82,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 333,
+    "tests": 375,
     "coverage_total": 86,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T21:34:55+02:00",
+      "kind": "commit",
+      "ref": "dd58a39",
+      "text": "feat(WP5): Agent-Tab – geführte Demo, Funktion und Ausblick je Schritt"
+    },
     {
       "at": "2026-09-13T20:34:07+02:00",
       "kind": "commit",
@@ -1167,7 +1179,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 195,
+      "tests": 237,
       "coverage": 100
     },
     {
@@ -1184,8 +1196,8 @@
     },
     {
       "path": "src/production_agent/graph/",
-      "files": 4,
-      "tests": 56,
+      "files": 6,
+      "tests": 98,
       "coverage": 94
     },
     {
