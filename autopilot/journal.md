@@ -119,13 +119,3 @@ In `.github/workflows/ci.yml` (Zeilen 93–100):
 **Was offen:** Die `autopilot/ops/`-Dateien, `tests/test_ops.py`, `docs/ops.md` und `tests/test_mes_coverage.py` sind noch untracked und müssen in einem separaten Commit (WP INF-E) eingecheckt werden.
 
 **Dateien:** Makefile, README.md, autopilot/journal.md, docs/AENDERUNGEN.md, docs/index.md, docs/presentation/index.html, docs/status/index.html, docs/status/status.json, docs/test_strategy.md
-
-## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
-
-## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
-
-## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
-
-## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
-
-## quota-Pause: quota – warte in 1 min (bisher 0/0 min)

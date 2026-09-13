@@ -243,8 +243,12 @@ def orchestrate(
                 f"(bisher {waited // 60}/{int(quota_wait_hours * 60)} min)"
             )
             print(msg, flush=True)
-            with (ROOT / "autopilot" / "journal.md").open("a", encoding="utf-8") as fh:
-                fh.write(f"\n## quota-Pause: {msg}\n")
+            # Quota-Pausen NICHT in die getrackte journal.md schreiben (sonst Log-Müll im Repo),
+            # sondern in ein ignoriertes Log unter autopilot/state/ (siehe .gitignore).
+            quota_log = ROOT / "autopilot" / "state" / "quota.log"
+            quota_log.parent.mkdir(parents=True, exist_ok=True)
+            with quota_log.open("a", encoding="utf-8") as fh:
+                fh.write(f"{msg}\n")
             sleep(wait)
             waited += wait
             if probe is None:  # ohne aktive Probe: blind entsperren und erneut versuchen

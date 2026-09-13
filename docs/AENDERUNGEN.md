@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · fix(orchestrate): Quota-Pausen ins ignorierte Log statt journal.md
+**Was:** orchestrate.py schreibt Quota-Pausen jetzt nach autopilot/state/quota.log (per .gitignore ignoriert) statt in die getrackte autopilot/journal.md. journal.md dabei erneut von nachgeschobenen quota-Pause-Zeilen bereinigt.
+**Warum (Problem oder Anlass):** Der laufende Orchestrator (Ops-Cockpit) hängte bei API-Quota fortlaufend „## quota-Pause"-Zeilen an die versionierte journal.md an (zuvor 450 Zeilen Log-Müll); sie kamen nach dem Aufräumen sofort zurück. Das ist die Wurzel, nicht das Symptom.
+**Alternativen (verworfen, weil ...):** journal.md nur wiederholt bereinigen – der Prozess füllt sie sofort erneut; Ops-Server abschalten – fremder laufender Dienst, nicht eigenmächtig; Zeilen weiter tolerieren – genau das, was aufgeräumt werden soll.
+**Auswirkung (Verträge, ADR, Tests):** autopilot/orchestrate.py, autopilot/journal.md; neues ignoriertes Log autopilot/state/quota.log. test_orchestrate.py unverändert grün (prüft Pausier-/Resume-Verhalten, nicht das Schreibziel).
+**Bezug (WP, ADR):** Housekeeping/Orchestrator
+
 ## 2026-09-13 · chore(status): WP-Stand ehrlich taggen, Journal entrümpeln
 **Was:** status.py: der git-Tag wp/<id> ist jetzt die Quelle der Wahrheit für „fertig" (100 %); ein Commit ohne Tag heißt „läuft", nicht mehr „fertig" (behebt Widersprüche wie „fertig bei 30 %"). Tags wp/WP1 und wp/WP5 gesetzt (Abnahmetests test_wp1/test_wp5 grün, Frontend/CI belegt) – WP1 stand fälschlich auf „läuft", WP5 auf „offen"; WP6 steht nun ehrlich auf „läuft" (nur Teil gebaut), WP4/WP7 bleiben „offen" (Kern-Artefakt rules.py bzw. demo_script.md fehlt). Ehrliche Journaleinträge WP1 (Erfolgs-Nachtrag) und WP5 (neu). autopilot/journal.md um 450 „quota-Pause"-Logzeilen bereinigt (1018→121), alle echten WP-Einträge erhalten. tests/test_status.py um zwei Fälle für die neue Tag=fertig-Semantik erweitert.
 **Warum (Problem oder Anlass):** Die Statusflächen (README-Stand, Statusseite) waren widersprüchlich/untertrieben: WP5 (Frontend läuft, Playwright grün) und WP1 (Abnahme grün) galten als offen, WP3/WP6 als „fertig" bei niedrigem Prozentwert. Für das Interview soll der Stand kohärent und ehrlich sein.
