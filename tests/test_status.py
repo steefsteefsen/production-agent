@@ -34,6 +34,25 @@ def test_percent_progression():
     assert status.compute_packages(tasks, rev, commits, {"WP1"}, set(), {})[0]["percent"] == 100
 
 
+def test_tag_ist_fertig_quelle_der_wahrheit():
+    """Verifikation: der Tag wp/<id> markiert 'fertig' (100 %), auch ohne Journaleinträge –
+    er wird per Konvention erst nach erfolgreichem Merge gesetzt."""
+    tasks = [_task()]
+    p = status.compute_packages(tasks, [], [], {"WP1"}, set(), {})[0]
+    assert p["state"] == "fertig" and p["percent"] == 100
+
+
+def test_commit_ohne_tag_ist_nicht_fertig_falsification():
+    """Falsifikation: ein Paket mit Commit, aber ohne Tag darf NICHT 'fertig' heißen (sonst der
+    frühere Widerspruch 'fertig bei 20 %'); es steht auf 'läuft'."""
+    tasks = [_task()]
+    commits = [
+        {"sha": "abcdef1", "title": "feat(WP1): x", "at": "2026-09-11T10:00:00", "scope": "WP1"}
+    ]
+    p = status.compute_packages(tasks, [], commits, set(), set(), {})[0]
+    assert p["state"] == "läuft" and p["percent"] == 20
+
+
 def test_html_embeds_parsable_json():
     pkgs = status.compute_packages([_task()], [], [], set(), set(), {})
     st = status.build_status(packages=pkgs, commit="", branch="main")

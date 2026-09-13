@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T18:41:14",
-  "commit": "3d9e3c223c1aca6e6d470191bd9e30da50d6f97a",
+  "generated_at": "2026-09-13T20:22:59",
+  "commit": "4e29241104128fb6b21f457d0bf4cf995b8c0b03",
   "branch": "main",
   "packages": [
     {
@@ -41,6 +41,11 @@
       "cost_usd": 0,
       "last_at": null,
       "commits": [
+        {
+          "sha": "4e29241",
+          "title": "docs(P): Scope-Entscheidungen und Qualitätsgrenzen in Präsentation",
+          "at": "2026-09-13T18:40:54+02:00"
+        },
         {
           "sha": "8d2e296",
           "title": "docs(P): WP3 integriert – Ermittlungs-Workflow auf main",
@@ -162,18 +167,18 @@
       "name": "WP1",
       "agent": "data-agent",
       "deps": [],
-      "percent": 0,
-      "state": "läuft",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-13 18:00"
         },
         {
           "name": "Review",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-13 18:00"
         },
         {
           "name": "Commit",
@@ -182,7 +187,7 @@
         },
         {
           "name": "Tag",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
@@ -191,9 +196,9 @@
           "at": null
         }
       ],
-      "attempts": 1,
+      "attempts": 2,
       "cost_usd": 1.87,
-      "last_at": "2026-09-12 11:43",
+      "last_at": "2026-09-13 18:00",
       "commits": []
     },
     {
@@ -297,7 +302,7 @@
         "WP1",
         "WP2a"
       ],
-      "percent": 30,
+      "percent": 100,
       "state": "fertig",
       "steps": [
         {
@@ -387,18 +392,18 @@
         "WP2b",
         "WP3"
       ],
-      "percent": 0,
-      "state": "offen",
+      "percent": 100,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-13 18:00"
         },
         {
           "name": "Review",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-13 18:00"
         },
         {
           "name": "Commit",
@@ -407,7 +412,7 @@
         },
         {
           "name": "Tag",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
@@ -416,9 +421,9 @@
           "at": null
         }
       ],
-      "attempts": 0,
+      "attempts": 1,
       "cost_usd": 0,
-      "last_at": null,
+      "last_at": "2026-09-13 18:00",
       "commits": []
     },
     {
@@ -430,7 +435,7 @@
         "WP5"
       ],
       "percent": 20,
-      "state": "fertig",
+      "state": "läuft",
       "steps": [
         {
           "name": "Gate grün",
@@ -737,14 +742,20 @@
     }
   ],
   "totals": {
-    "percent": 66,
+    "percent": 82,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 329,
+    "tests": 331,
     "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T18:40:54+02:00",
+      "kind": "commit",
+      "ref": "4e29241",
+      "text": "docs(P): Scope-Entscheidungen und Qualitätsgrenzen in Präsentation"
+    },
     {
       "at": "2026-09-13T14:05:05+02:00",
       "kind": "commit",
@@ -822,6 +833,30 @@
       "kind": "commit",
       "ref": "f3798ae",
       "text": "Merge wp/INF-3: Änderungsprotokoll mit Begründungspflicht (--no-ff)"
+    },
+    {
+      "at": "2026-09-13 18:00",
+      "kind": "journal",
+      "ref": "WP1",
+      "text": "WP1 ok (1 Versuche)"
+    },
+    {
+      "at": "2026-09-13 18:00",
+      "kind": "review",
+      "ref": "WP1",
+      "text": "Review pass"
+    },
+    {
+      "at": "2026-09-13 18:00",
+      "kind": "journal",
+      "ref": "WP5",
+      "text": "WP5 ok (1 Versuche)"
+    },
+    {
+      "at": "2026-09-13 18:00",
+      "kind": "review",
+      "ref": "WP5",
+      "text": "Review pass"
     },
     {
       "at": "2026-09-12T23:51:37+02:00",
@@ -1084,6 +1119,12 @@
     {
       "at": "",
       "kind": "tag",
+      "ref": "wp/WP1",
+      "text": "Tag wp/WP1"
+    },
+    {
+      "at": "",
+      "kind": "tag",
       "ref": "wp/WP2a",
       "text": "Tag wp/WP2a"
     },
@@ -1098,6 +1139,12 @@
       "kind": "tag",
       "ref": "wp/WP3",
       "text": "Tag wp/WP3"
+    },
+    {
+      "at": "",
+      "kind": "tag",
+      "ref": "wp/WP5",
+      "text": "Tag wp/WP5"
     }
   ],
   "guardian": {

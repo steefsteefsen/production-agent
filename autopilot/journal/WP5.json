@@ -1,0 +1,24 @@
+[
+  {
+    "wp": "WP5",
+    "agent": "ui-agent",
+    "at": "2026-09-13 18:00",
+    "ok": true,
+    "attempts": 1,
+    "minutes": 0,
+    "cost_usd": 0,
+    "manuell": true,
+    "files": [
+      "frontend/src/App.tsx",
+      "frontend/src/components/LiveMES.tsx",
+      "frontend/src/components/Medallion.tsx",
+      "frontend/src/components/Agent.tsx",
+      "frontend/src/components/Status.tsx"
+    ],
+    "agent_summary": "React-Cockpit (Vite) auf main: vier Tabs (Live-MES, Medallion, Agent, Status), SSE-Anbindung, Freigabe-Dialog, data-testid=cockpit. Manuell auf main integriert; npm ci + vite build und Playwright-Smoke-Tests im CI grün.",
+    "review": {
+      "verdict": "pass",
+      "summary": "tests/acceptance/test_wp5.py grün; Playwright-E2E im CI-Job grün."
+    }
+  }
+]

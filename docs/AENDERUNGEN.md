@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · chore(status): WP-Stand ehrlich taggen, Journal entrümpeln
+**Was:** status.py: der git-Tag wp/<id> ist jetzt die Quelle der Wahrheit für „fertig" (100 %); ein Commit ohne Tag heißt „läuft", nicht mehr „fertig" (behebt Widersprüche wie „fertig bei 30 %"). Tags wp/WP1 und wp/WP5 gesetzt (Abnahmetests test_wp1/test_wp5 grün, Frontend/CI belegt) – WP1 stand fälschlich auf „läuft", WP5 auf „offen"; WP6 steht nun ehrlich auf „läuft" (nur Teil gebaut), WP4/WP7 bleiben „offen" (Kern-Artefakt rules.py bzw. demo_script.md fehlt). Ehrliche Journaleinträge WP1 (Erfolgs-Nachtrag) und WP5 (neu). autopilot/journal.md um 450 „quota-Pause"-Logzeilen bereinigt (1018→121), alle echten WP-Einträge erhalten. tests/test_status.py um zwei Fälle für die neue Tag=fertig-Semantik erweitert.
+**Warum (Problem oder Anlass):** Die Statusflächen (README-Stand, Statusseite) waren widersprüchlich/untertrieben: WP5 (Frontend läuft, Playwright grün) und WP1 (Abnahme grün) galten als offen, WP3/WP6 als „fertig" bei niedrigem Prozentwert. Für das Interview soll der Stand kohärent und ehrlich sein.
+**Alternativen (verworfen, weil ...):** Deliverable-Erkennung in status.py (Code/Tests statt Tags) – größerer Generator-Umbau, kurz vor dem Interview riskanter; getippte Statuszahlen in der Doku – verboten (D8), veralten; WP4/WP6/WP7 als fertig markieren – unwahr, ihre Kern-Artefakte fehlen.
+**Auswirkung (Verträge, ADR, Tests):** autopilot/status.py, autopilot/journal.md, autopilot/journal/WP1.json, autopilot/journal/WP5.json, tests/test_status.py; neue git-Tags wp/WP1, wp/WP5. Regenerierte status.json/index.html/README-Marker/Präsentation. Keine Vertrags-/ADR-Änderung.
+**Bezug (WP, ADR):** Housekeeping/Status
+
 ## 2026-09-13 · docs(P): Scope-Entscheidungen und Qualitätsgrenzen in Präsentation
 **Was:** autopilot/present.py um zwei kuratierte Tabs erweitert: „Scope-Entscheidungen" (Tabelle Abkürzung/Warum/Ausbau nach Kauf) und „Nicht abgekürzt: Sicherheit und Kontrolle" (sql_guard, injection_guard, action_policy, Freigabe-Gate, Audit, Replay-Determinismus). Inhalte als Daten (SCOPE_DECISIONS/QUALITY_GUARANTEES) im Generator, Rendering über eine Tabelle im HTML; tests/test_present.py auf acht Tabs und die neuen Panels erweitert.
 **Warum (Problem oder Anlass):** Für das Interview soll die Präsentation ehrlich zeigen, was im PoC bewusst gescoped ist (mit Ausbau-Aufwand) und was gerade nicht abgekürzt wurde – Sicherheit und Kontrolle.

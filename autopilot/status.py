@@ -228,21 +228,24 @@ def compute_packages(
             blocked = bool(reviews) and reviews[-1] in ("fail", "escalate")
             has_commit = bool(pkg_commits)
             has_tag = tid in tags
+            # Der Tag wp/<id> ist die Fertig-Marke der Projektkonvention ("danach Tag wp/<id>"):
+            # gesetzt erst nach erfolgreichem Merge auf main. Er ist daher die Quelle der Wahrheit
+            # für "fertig" (100 %). Ein Commit ohne Tag heißt "in Arbeit", nicht "fertig" – sonst
+            # stünde ein Paket mit einem einzigen Commit widersprüchlich auf "fertig" bei 20 %.
             percent = (
-                (40 if gate else 0)
-                + (30 if review_pass else 0)
-                + (20 if has_commit else 0)
-                + (10 if has_tag else 0)
+                100
+                if has_tag
+                else (40 if gate else 0) + (30 if review_pass else 0) + (20 if has_commit else 0)
             )
-            if blocked:
-                state = "blockiert"
-            elif has_commit:
+            if has_tag:
                 state = "fertig"
+            elif blocked:
+                state = "blockiert"
             elif review_pass:
                 state = "review_pass"
             elif gate:
                 state = "gate_grün"
-            elif entries:
+            elif has_commit or entries:
                 state = "läuft"
             else:
                 state = "offen"

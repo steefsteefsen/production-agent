@@ -12,7 +12,7 @@ python -m venv .venv && source .venv/bin/activate
 make install                            # deps + pre-commit
 cp .env.example .env                    # API-Key eintragen
 python -m production_agent.data.simulator   # 360 Störungsereignisse → data/gold/mes.sqlite
-make test                               # Testsuite (<!-- auto:tests -->329<!-- /auto:tests --> Tests), läuft ohne API-Key
+make test                               # Testsuite (<!-- auto:tests -->331<!-- /auto:tests --> Tests), läuft ohne API-Key
 python autopilot/run.py --dry-run       # Prompts der Arbeitspakete ansehen, dann ohne --dry-run laufen lassen
 ```
 
@@ -62,9 +62,9 @@ Die Arbeitspakete WP0–WP7 stehen in `autopilot/tasks.yaml`; die Entscheidungsg
 
 ## Stand
 <!-- auto:stand -->
-- fertig: 12 von 16 Paketen
-- offen: WP1, WP4, WP5, WP7
-- Fortschritt: 66 % — siehe [Statusseite](docs/status/index.html)
+- fertig: 13 von 16 Paketen
+- offen: WP4, WP6, WP7
+- Fortschritt: 82 % — siehe [Statusseite](docs/status/index.html)
 <!-- /auto:stand -->
 
 Guardian-Regeln (automatisch aus dem Guardian-Docstring):
