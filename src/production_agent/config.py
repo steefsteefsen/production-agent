@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     )
 
     anthropic_api_key: SecretStr = SecretStr("")
-    anthropic_model: str = "claude-sonnet-5"
+    anthropic_model: str = "claude-opus-5"
     anthropic_model_fast: str = "claude-haiku-4-5-20251001"
 
     mes_db_path: str = "data/gold/mes.sqlite"

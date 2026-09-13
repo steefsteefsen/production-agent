@@ -1,32 +1,94 @@
-"""Trajektorie des Graphen: Reihenfolge der Knoten und Werkzeuge ist eine Zusicherung, kein Zufall.
-Verifikation über agentevals (Trajectory-Match); Falsifikation: verbotene Maßnahme erreicht nie die Freigabe,
-ohne Alarmflut kein RAG-Zweig, Freigabeknoten wird immer erreicht."""
+"""Trajektorie des Graphen: Reihenfolge der Knoten ist eine Zusicherung, kein Zufall.
+
+decisions.yaml „einfachster Graph: keine Verzweigung" → alle Szenarien
+(Alarmflut, ruhige Linie, Held) folgen derselben linearen Trajektorie.
+
+Verifikation über agentevals (Trajectory-Match, strict).
+Falsifikation: verbotene Maßnahme erreicht nie die Freigabe;
+               Freigabeknoten wird immer erreicht.
+"""
 
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime, timedelta
+
 from agentevals.trajectory.match import create_trajectory_match_evaluator
+from langchain_core.runnables import RunnableLambda
 from langgraph.types import Command
 
-from production_agent.graph.workflow import build_graph
+from production_agent.graph.state import Hypothesis
+from production_agent.graph.workflow import _ActionsOutput, build_graph
+from production_agent.security.action_policy import ActionLevel, RecommendedAction
+
+# ---------------------------------------------------------------------------
+# Fixture-Tools und Fake-LLM (kopiert aus test_workflow für Eigenständigkeit)
+# ---------------------------------------------------------------------------
+
+_NOW = datetime.now(UTC)
+_TS = (_NOW - timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def run(alarms: int, actions: list[dict]) -> tuple[list[str], dict]:
-    g = build_graph()
-    cfg = {"configurable": {"thread_id": f"t-{alarms}"}}
+def _make_alarms(n: int) -> str:
+    return json.dumps([{"alarm_code": "E-4711", "ts": _TS, "priority": 1} for _ in range(n)])
+
+
+def _fixture_tools(alarm_count: int = 0):
+    return {
+        "get_line_status": lambda **_: json.dumps(
+            [{"equipment_id": "EQ1", "packml_state": "Held", "ts": _TS}]
+        ),
+        "get_production_plan": lambda **_: json.dumps([]),
+        "get_active_alarms": lambda **_: _make_alarms(alarm_count),
+        "search_maintenance_docs": lambda **_: json.dumps([]),
+        "find_similar_incidents": lambda **_: json.dumps([]),
+        "estimate_impact": lambda **_: json.dumps({"expected_downtime_min": 25.0, "cost_eur": 5000}),
+    }
+
+
+_FAKE_HYPO = Hypothesis(
+    cause="Folienriss",
+    reason_code="STO-FOLIE",
+    confidence=0.82,
+    evidence=["E-4711"],
+    expected_downtime_min=25.0,
+)
+_FAKE_ACTIONS = _ActionsOutput(
+    actions=[
+        RecommendedAction(
+            title="Folie neu einlegen",
+            description="Folienrolle wechseln.",
+            level=ActionLevel.APPROVAL_REQUIRED,
+            confidence=0.82,
+            rationale="EVT-001",
+        )
+    ]
+)
+_FAKE_LLM = {
+    "narrow_cause": RunnableLambda(lambda _: _FAKE_HYPO),
+    "derive_actions": RunnableLambda(lambda _: _FAKE_ACTIONS),
+}
+
+
+# ---------------------------------------------------------------------------
+# Hilfsfunktionen
+# ---------------------------------------------------------------------------
+
+
+def run(alarm_count: int) -> list[str]:
+    """Knotenfolge eines vollständigen Durchlaufs bis zum Interrupt."""
+    g = build_graph(tools=_fixture_tools(alarm_count), llm=_FAKE_LLM)
+    cfg = {"configurable": {"thread_id": f"traj-{alarm_count}"}}
     nodes: list[str] = []
-    last: dict = {}
     for update in g.stream(
-        {"line_id": "L1", "alarms": [{}] * alarms, "actions": actions, "trace": []},
-        cfg,
-        stream_mode="updates",
+        {"line_id": "L1", "trace": []}, cfg, stream_mode="updates"
     ):
         nodes.extend("approval_gate" if k == "__interrupt__" else k for k in update)
-        last = update
-    return nodes, last
+    return nodes
 
 
 def as_messages(nodes: list[str]) -> list[dict]:
-    """Knotenfolge in das OpenAI-Nachrichtenformat, das agentevals vergleicht (Knoten = Tool-Call)."""
+    """Knotenfolge ins OpenAI-Nachrichtenformat für agentevals (Knoten = Tool-Call)."""
     msgs: list[dict] = [{"role": "user", "content": "Linie L1 steht"}]
     for n in nodes:
         msgs.append(
@@ -40,7 +102,11 @@ def as_messages(nodes: list[str]) -> list[dict]:
     return msgs
 
 
-REF_FLOOD = [
+# ---------------------------------------------------------------------------
+# Referenztrajektorie (alle Szenarien gleich – keine Verzweigung)
+# ---------------------------------------------------------------------------
+
+REF_ALLE = [
     "capture_status",
     "analyze_alarms",
     "retrieve_knowledge",
@@ -49,45 +115,81 @@ REF_FLOOD = [
     "derive_actions",
     "approval_gate",
 ]
-REF_QUIET = [
-    "capture_status",
-    "analyze_alarms",
-    "narrow_cause",
-    "estimate_impact",
-    "derive_actions",
-    "approval_gate",
-]
 
 
-def test_flood_trajectory_matches_reference_strictly():
-    nodes, _ = run(12, [{"title": "Motor prüfen", "description": "", "confidence": 0.9}])
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
+def test_alarmflut_trajektorie_strikt():
+    """Verifikation: Alarmflut (12 Alarme) folgt exakt der Referenztrajektorie."""
+    nodes = run(12)
     ev = create_trajectory_match_evaluator(trajectory_match_mode="strict")
-    assert ev(outputs=as_messages(nodes), reference_outputs=as_messages(REF_FLOOD))["score"] is True
+    assert ev(outputs=as_messages(nodes), reference_outputs=as_messages(REF_ALLE))["score"] is True
 
 
-def test_quiet_line_skips_rag_branch():  # Falsifikation der Verzweigung
-    nodes, _ = run(2, [{"title": "Sensor reinigen", "description": "", "confidence": 0.9}])
-    assert nodes == REF_QUIET
-    assert "retrieve_knowledge" not in nodes
+def test_ruhige_linie_trajektorie_identisch():
+    """Verifikation: ruhige Linie (2 Alarme) – gleiche Trajektorie wie Alarmflut (keine Verzweigung)."""
+    nodes = run(2)
+    assert nodes == REF_ALLE
+    assert "retrieve_knowledge" in nodes  # immer_wissen_abrufen: true
 
 
-def test_forbidden_action_never_reaches_approval():  # Falsifikation der Sicherheitsschicht
-    bad = {
-        "title": "Not-Aus überbrücken",
-        "description": "damit es weiterläuft",
-        "confidence": 0.99,
+def test_held_trajektorie_identisch():
+    """Verifikation: Held-Zustand (0 Alarme) – gleiche vollständige Trajektorie."""
+    nodes = run(0)
+    assert nodes == REF_ALLE
+
+
+def test_ruhige_linie_hat_retrieve_knowledge_falsification():
+    """Falsifikation: retrieve_knowledge MUSS in der Trajektorie sein – fehlt es, ist Routing defekt."""
+    nodes = run(2)
+    assert "retrieve_knowledge" in nodes, (
+        f"retrieve_knowledge fehlt bei ruhiger Linie: {nodes} – Routing ist falsch"
+    )
+
+
+def test_verbotene_massnahme_erreicht_nie_freigabe():
+    """Falsifikation der Sicherheitsschicht: Not-Aus-Überbrückung niemals in Interrupt-Payload."""
+    bad_actions = _ActionsOutput(
+        actions=[
+            RecommendedAction(
+                title="Not-Aus überbrücken damit die Linie läuft",
+                description="Sicherheitskreis deaktivieren",
+                level=ActionLevel.APPROVAL_REQUIRED,
+                confidence=0.99,
+                rationale="schnell",
+            ),
+            RecommendedAction(
+                title="Sensor prüfen",
+                description="Sensoroberfläche reinigen.",
+                level=ActionLevel.INFORM,
+                confidence=0.9,
+                rationale="EVT-001",
+            ),
+        ]
+    )
+    fake_llm = {
+        "narrow_cause": RunnableLambda(lambda _: _FAKE_HYPO),
+        "derive_actions": RunnableLambda(lambda _: bad_actions),
     }
-    _, last = run(12, [bad, {"title": "Prüfe Sensor", "description": "", "confidence": 0.9}])
+    g = build_graph(tools=_fixture_tools(12), llm=fake_llm)
+    cfg = {"configurable": {"thread_id": "traj-forbidden"}}
+    last = {}
+    for update in g.stream(
+        {"line_id": "L1", "trace": []}, cfg, stream_mode="updates"
+    ):
+        last = update
     payload = last["__interrupt__"][0].value
     assert all("Not-Aus" not in a["title"] for a in payload["actions"])
 
 
-def test_approval_always_reached_and_resumable():
-    g = build_graph()
-    cfg = {"configurable": {"thread_id": "t-resume"}}
-    first = g.invoke({"line_id": "L1", "alarms": [], "actions": [], "trace": []}, cfg)
-    assert (
-        "__interrupt__" in first
-    )  # auch ohne Alarme und Maßnahmen wartet der Graph auf den Menschen
+def test_freigabe_immer_erreichbar_und_resumebar():
+    """Verifikation: approval_gate ist immer erreichbar und Command(resume) schließt den Graph."""
+    g = build_graph(tools=_fixture_tools(0), llm=_FAKE_LLM)
+    cfg = {"configurable": {"thread_id": "traj-resume"}}
+    first = g.invoke({"line_id": "L1", "trace": []}, cfg)
+    assert "__interrupt__" in first
     final = g.invoke(Command(resume={"approved": False, "comment": "nein"}), cfg)
     assert final["approval"]["approved"] is False

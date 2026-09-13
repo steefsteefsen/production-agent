@@ -1,5 +1,17 @@
 # Projektjournal – automatisch je Arbeitspaket
 
+## 2026-09-13 · WP3 · graph-agent · ✅
+
+**Was gebaut:** LangGraph-Ablauf vollständig implementiert: 7 Knoten (capture_status → analyze_alarms → retrieve_knowledge → narrow_cause [LLM] → estimate_impact → derive_actions [LLM] → approval_gate). MCP-Tool-Injektion via `build_graph(tools=...)` + `build_tools_from_mcp()` (MultiServerMCPClient, stdio). Knoten 4 und 6 mit `ChatAnthropic(claude-opus-5).with_structured_output(Hypothesis/ActionsOutput)`. `graph/prompts.py` mit `PROMPT_VERSION` und Kern-Prompt (empfehle, führe nicht aus; Evidenzpflicht; Konfidenz nie erhöhen; Sicherheitsfunktionen tabu). SSE-Endpunkt `/investigations/stream` (sse-starlette) + `/investigations/approve`. `docs/contracts/api.md` mit vollständigen Beispiel-Events. `settings.env`/`config.py` auf `claude-opus-5` korrigiert (war: `claude-sonnet-5`).
+
+**Was getestet:** `tests/test_workflow.py` 36 Tests (Verifikation + Falsifikation): Graph endet am Freigabeknoten, verbotene Maßnahme gefiltert, Alarmflut/ruhige Linie/Held → RAG immer ausgeführt, Resume, Hypothesis im State, SQLite-Checkpointer, MCP-Client-Mock, SIM_NOW-Env. `tests/test_trajectory.py` 6 Tests mit `agentevals.create_trajectory_match_evaluator` (strict) für alle drei Szenarien. Gesamt: 302 Tests, ruff check grün.
+
+**Offen:** –
+
+**Dateien:** `src/production_agent/graph/workflow.py`, `src/production_agent/graph/state.py`, `src/production_agent/graph/prompts.py` (neu), `src/production_agent/api/server.py`, `src/production_agent/config.py`, `settings.env`, `docs/contracts/api.md` (neu), `tests/test_workflow.py`, `tests/test_trajectory.py`
+
+---
+
 ## 2026-09-12 · WP2a · mcp-agent · ✅
 
 **Was gebaut:** MES-MCP-Server fertiggestellt: 6 Werkzeugdocstrings mit "Nutze dies, wenn…" geschärft; Limits `_MAX_ACTIVE_ALARMS=100 / _MAX_ALARM_HISTORY=20 / _MAX_SIMILAR_INCIDENTS=5` als Konstanten; `estimate_impact` mit vollständiger Pufferformel (`Zeit_bis_due − Restproduktionszeit − Stillstand`), `orders`-Feld und korrektem `orders_at_risk`; `_query` hat `limit`-Parameter als Python-Schutzebene zusätzlich zum SQL-LIMIT; `docs/contracts/mes_tools.json` aktuell.
@@ -734,3 +746,233 @@ In `.github/workflows/ci.yml` (Zeilen 93–100):
 **Was offen:** Die `autopilot/ops/`-Dateien, `tests/test_ops.py`, `docs/ops.md` und `tests/test_mes_coverage.py` sind noch untracked und müssen in einem separaten Commit (WP INF-E) eingecheckt werden.
 
 **Dateien:** Makefile, README.md, autopilot/journal.md, docs/AENDERUNGEN.md, docs/index.md, docs/presentation/index.html, docs/status/index.html, docs/status/status.json, docs/test_strategy.md
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 15 min (bisher 0/480 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)
+
+## quota-Pause: quota – warte in 1 min (bisher 0/0 min)

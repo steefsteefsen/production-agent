@@ -189,3 +189,41 @@ def test_ingest_ohne_chunks_raises_falsification():
 
     with pytest.raises(ValueError, match="Keine Chunks"):
         ingest_docs([])
+
+
+# --- Stefan-Zusatzentscheidung (b): search_maintenance_docs schreibt je Aufruf einen AuditLog-Eintrag ---
+
+
+def test_search_maintenance_docs_schreibt_audit(monkeypatch):
+    """Verifikation: ein Aufruf von search_maintenance_docs schreibt genau einen tool_call-Audit-Eintrag."""
+    from production_agent.mcp import rag_server
+
+    calls: list[tuple[str, dict]] = []
+
+    class _Spy:
+        def record(self, event, **fields):
+            calls.append((event, fields))
+
+    monkeypatch.setattr(rag_server, "audit", _Spy())
+    rag_server.search_maintenance_docs(query="E-4711", top_k=3)
+    tool_calls = [
+        f for e, f in calls if e == "tool_call" and f.get("tool") == "search_maintenance_docs"
+    ]
+    assert len(tool_calls) == 1
+
+
+def test_search_maintenance_docs_audit_falsification(monkeypatch):
+    """Falsifikation: OHNE den audit.record-Aufruf im Server bliebe die Liste leer – der Test wird rot,
+    wenn die AuditLog-Pflicht aus rag_server entfernt würde."""
+    from production_agent.mcp import rag_server
+
+    calls: list[tuple[str, dict]] = []
+
+    class _Spy:
+        def record(self, event, **fields):
+            calls.append((event, fields))
+
+    monkeypatch.setattr(rag_server, "audit", _Spy())
+    assert calls == []  # vor dem Aufruf kein Eintrag
+    rag_server.search_maintenance_docs(query="W-1001", top_k=2)
+    assert len(calls) == 1 and calls[0][0] == "tool_call"

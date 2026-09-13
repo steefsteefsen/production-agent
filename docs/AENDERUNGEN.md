@@ -10,6 +10,13 @@ von README/Doku (sonst veralten sie).
 **Auswirkung (Verträge, ADR, Tests):** autopilot/run.py, autopilot/selfcheck.py (neuer Fall), tests/test_run_cli.py (Falsifikation), autopilot/tasks.yaml (WP3).
 **Bezug (WP, ADR):** infra/WP3
 
+## 2026-09-13 · feat(WP3): LangGraph-Ablauf vollständig – 7 Knoten, LLM, SSE, Trajektorien
+**Was:** workflow.py von Skelett auf vollständige Implementierung: Knoten 1–7, MCP-Tool-Injektion, build_tools_from_mcp (MultiServerMCPClient stdio); prompts.py mit PROMPT_VERSION; api/server.py SSE-Stream (/investigations/stream) + /investigations/approve; docs/contracts/api.md mit vollständigen Beispiel-Events; config/settings.env auf claude-opus-5 (decisions.yaml-konform) korrigiert; tests/test_workflow.py und tests/test_trajectory.py mit Verifikations-/Falsifikationstests und agentevals-Trajektorienprüfung.
+**Warum (Problem oder Anlass):** Das Workflow-Skelett enthielt Platzhalter für LLM-Knoten 4 und 6; build_graph akzeptierte noch keine injizierbaren Tool-Dicts; SSE-Endpunkt fehlte; Modellname wich von decisions.yaml ab.
+**Alternativen (verworfen, weil ...):** Verzweigung bei Alarmflut – verworfen (decisions.yaml „einfachster Graph: keine Verzweigung"); Konfidenz-Wiederholung – verworfen (einmal, 60-min-Fenster); FakeListChatModel statt RunnableLambda – aufwändigere Fixture ohne Vorteil.
+**Auswirkung (Verträge, ADR, Tests):** docs/contracts/api.md (neu), src/production_agent/graph/prompts.py (neu), api/server.py, workflow.py, state.py, config.py, settings.env; test_workflow.py, test_trajectory.py.
+**Bezug (WP, ADR):** WP3
+
 ## 2026-09-13 · docs(P): Nachtlauf-Integration – sechs Pakete nach main
 **Was:** WP2b, WP-B, INF-3, INF-4, INF-9, INF-E nach main gemergt; Statusseite, Präsentation und Doku-Marker aufgefrischt; WP3 neu eingereiht.
 **Warum (Problem oder Anlass):** Der Nachtlauf hatte die Stränge gebaut, aber die Worktree-Commits/Merges scheiterten still; die Arbeit lag nur auf Rettungs-Branches.
