@@ -45,3 +45,32 @@ def test_cockpit_element_sichtbar(page):
     page.wait_for_load_state("networkidle")
     locator = page.locator("[data-testid='cockpit']")
     assert locator.count() > 0, "data-testid='cockpit' nicht gefunden"
+
+
+def _open_agent_tab(page):
+    page.goto(_BASE_URL)
+    page.wait_for_load_state("networkidle")
+    page.get_by_role("button", name="Agent", exact=True).click()
+
+
+def test_agent_tab_zeigt_gefuehrte_schritte(page):
+    """Agent-Tab rendert die sieben Knoten-Schritte, den Start-Knopf und den Demo-Notizen-Umschalter
+    (statisch, ohne Lauf)."""
+    _open_agent_tab(page)
+    assert page.get_by_role("button", name="Untersuchung starten").is_visible()
+    assert page.get_by_text("1 · Linienstatus & Plan").is_visible()
+    assert page.get_by_text("7 · Freigabe", exact=True).is_visible()
+    assert page.get_by_text("Demo-Notizen", exact=False).is_visible()
+    # Präsentationsmodus: eine Funktion-Annotation ist sichtbar
+    assert page.get_by_text("Funktion:", exact=False).first.is_visible()
+
+
+def test_agent_durchlauf_mock_freigabe(page):
+    """Mock-Durchlauf über die UI: Start → Karten füllen sich → Freigabe erforderlich → Freigeben
+    → Abschluss. Prüft die SSE→Karten-Kette und den Resume-Pfad end-to-end."""
+    _open_agent_tab(page)
+    page.get_by_role("button", name="Untersuchung starten").click()
+    # Der Freigabeknoten (interrupt) muss erreicht werden – beweist, dass der SSE-Stream Karten füllt.
+    page.get_by_text("Freigabe erforderlich", exact=False).first.wait_for(timeout=30_000)
+    page.get_by_role("button", name="Freigeben").click()
+    page.get_by_text("regulärer Abschluss", exact=False).wait_for(timeout=15_000)

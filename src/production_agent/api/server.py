@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sqlite3
 import uuid
 
 from fastapi import FastAPI, HTTPException
@@ -13,7 +15,22 @@ from sse_starlette.sse import EventSourceResponse
 
 from production_agent.api.mes_router import router as mes_router
 from production_agent.config import get_settings
+from production_agent.data.replay import case_for_event_id
 from production_agent.graph.workflow import build_graph
+
+DEMO_EVENT_ID = 360  # jüngstes Gold-Ereignis (STO-FOLIE); Default der geführten Demo
+
+
+def _replay_case(event_id: int):
+    """Replay-Fall (SIM_NOW, line_id, Gold-Wahrheit) für ein Ereignis – read-only, kein Leck an den
+    Agenten (nur die Uhr wird gesetzt; die Gold-Zeile dient allein der Eval nach dem Lauf)."""
+    conn = sqlite3.connect(f"file:{get_settings().mes_db_path}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        return case_for_event_id(conn, event_id)
+    finally:
+        conn.close()
+
 
 settings = get_settings()
 app = FastAPI(title="Production Agent PoC")
@@ -39,20 +56,42 @@ class ApprovalRequest(BaseModel):
 
 
 @app.get("/investigations/stream")
-async def stream_investigation(line_id: str = "L1") -> EventSourceResponse:
+async def stream_investigation(
+    line_id: str = "L1", event_id: int = DEMO_EVENT_ID
+) -> EventSourceResponse:
     """SSE-Stream: je Knoten ein Event {node, payload, trace}; stoppt am Freigabeknoten.
 
+    event_id wählt den Replay-Fall (Default 360): daraus wird die Replay-Uhr SIM_NOW für diesen
+    Lauf gesetzt (die MES-Werkzeuge lesen sie zur Laufzeit). Der Modus mock/live steckt im
+    Backend-LLM_MODE und wird nur mitgeschickt, nicht hier gesetzt.
+
     Events:
-    - event: start  → {"thread_id": "..."}
+    - event: start  → {"thread_id", "event_id", "sim_now", "line_id", "mode"}
     - event: node   → {"node": "<name>", "payload": {...}, "trace": [...]}
-    - event: interrupt → {"node": "approval_gate", "actions": [...], "thread_id": "..."}
+    - event: interrupt → {"node": "approval_gate", "payload": {...}, "thread_id": "..."}
     """
     thread_id = str(uuid.uuid4())
     cfg = {"configurable": {"thread_id": thread_id}}
+    case = _replay_case(event_id)
+    run_line = case.line_id if case else line_id
+    if case:
+        # Replay-Uhr dieses Laufs; die direktimportierten MES-Tools lesen SIM_NOW zur Laufzeit.
+        os.environ["SIM_NOW"] = case.now
 
     async def _generator():
-        yield {"event": "start", "data": json.dumps({"thread_id": thread_id})}
-        for update in graph.stream({"line_id": line_id, "trace": []}, cfg, stream_mode="updates"):
+        yield {
+            "event": "start",
+            "data": json.dumps(
+                {
+                    "thread_id": thread_id,
+                    "event_id": event_id if case else None,
+                    "sim_now": case.now if case else None,
+                    "line_id": run_line,
+                    "mode": settings.llm_mode,
+                }
+            ),
+        }
+        for update in graph.stream({"line_id": run_line, "trace": []}, cfg, stream_mode="updates"):
             for node, state_update in update.items():
                 if node == "__interrupt__":
                     payload = state_update[0].value if state_update else {}
@@ -93,6 +132,24 @@ def approve(req: ApprovalRequest) -> dict:
     return {"thread_id": req.thread_id, "state": result}
 
 
+@app.get("/investigations/gold/{event_id}")
+def gold_truth(event_id: int) -> dict:
+    """Gold-Wahrheit eines Replay-Falls – NUR für die Eval nach dem Lauf (reason_hit-Vergleich).
+
+    Kein Werkzeug des Agenten: Der Agent sieht das nie während der Untersuchung (ADR-0002); erst
+    das Cockpit vergleicht seine Hypothese danach damit. Read-only.
+    """
+    case = _replay_case(event_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail=f"Ereignis {event_id} nicht gefunden")
+    return {"event_id": event_id, **case.truth}
+
+
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True, "model": settings.llm_model_main, "langfuse": settings.langfuse_enabled}
+    return {
+        "ok": True,
+        "model": settings.llm_model_main,
+        "mode": settings.llm_mode,
+        "langfuse": settings.langfuse_enabled,
+    }

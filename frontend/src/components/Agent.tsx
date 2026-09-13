@@ -1,138 +1,333 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import {
+  applyEvent,
+  initialCards,
+  type NodeCard,
+  type CardStatus,
+} from "./agentStream.ts";
+import { NODE_ANNOTATIONS } from "./demo_annotations.ts";
 
-interface Investigation {
+type Phase = "idle" | "running" | "interrupt" | "approving" | "done" | "error";
+
+interface StartMeta {
   thread_id: string;
-  state: Record<string, unknown>;
-  interrupt?: unknown;
+  event_id: number | null;
+  sim_now: string | null;
+  line_id: string;
+  mode: string;
 }
 
-export default function Agent() {
-  const [lineId, setLineId] = useState("L1");
-  const [investigation, setInvestigation] = useState<Investigation | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [approvalComment, setApprovalComment] = useState("");
+interface Action {
+  title?: string;
+  description?: string;
+  rationale?: string;
+  level?: string;
+  confidence?: number;
+}
 
-  const startInvestigation = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const r = await fetch("/investigations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ line_id: lineId }),
-      });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      setInvestigation(await r.json());
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
+interface Gold {
+  reason_code?: string;
+  duration_min?: number;
+}
+
+const STATUS_STYLE: Record<CardStatus, { dot: string; label: string; text: string }> = {
+  wartend: { dot: "bg-gray-600", label: "wartend", text: "text-gray-500" },
+  "läuft": { dot: "bg-teal-600 animate-pulse", label: "läuft", text: "text-teal-500" },
+  fertig: { dot: "bg-salbei-500", label: "fertig", text: "text-salbei-500" },
+  freigabe: { dot: "bg-wein-500 animate-pulse", label: "Freigabe", text: "text-wein-500" },
+};
+
+export default function Agent() {
+  const [eventId, setEventId] = useState(360);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [cards, setCards] = useState<NodeCard[]>(initialCards());
+  const [meta, setMeta] = useState<StartMeta | null>(null);
+  const [interruptPayload, setInterruptPayload] = useState<Record<string, unknown> | null>(null);
+  const [approval, setApproval] = useState<{ approved: boolean } | null>(null);
+  const [gold, setGold] = useState<Gold | null>(null);
+  const [error, setError] = useState("");
+  const [comment, setComment] = useState("");
+  const [showNotes, setShowNotes] = useState(true);
+  const [openCard, setOpenCard] = useState<string | null>(null);
+
+  const esRef = useRef<EventSource | null>(null);
+  const phaseRef = useRef<Phase>("idle");
+  const retriedRef = useRef(false);
+  const setPhaseSync = (p: Phase) => {
+    phaseRef.current = p;
+    setPhase(p);
   };
 
-  const approve = async (approved: boolean) => {
-    if (!investigation) return;
-    setLoading(true);
+  const openStream = () => {
+    const es = new EventSource(`/investigations/stream?line_id=L1&event_id=${eventId}`);
+    esRef.current = es;
+
+    es.addEventListener("start", (e) => {
+      setMeta(JSON.parse((e as MessageEvent).data));
+    });
+    es.addEventListener("node", (e) => {
+      const d = JSON.parse((e as MessageEvent).data);
+      setCards((prev) => applyEvent(prev, { kind: "node", node: d.node, payload: d.payload }));
+    });
+    es.addEventListener("interrupt", (e) => {
+      const d = JSON.parse((e as MessageEvent).data);
+      setCards((prev) => applyEvent(prev, { kind: "interrupt", payload: d.payload }));
+      setInterruptPayload(d.payload ?? {});
+      setPhaseSync("interrupt");
+      es.close(); // Stream endet am Freigabeknoten – sonst würde EventSource neu verbinden
+    });
+    es.onerror = () => {
+      es.close();
+      // am Freigabeknoten/Abschluss ist das Schließen erwartet – kein Fehler
+      if (phaseRef.current === "interrupt" || phaseRef.current === "done") return;
+      if (!retriedRef.current) {
+        retriedRef.current = true; // genau ein Reconnect-Versuch
+        setTimeout(openStream, 800);
+        return;
+      }
+      setError("Verbindung zum SSE-Stream abgebrochen (nach einem Reconnect-Versuch).");
+      setPhaseSync("error");
+    };
+  };
+
+  const start = () => {
+    esRef.current?.close();
+    retriedRef.current = false;
+    setCards(applyEvent(initialCards(), { kind: "start" }));
+    setMeta(null);
+    setInterruptPayload(null);
+    setApproval(null);
+    setGold(null);
+    setError("");
+    setOpenCard(null);
+    setPhaseSync("running");
+    openStream();
+  };
+
+  const decide = async (approved: boolean) => {
+    if (!meta) return;
+    setPhaseSync("approving");
     try {
       const r = await fetch("/investigations/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          thread_id: investigation.thread_id,
+          thread_id: meta.thread_id,
           approved,
-          comment: approvalComment,
+          comment,
           approved_action_titles: [],
         }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      setInvestigation(await r.json());
+      await r.json();
+      setApproval({ approved });
+      setPhaseSync("done");
+      // Eval nach dem Lauf: Hypothese gegen die Gold-Wahrheit (kein Leck während des Laufs)
+      if (meta.event_id != null) {
+        try {
+          const g = await fetch(`/investigations/gold/${meta.event_id}`);
+          if (g.ok) setGold(await g.json());
+        } catch {
+          /* Eval ist optional */
+        }
+      }
     } catch (e) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
+      setError(`Freigabe fehlgeschlagen: ${String(e)}`);
+      setPhaseSync("error");
     }
   };
 
-  const state = investigation?.state ?? {};
-  const hasInterrupt = Boolean(investigation?.interrupt);
+  const actions: Action[] = Array.isArray(interruptPayload?.actions)
+    ? (interruptPayload!.actions as Action[])
+    : [];
+  const hypothesis = (cards.find((c) => c.id === "narrow_cause")?.payload?.hypothesis ??
+    {}) as Record<string, unknown>;
+  const predictedReason = hypothesis.reason_code as string | undefined;
+  const reasonHit =
+    gold && predictedReason ? gold.reason_code === predictedReason : null;
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      {/* Start */}
-      <div className="flex gap-3 items-end">
+    <div className="space-y-5 max-w-3xl">
+      {/* Steuerzeile */}
+      <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="text-gray-400 text-xs block mb-1">Linie</label>
+          <label className="text-gray-400 text-xs block mb-1">Ereignis-ID</label>
           <input
-            value={lineId}
-            onChange={(e) => setLineId(e.target.value)}
-            className="w-20 bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-600"
+            type="number"
+            min={1}
+            value={eventId}
+            onChange={(e) => setEventId(Number(e.target.value))}
+            className="w-24 bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-teal-600"
           />
         </div>
         <button
-          onClick={startInvestigation}
-          disabled={loading}
+          onClick={start}
+          disabled={phase === "running" || phase === "approving"}
           className="px-4 py-1.5 rounded bg-teal-700 hover:bg-teal-600 text-white text-sm disabled:opacity-50 transition-colors"
         >
-          {loading ? "Läuft…" : "Untersuchung starten"}
+          {phase === "running" ? "Läuft…" : "Untersuchung starten"}
         </button>
+        <label className="flex items-center gap-2 text-xs text-gray-400 ml-auto cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showNotes}
+            onChange={(e) => setShowNotes(e.target.checked)}
+            className="accent-teal-600"
+          />
+          Demo-Notizen {showNotes ? "(Präsentationsmodus)" : "(Produktansicht)"}
+        </label>
       </div>
 
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {/* Lauf-Metadaten: Modus wird angezeigt, nicht gesetzt */}
+      {meta && (
+        <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
+          <span>
+            Modus{" "}
+            <span
+              className={meta.mode === "live" ? "text-wein-500" : "text-teal-500"}
+              title="bestimmt der Backend-LLM_MODE, nicht das Cockpit"
+            >
+              {meta.mode}
+            </span>
+          </span>
+          <span>Ereignis {meta.event_id ?? "–"}</span>
+          <span>Replay-Uhr {meta.sim_now ?? "–"}</span>
+          <span>Linie {meta.line_id}</span>
+        </div>
+      )}
 
-      {investigation && (
-        <div className="space-y-4">
-          <p className="text-gray-500 text-xs">Thread: {investigation.thread_id}</p>
+      {/* Fortschrittsleiste */}
+      <div className="flex items-center gap-1">
+        {cards.map((c, i) => (
+          <div key={c.id} className="flex items-center flex-1 last:flex-none">
+            <span
+              className={["inline-block w-3 h-3 rounded-full shrink-0", STATUS_STYLE[c.status].dot].join(" ")}
+              title={`${c.label}: ${STATUS_STYLE[c.status].label}`}
+            />
+            {i < cards.length - 1 && <span className="h-px flex-1 bg-gray-700 mx-1" />}
+          </div>
+        ))}
+      </div>
 
-          {/* Hypothese */}
-          {!!state.hypotheses && (
-            <div className="bg-gray-900 rounded-lg border border-gray-700 p-4">
-              <p className="text-gray-400 text-xs mb-2 font-semibold">Hypothesen</p>
-              <pre className="text-xs text-gray-300 whitespace-pre-wrap">
-                {JSON.stringify(state.hypotheses, null, 2)}
-              </pre>
+      {error && (
+        <div className="rounded-lg border border-wein-600 bg-wein-700/20 p-3 text-wein-500 text-xs">
+          {error}
+        </div>
+      )}
+
+      {/* Schritt-Karten je Knoten */}
+      <div className="space-y-2">
+        {cards.map((c) => {
+          const st = STATUS_STYLE[c.status];
+          const ann = NODE_ANNOTATIONS[c.id];
+          const isOpen = openCard === c.id;
+          return (
+            <div key={c.id} className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+              <button
+                onClick={() => setOpenCard(isOpen ? null : c.id)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-800/40"
+              >
+                <span className={["inline-block w-2.5 h-2.5 rounded-full shrink-0", st.dot].join(" ")} />
+                <span className="text-gray-200 text-sm font-medium w-52 shrink-0">{c.label}</span>
+                <span className="text-gray-400 text-xs truncate flex-1">
+                  {c.summary || <span className="text-gray-600">—</span>}
+                </span>
+                <span className={["text-xs shrink-0", st.text].join(" ")}>{st.label}</span>
+              </button>
+
+              {showNotes && ann && (
+                <div className="px-4 pb-2 pt-0 space-y-1 border-t border-gray-800/60">
+                  <p className="text-xs text-gray-400">
+                    <span className="text-teal-500 font-semibold">Funktion:</span> {ann.funktion}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    <span className="text-salbei-500 font-semibold">Ausblick:</span> {ann.ausblick}
+                  </p>
+                </div>
+              )}
+
+              {isOpen && c.payload && (
+                <pre className="px-4 py-2 text-xs text-gray-400 whitespace-pre-wrap border-t border-gray-800/60 max-h-56 overflow-auto">
+                  {JSON.stringify(c.payload, null, 2)}
+                </pre>
+              )}
             </div>
-          )}
+          );
+        })}
+      </div>
 
-          {/* Maßnahmen */}
-          {!!state.actions && (
-            <div className="bg-gray-900 rounded-lg border border-gray-700 p-4">
-              <p className="text-gray-400 text-xs mb-2 font-semibold">Empfohlene Maßnahmen</p>
-              <pre className="text-xs text-gray-300 whitespace-pre-wrap">
-                {JSON.stringify(state.actions, null, 2)}
-              </pre>
-            </div>
-          )}
-
-          {/* Freigabe-Dialog */}
-          {hasInterrupt && (
-            <div className="bg-gray-900 rounded-lg border border-wein-600 p-4 space-y-3">
-              <p className="text-wein-500 text-xs font-semibold uppercase tracking-wide">
-                Freigabe erforderlich
-              </p>
-              <textarea
-                value={approvalComment}
-                onChange={(e) => setApprovalComment(e.target.value)}
-                placeholder="Kommentar (optional)"
-                rows={2}
-                className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:border-teal-600 resize-none"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => approve(true)}
-                  disabled={loading}
-                  className="px-4 py-1.5 rounded bg-teal-700 hover:bg-teal-600 text-white text-sm disabled:opacity-50"
-                >
-                  Freigeben
-                </button>
-                <button
-                  onClick={() => approve(false)}
-                  disabled={loading}
-                  className="px-4 py-1.5 rounded bg-wein-600 hover:bg-wein-500 text-white text-sm disabled:opacity-50"
-                >
-                  Ablehnen
-                </button>
+      {/* Freigabe erforderlich */}
+      {phase === "interrupt" && (
+        <div className="rounded-lg border border-wein-600 bg-gray-900 p-4 space-y-3">
+          <p className="text-wein-500 text-xs font-semibold uppercase tracking-wide">
+            Freigabe erforderlich – der Agent empfiehlt, er führt nicht aus
+          </p>
+          <div className="space-y-2">
+            {actions.map((a, i) => (
+              <div key={i} className="rounded border border-gray-700 p-2 text-xs">
+                <p className="text-gray-200 font-medium">{a.title}</p>
+                {a.description && <p className="text-gray-400 mt-0.5">{a.description}</p>}
+                {a.rationale && (
+                  <p className="text-salbei-500 mt-0.5">Beleg: {a.rationale}</p>
+                )}
               </div>
+            ))}
+            {actions.length === 0 && (
+              <p className="text-gray-500 text-xs">Keine Maßnahmen im Interrupt-Payload.</p>
+            )}
+          </div>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Kommentar (optional)"
+            rows={2}
+            className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:border-teal-600 resize-none"
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={() => decide(true)}
+              className="px-4 py-1.5 rounded bg-teal-700 hover:bg-teal-600 text-white text-sm"
+            >
+              Freigeben
+            </button>
+            <button
+              onClick={() => decide(false)}
+              className="px-4 py-1.5 rounded bg-wein-600 hover:bg-wein-500 text-white text-sm"
+            >
+              Ablehnen
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Abschluss + Eval */}
+      {phase === "done" && approval && (
+        <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 space-y-2">
+          <p
+            className={[
+              "text-xs font-semibold uppercase tracking-wide",
+              approval.approved ? "text-teal-500" : "text-wein-500",
+            ].join(" ")}
+          >
+            {approval.approved
+              ? "Freigegeben – regulärer Abschluss"
+              : "Abgelehnt – sauberer Abbruch, kein Maßnahmen-Abschluss"}
+          </p>
+          <p className="text-gray-400 text-xs">
+            Entscheidung rollenbasiert im Audit protokolliert (jeder Werkzeugaufruf und jede Freigabe).
+          </p>
+          {gold && (
+            <div className="text-xs text-gray-400 border-t border-gray-800 pt-2">
+              <span className="text-gray-500">Eval gegen Gold: </span>
+              Hypothese <span className="text-gray-200">{predictedReason ?? "–"}</span> vs. Gold{" "}
+              <span className="text-gray-200">{gold.reason_code ?? "–"}</span> ·{" "}
+              {reasonHit === null ? (
+                "–"
+              ) : reasonHit ? (
+                <span className="text-salbei-500">reason_hit ✓</span>
+              ) : (
+                <span className="text-wein-500">reason_hit ✗</span>
+              )}
             </div>
           )}
         </div>

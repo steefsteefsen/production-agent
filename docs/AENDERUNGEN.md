@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · feat(WP5): Agent-Tab – geführte Demo, Funktion und Ausblick je Schritt
+**Was:** Der Agent-Tab im React-Cockpit rendert die Untersuchung als sieben Schritt-Karten (je Graph-Knoten) mit Live-Zusammenfassung aus dem SSE-Stream und zwei statischen Annotationen je Knoten – „Funktion" und „Ausblick" (aus einer Quelle: frontend/src/components/demo_annotations.ts). Umschalter „Demo-Notizen" (Präsentation/Produktansicht), Fortschrittsleiste, aufklappbare Details, Freigabe-/Ablehnungskarte über interrupt/Resume, Abschlusskarte mit Audit-Hinweis und Eval (reason_hit) sowie Fehlerbild mit einem Reconnect-Versuch. Reine Stream-Reduktion in frontend/src/components/agentStream.ts. Backend: /investigations/stream nimmt event_id (Default 360) und setzt daraus die Replay-Uhr SIM_NOW, /health meldet den Modus, neuer read-only Endpoint /investigations/gold/{event_id} nur für die Eval nach dem Lauf. Playwright-Smokes (Aufbau + Mock-Durchlauf mit Freigabe), Prüfpfad in docs/e2e.md.
+**Warum (Problem oder Anlass):** Für das Interview soll das Cockpit den agentischen Ablauf Schritt für Schritt zeigen und je Knoten erklären, was passiert und wie es nach Kauf ausgebaut würde – ohne die Statusflächen oder andere Tabs zu verändern.
+**Alternativen (verworfen, weil ...):** Neue UI-Bibliothek/Stepper-Framework – verworfen, kein neuer Dependency; Annotationen im HTML der Präsentation statt im Cockpit – trennt Erklärung von Funktion; event_id im Cockpit den Modus setzen lassen – Modus bleibt Backend-Sache (nur Anzeige).
+**Auswirkung (Verträge, ADR, Tests):** src/production_agent/api/server.py (Stream event_id/SIM_NOW, /health mode, /investigations/gold), frontend/src/components/{Agent.tsx,agentStream.ts,demo_annotations.ts}, tests/e2e/test_ui.py, docs/e2e.md. API-Vertrag erweitert (rückwärtskompatibel: event_id optional, Default 360).
+**Bezug (WP, ADR):** WP5/ADR-0002
+
 ## 2026-09-13 · fix(orchestrate): Quota-Pausen ins ignorierte Log statt journal.md
 **Was:** orchestrate.py schreibt Quota-Pausen jetzt nach autopilot/state/quota.log (per .gitignore ignoriert) statt in die getrackte autopilot/journal.md. journal.md dabei erneut von nachgeschobenen quota-Pause-Zeilen bereinigt.
 **Warum (Problem oder Anlass):** Der laufende Orchestrator (Ops-Cockpit) hängte bei API-Quota fortlaufend „## quota-Pause"-Zeilen an die versionierte journal.md an (zuvor 450 Zeilen Log-Müll); sie kamen nach dem Aufräumen sofort zurück. Das ist die Wurzel, nicht das Symptom.

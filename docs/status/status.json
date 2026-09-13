@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T20:34:28",
-  "commit": "784c3476247ad710f66255a687fd1ca742344ff2",
+  "generated_at": "2026-09-13T21:35:16",
+  "commit": "27880ada1baf7c02c5c6afdf9d47d2de9bda5daa",
   "branch": "main",
   "packages": [
     {
@@ -745,11 +745,17 @@
     "percent": 82,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 331,
-    "coverage_total": 87,
+    "tests": 333,
+    "coverage_total": 86,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T20:34:07+02:00",
+      "kind": "commit",
+      "ref": "27880ad",
+      "text": "fix(orchestrate): Quota-Pausen ins ignorierte Log statt journal.md"
+    },
     {
       "at": "2026-09-13T20:22:40+02:00",
       "kind": "commit",
@@ -1168,7 +1174,7 @@
       "path": "src/production_agent/api/",
       "files": 2,
       "tests": 36,
-      "coverage": 84
+      "coverage": 77
     },
     {
       "path": "src/production_agent/data/",

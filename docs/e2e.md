@@ -47,3 +47,25 @@ Der Lauf meldet Alarmzahl und Alarmflut, gefundene Dokumente und ähnliche Vorf�
 Maßnahmen eine Vorfall-ID belegen, ob die Ursache getroffen wurde und ob der Freigabeknoten erreicht
 ist. Der Exit-Code ist nur dann 0, wenn ähnliche Vorfälle vorliegen, mindestens eine Maßnahme belegt
 ist, der Freigabeknoten hält und die Ursache stimmt.
+
+## Agent-Tab – geführte Demo im Cockpit
+
+Der Agent-Tab im React-Cockpit zeigt die Untersuchung als geführte Schrittfolge: je Graph-Knoten
+eine Karte mit Live-Zusammenfassung aus dem SSE-Stream (`/investigations/stream`) und zwei
+statischen Annotationen – **Funktion** (was der Knoten tut, über welchen Weg) und **Ausblick**
+(Ausbaustufe nach Kauf). Der Umschalter „Demo-Notizen" blendet die Annotationen ein (Präsentation)
+oder aus (Produktansicht). Der Modus mock/live kommt aus dem Backend-`LLM_MODE` und wird nur
+angezeigt, nicht im Cockpit gesetzt.
+
+Die Freigabe läuft über `interrupt()`/Resume: am Freigabeknoten hält der Graph, die Karte listet
+Maßnahmen samt Belegen und geschätzter Wirkung; **Freigeben** oder **Ablehnen** setzt über
+`/investigations/approve` fort. Nach dem Lauf vergleicht das Cockpit die Hypothese mit der
+Gold-Wahrheit (`/investigations/gold/{event_id}`, nur für die Eval, kein Leck an den Agenten).
+
+**Manueller Prüfpfad (LLM_MODE=mock):**
+
+1. Backend `uvicorn production_agent.api.server:app` und Frontend `npm run dev` starten.
+2. Cockpit öffnen, Tab **Agent**, Ereignis-ID `360`, **Untersuchung starten**.
+3. Die sieben Karten füllen sich der Reihe nach; am Ende erscheint **Freigabe erforderlich**.
+4. **Freigeben** → Abschlusskarte „regulärer Abschluss" mit Audit-Hinweis und Eval (`reason_hit`).
+5. Erneut starten, diesmal **Ablehnen** → „sauberer Abbruch, kein Maßnahmen-Abschluss".

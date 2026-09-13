@@ -4,16 +4,18 @@ Alle Pfade unterhalb von `http://localhost:8000`.
 
 ---
 
-## GET /investigations/stream?line_id=L1
+## GET /investigations/stream?line_id=L1&event_id=360
 
 Startet eine Untersuchung und liefert Knotenergebnisse als **Server-Sent Events (SSE)**.
-Jedes Event trägt `event:` (Typ) und `data:` (JSON-String).
+Jedes Event trägt `event:` (Typ) und `data:` (JSON-String). `event_id` (optional, Default 360)
+wählt den Replay-Fall; daraus wird die Replay-Uhr `SIM_NOW` für diesen Lauf gesetzt. Der Modus
+mock/live steckt im Backend-`LLM_MODE` und wird im `start`-Event nur mitgeteilt, nicht gesetzt.
 
 ### Event-Sequenz
 
 ```
 event: start
-data: {"thread_id": "550e8400-e29b-41d4-a716-446655440000"}
+data: {"thread_id": "550e8400-e29b-41d4-a716-446655440000", "event_id": 360, "sim_now": "2026-06-15 09:55:00", "line_id": "L1", "mode": "mock"}
 
 event: node
 data: {"node": "capture_status", "payload": {"line_status": {"rows": [{"equipment_id": "L1-S1", "packml_state": "Held", "ts": "2026-06-15 09:55:00"}]}, "production_plan": [{"order_id": "A-2207", "planned_qty": 4800, "produced_qty": 3120}], "trace": ["1 Linienstatus und Produktionsplan erfasst"]}, "trace": ["1 Linienstatus und Produktionsplan erfasst"]}
@@ -90,10 +92,24 @@ Gibt Maßnahmen frei oder lehnt sie ab. Setzt den Graphen am `approval_gate`-Kno
 
 ---
 
+## GET /investigations/gold/{event_id}
+
+Gold-Wahrheit eines Replay-Falls – **nur für die Eval nach dem Lauf** (reason_hit-Vergleich im
+Cockpit). Kein Werkzeug des Agenten: Er sieht das während der Untersuchung nie (ADR-0002). Read-only.
+
+**Response:**
+```json
+{"event_id": 360, "reason_code": "STO-FOLIE", "duration_min": 10.9, "resolution_action": "...", "cost_eur": 2183.7}
+```
+
+**Fehler 404** – Ereignis nicht gefunden.
+
+---
+
 ## GET /health
 
 ```json
-{"ok": true, "model": "claude-sonnet-5", "langfuse": false}
+{"ok": true, "model": "claude-sonnet-5", "mode": "mock", "langfuse": false}
 ```
 
 ---
