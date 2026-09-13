@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T14:05:24",
-  "commit": "289e26a0445e75baee5a149246337363cad9476a",
+  "generated_at": "2026-09-13T18:41:14",
+  "commit": "3d9e3c223c1aca6e6d470191bd9e30da50d6f97a",
   "branch": "main",
   "packages": [
     {
@@ -429,8 +429,8 @@
         "WP4",
         "WP5"
       ],
-      "percent": 0,
-      "state": "offen",
+      "percent": 20,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
@@ -444,8 +444,8 @@
         },
         {
           "name": "Commit",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-13T14:05:05+02:00"
         },
         {
           "name": "Tag",
@@ -461,7 +461,13 @@
       "attempts": 0,
       "cost_usd": 0,
       "last_at": null,
-      "commits": []
+      "commits": [
+        {
+          "sha": "3d9e3c2",
+          "title": "feat(WP6): Testmatrix, zweiter Fall, Freigabe- und Ablehnungspfad",
+          "at": "2026-09-13T14:05:05+02:00"
+        }
+      ]
     },
     {
       "id": "WP7",
@@ -731,7 +737,7 @@
     }
   ],
   "totals": {
-    "percent": 64,
+    "percent": 66,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
     "tests": 329,
@@ -739,6 +745,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T14:05:05+02:00",
+      "kind": "commit",
+      "ref": "3d9e3c2",
+      "text": "feat(WP6): Testmatrix, zweiter Fall, Freigabe- und Ablehnungspfad"
+    },
     {
       "at": "2026-09-13T13:40:16+02:00",
       "kind": "commit",

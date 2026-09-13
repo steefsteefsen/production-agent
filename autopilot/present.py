@@ -3,7 +3,9 @@
 
 Quellen: git log (Commits), autopilot/journal/*.json (Läufe/Kosten/Reviews), autopilot/state/
 orchestrator.json (Lanes/Merges), docs/sessions/*.md, docs/AENDERUNGEN.md, docs/adr/*.md,
-coverage.json. Statische Seite, Daten inline als JSON (file:// lauffähig), sechs Tabs. Kein LLM.
+coverage.json. Statische Seite, Daten inline als JSON (file:// lauffähig), mehrere Tabs. Kein LLM.
+Zwei Tabs sind kuratiert (Scope-Entscheidungen, Nicht abgekürzt) – bewusste Botschaft an den Kunden,
+nicht aus Fakten abgeleitet; Inhalt steht als Daten in build_presentation, nicht getippt im HTML.
 
   python autopilot/present.py            erzeugen, Pfad ausgeben
   python autopilot/present.py --stage    erzeugen und git add (für den Hook)
@@ -26,12 +28,66 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 SCOPE_RE = re.compile(r"^(feat|fix|test|docs|adr|sec|chore)\(([^)]+)\):\s*(.*)$")
 TABS = [
     ("ablauf", "Ablauf"),
+    ("scope", "Scope-Entscheidungen"),
+    ("grenzen", "Nicht abgekürzt"),
     ("lanes", "Lanes"),
     ("entscheidungen", "Entscheidungen"),
     ("qualitaet", "Qualität"),
     ("kosten", "Kosten"),
     ("sitzungen", "Sitzungen"),
 ]
+
+# Kuratierte Inhalte (bewusste Scope-Botschaft, nicht aus Fakten abgeleitet). Als Daten gehalten,
+# damit sie im Quellformat stehen und nicht getippt im generierten HTML landen.
+SCOPE_DECISIONS = {
+    "title": "Scope-Entscheidungen – Aufwand gering halten, bevor der Kunde kauft",
+    "columns": ["Abkürzung im PoC", "Warum – was der PoC validiert", "Ausbau nach Kauf"],
+    "rows": [
+        [
+            "Kein ML-Training",
+            "PoC beweist den agentischen Ablauf, nicht Modellgüte",
+            "Feintuning/Klassifikator nach Datenlage",
+        ],
+        [
+            "RAG prototypisch (BM25+Vektor/RRF)",
+            "reicht zur Validierung der Beleg-Pflicht je Maßnahme",
+            "Re-Ranking, Chunking-Tuning ~2–3 Tage",
+        ],
+        [
+            "Ein Replay-Fall statt Eval-Harness",
+            "erst wenn der Ablauf überzeugt, lohnt Messbreite",
+            "Eval über 20+ Fälle mit Metriken ~3 Tage",
+        ],
+        [
+            "Simulator kennt seine Ursachen",
+            "bewusst – nur so ist reason_hit prüfbar",
+            "am echten MES: Gold-Labels aus der Instandhaltung",
+        ],
+        [
+            "CI testet nur Existierendes",
+            "Badge grün = ehrlich",
+            "Browser-E2E gegen Cockpit ~2 Tage",
+        ],
+        [
+            "Einfachster Graph ohne Verzweigung",
+            "Nachvollziehbarkeit vor Raffinesse",
+            "Verzweigung/CBR (WP4-Pfad)",
+        ],
+    ],
+    "anchor": "Dokumentiert in Testplan/ADRs, je mit Ausbau-Aufwand – gescoped, nicht unfertig.",
+}
+QUALITY_GUARANTEES = {
+    "title": "Nicht abgekürzt: Sicherheit und Kontrolle",
+    "items": [
+        "sql_guard: SELECT-only, Allowlist, Row-Limit, Verbindung read-only",
+        "injection_guard: Werkzeugergebnisse als tool_data (untrusted) behandelt, nie als Anweisung",
+        "action_policy: Empfehlung erst ab Konfidenz 0,60, Vier-Augen-Prinzip ab 5000 €",
+        "Freigabe-Gate mit echtem interrupt()/Resume – der Agent empfiehlt, er führt nicht aus",
+        "rollenbasiertes Audit, lückenlos je Werkzeugaufruf und Freigabe",
+        "Determinismus über die Replay-Uhr, keine verratene Gegenwart (ADR-0002)",
+    ],
+    "anchor": "Scope spart man vor dem Kauf – Qualität nie.",
+}
 
 
 def _git(*args: str) -> str:
@@ -140,6 +196,8 @@ def build_presentation(
         },
         "costs": {"per_wp": costs, "loops": loops, "total": round(sum(costs.values()), 2)},
         "sessions": sessions,
+        "scope": SCOPE_DECISIONS,
+        "guarantees": QUALITY_GUARANTEES,
     }
 
 
@@ -170,6 +228,12 @@ main{{padding:18px 24px;max-width:1100px;margin:0 auto}}
 .bar{{height:14px;border-radius:3px;background:var(--teal3)}}
 .card{{background:#fff;border:1px solid #dde5e8;border-radius:8px;padding:12px;margin-bottom:8px}}
 h2{{font-size:16px;color:var(--teal)}}
+h3{{font-size:14px;color:var(--teal2);margin:2px 0 10px}}
+table{{border-collapse:collapse;width:100%;font-size:13px;background:#fff}}
+th,td{{border:1px solid #dde5e8;padding:7px 9px;text-align:left;vertical-align:top}}
+th{{background:var(--teal);color:#fff;font-weight:600}}
+td:first-child{{font-weight:600;color:var(--teal2)}}
+.anchor{{margin-top:10px;font-style:italic;color:var(--wine);font-weight:600}}
 </style></head>
 <body>
 <script id="data" type="application/json">{payload}</script>
@@ -183,6 +247,8 @@ function esc(s){{return (s||'').replace(/[&<>]/g,c=>({{'&':'&amp;','<':'&lt;','>
 function render(){{
  const b=k=>document.querySelector('#panel-'+k+' .body');
  b('ablauf').innerHTML=D.commits.map(c=>`<div class="row"><span class="dot" style="background:${{C[c.type]||'#9aa5ab'}}"></span><b>${{esc(c.type)}}${{c.scope?'('+esc(c.scope)+')':''}}</b> ${{esc(c.title)}} <small>${{esc(c.at)}} · ${{c.sha}}</small></div>`).join('')||'<p>keine Commits</p>';
+ b('scope').innerHTML=`<h3>${{esc(D.scope.title)}}</h3><table><thead><tr>${{D.scope.columns.map(h=>'<th>'+esc(h)+'</th>').join('')}}</tr></thead><tbody>${{D.scope.rows.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('')}}</tbody></table><p class="anchor">${{esc(D.scope.anchor)}}</p>`;
+ b('grenzen').innerHTML=`<h3>${{esc(D.guarantees.title)}}</h3>`+D.guarantees.items.map(i=>`<div class="row">${{esc(i)}}</div>`).join('')+`<p class="anchor">${{esc(D.guarantees.anchor)}}</p>`;
  b('lanes').innerHTML=Object.keys(D.lanes).length?Object.entries(D.lanes).map(([l,ws])=>`<div class="row"><b>${{esc(l)}}</b>: ${{ws.map(w=>esc(w.wp)+' ['+esc(w.status)+']').join(', ')}}</div>`).join(''):'<p>orchestrator.json noch nicht vorhanden – Lanes erscheinen nach dem ersten Lauf.</p>';
  b('entscheidungen').innerHTML=D.decisions.map(a=>`<div class="card"><b>${{esc(a.title)}}</b><br><small>${{esc(a.file)}}</small><p>${{esc(a.decision)}}</p></div>`).join('')||'<p>keine ADRs</p>';
  b('qualitaet').innerHTML=`<div class="card">Coverage gesamt: <b>${{D.quality.coverage_total??'—'}} %</b> · security <b>${{D.quality.coverage_security??'—'}} %</b></div><div class="card">Läufe mit Review: ${{D.runs.filter(r=>r.review).map(r=>esc(r.wp)+':'+esc(r.review)).join(', ')||'—'}}</div>`;

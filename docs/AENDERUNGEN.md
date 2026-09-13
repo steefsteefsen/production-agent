@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · docs(P): Scope-Entscheidungen und Qualitätsgrenzen in Präsentation
+**Was:** autopilot/present.py um zwei kuratierte Tabs erweitert: „Scope-Entscheidungen" (Tabelle Abkürzung/Warum/Ausbau nach Kauf) und „Nicht abgekürzt: Sicherheit und Kontrolle" (sql_guard, injection_guard, action_policy, Freigabe-Gate, Audit, Replay-Determinismus). Inhalte als Daten (SCOPE_DECISIONS/QUALITY_GUARANTEES) im Generator, Rendering über eine Tabelle im HTML; tests/test_present.py auf acht Tabs und die neuen Panels erweitert.
+**Warum (Problem oder Anlass):** Für das Interview soll die Präsentation ehrlich zeigen, was im PoC bewusst gescoped ist (mit Ausbau-Aufwand) und was gerade nicht abgekürzt wurde – Sicherheit und Kontrolle.
+**Alternativen (verworfen, weil ...):** Nur das generierte HTML editieren – verworfen, würde beim nächsten present.py-Lauf überschrieben; freien Fließtext statt Tabelle – schlechter vergleichbar für den Kunden.
+**Auswirkung (Verträge, ADR, Tests):** autopilot/present.py, tests/test_present.py, docs/presentation/index.html (generiert). Keine Vertrags-/ADR-Änderung.
+**Bezug (WP, ADR):** P/Präsentation
+
 ## 2026-09-13 · feat(WP6): Testmatrix, zweiter Fall, Freigabe- und Ablehnungspfad
 **Was:** docs/testplan_e2e.md mit Testmatrix (vier Achsen Diagnose/Aktionspfad/Guards/Robustheit, Status-Spalte). scripts/e2e_replay.py um --event-id (Default jüngstes, 360) und --decision none|approve|reject erweitert, run() liefert ein deterministisches Ergebnis-Dict; replay.py um case_for_event_id(). approve/reject setzen nach interrupt() über den SQLite-Checkpointer fort und protokollieren die Entscheidung rollenbasiert im Audit. Neuer E2-Fall 336 (STO-ANTRIEB). tests/test_e2e_replay.py um E2, approve, reject und D1 (drei bitidentische Läufe) ergänzt. CI-e2e-Job: npm ci + Warten auf Vite (5173) vor Playwright; App.tsx erhält data-testid="cockpit".
 **Warum (Problem oder Anlass):** Der E2E-Nachweis bestand nur aus einem Fall (STO-FOLIE, 360) und endete am Freigabeknoten; Freigabe/Ablehnung und ein zweiter, andersartiger Fall waren ungeprüft. Die Playwright-E2E scheiterten in CI, weil der Vite-Server ohne npm ci und ohne Readiness-Warten nicht erreichbar war und kein data-testid="cockpit" existierte.
