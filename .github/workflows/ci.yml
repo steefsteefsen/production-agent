@@ -32,7 +32,12 @@ jobs:
         run: bandit -c pyproject.toml -r src
 
       - name: Abhängigkeits-Audit
-        run: pip-audit
+        # setuptools ist Build-Tool der Runner-Umgebung, keine deklarierte Laufzeit-Abhängigkeit;
+        # vor dem Audit auf die Fix-Version heben, damit Umgebungs-CVEs (PYSEC-2026-3447) den
+        # Audit der Projekt-Abhängigkeiten nicht verfälschen.
+        run: |
+          python -m pip install --upgrade "setuptools>=83.0.0"
+          pip-audit
 
   frontend:
     needs: test

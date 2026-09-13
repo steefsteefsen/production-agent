@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · fix(ci): setuptools vor pip-audit auf Fix-Version heben
+**Was:** Der CI-Schritt „Abhängigkeits-Audit" hebt setuptools vor dem Lauf auf >=83.0.0, dann erst pip-audit.
+**Warum (Problem oder Anlass):** pip-audit meldete zwei bekannte CVEs (PYSEC-2026-3447) in setuptools 79.0.1 und brach mit Exit 1 ab; setuptools ist Build-Tool der Runner-Umgebung, keine deklarierte Laufzeit-Abhängigkeit des Projekts.
+**Alternativen (verworfen, weil ...):** pip-audit ganz überspringen – verwirft die Prüfung der echten Projekt-Abhängigkeiten; --ignore-vuln PYSEC-2026-3447 – blendet den CVE dauerhaft aus, statt die verwundbare Version zu entfernen.
+**Auswirkung (Verträge, ADR, Tests):** .github/workflows/ci.yml (Step „Abhängigkeits-Audit"); keine Verträge/ADR/Tests betroffen.
+**Bezug (WP, ADR):** WP7/CI
+
 ## 2026-09-13 · fix(config): Knoten 4/6 auf Sonnet, CI-hashFiles je Step
 **Was:** Modell-IDs zentral in config.py als ENV-überschreibbare Felder llm_model_main (Knoten 4/6, Default claude-sonnet-5) und llm_model_judge (Judge/Klassifikation, claude-haiku-4-5-20251001); frühere anthropic_model/anthropic_model_fast ersetzt, workflow.py und api/server.py sowie settings.env und docs/contracts/api.md nachgezogen. CI: hashFiles vom Job-if der frontend-Stage auf eine Erkennungs-Step-Ausgabe verschoben, Folge-Steps daran gekoppelt. docs/e2e.md um die Kostenentscheidung ergänzt.
 **Warum (Problem oder Anlass):** Opus in den Begründungsknoten ist für die wiederholte Demo zu teuer (ADR-0008 nennt Sonnet als Default); hashFiles ist auf Job-Ebene ungültig (Workspace noch nicht ausgecheckt) und übersprang den frontend-Job stillschweigend.

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T13:25:11",
-  "commit": "d39209c1243bfe94a8609231ec604e8b2194381f",
+  "generated_at": "2026-09-13T13:40:32",
+  "commit": "2afe060b9aa3afaf546cca79a1a2484b71030a40",
   "branch": "main",
   "packages": [
     {
@@ -739,6 +739,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T13:24:18+02:00",
+      "kind": "commit",
+      "ref": "2afe060",
+      "text": "fix(config): Knoten 4/6 auf Sonnet, CI-hashFiles je Step"
+    },
     {
       "at": "2026-09-13T12:58:39+02:00",
       "kind": "commit",
