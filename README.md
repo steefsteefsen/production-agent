@@ -62,9 +62,9 @@ Die Arbeitspakete WP0–WP7 stehen in `autopilot/tasks.yaml`; die Entscheidungsg
 
 ## Stand
 <!-- auto:stand -->
-- fertig: 10 von 16 Paketen
-- offen: WP1, WP3, WP4, WP5, WP6, WP7
-- Fortschritt: 62 % — siehe [Statusseite](docs/status/index.html)
+- fertig: 11 von 16 Paketen
+- offen: WP1, WP4, WP5, WP6, WP7
+- Fortschritt: 64 % — siehe [Statusseite](docs/status/index.html)
 <!-- /auto:stand -->
 
 Guardian-Regeln (automatisch aus dem Guardian-Docstring):

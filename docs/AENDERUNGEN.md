@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-13 · docs(P): WP3 integriert – Ermittlungs-Workflow auf main
+**Was:** WP3 (LangGraph-Ablauf, LLM-Knoten, SSE, Vorfall-ID-Nachbedingung, RAG-Audit-Test) nach main gemergt; Statusseite/Präsentation/Marker aufgefrischt; WP4/WP5 startbereit.
+**Warum (Problem oder Anlass):** WP3 war gebaut und gate-grün, hing aber an der headless-Review-Eskalation; nach dem run.py-Fix und Stefans Zusatzentscheidungen ist es abnahmefähig.
+**Alternativen (verworfen, weil ...):** WP3 offen lassen – blockiert WP4–WP7, die alle auf WP3 aufbauen.
+**Auswirkung (Verträge, ADR, Tests):** graph/workflow.py, graph/prompts.py, api/server.py, docs/contracts/api.md, tests/acceptance/test_wp3.py, tests/test_workflow.py, tests/test_trajectory.py, tests/test_rag.py.
+**Bezug (WP, ADR):** WP3
+
 ## 2026-09-13 · fix(infra): Headless-Review über Decider statt input()
 **Was:** run.py ruft im Nachtlauf (kein TTY) bei Reviewer-'escalate' den Decider (auch ohne --auto-decide): risk≤medium anwenden + Reviewer erneut, risk high → ESCALATION.md + Exit 2, nie input(). --review human/both bricht ohne TTY sauber ab. WP3-Prompt um Stefans Zusatzentscheidungen (Vorfall-ID, RAG-Audit) ergänzt.
 **Warum (Problem oder Anlass):** run.py stürzte headless in input("Abnehmen?") mit EOFError ab und blockierte den ganzen Lauf an WP3.

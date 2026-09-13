@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T08:10:12",
-  "commit": "2c01bfbfdee4440677b2dcc9497d3ae7d360dff3",
+  "generated_at": "2026-09-13T08:23:40",
+  "commit": "535921b9eae057e031ac929d86ba5871448781b2",
   "branch": "main",
   "packages": [
     {
@@ -292,8 +292,8 @@
         "WP1",
         "WP2a"
       ],
-      "percent": 0,
-      "state": "offen",
+      "percent": 30,
+      "state": "fertig",
       "steps": [
         {
           "name": "Gate grün",
@@ -307,12 +307,12 @@
         },
         {
           "name": "Commit",
-          "done": false,
-          "at": null
+          "done": true,
+          "at": "2026-09-13T07:43:59+02:00"
         },
         {
           "name": "Tag",
-          "done": false,
+          "done": true,
           "at": null
         },
         {
@@ -324,7 +324,13 @@
       "attempts": 0,
       "cost_usd": 0,
       "last_at": null,
-      "commits": []
+      "commits": [
+        {
+          "sha": "6236782",
+          "title": "feat(WP3): LangGraph-Ablauf, SSE, Hypothesis/RecommendedAction (Rettungs-Commit, hooks: übersprungen)",
+          "at": "2026-09-13T07:43:59+02:00"
+        }
+      ]
     },
     {
       "id": "WP4",
@@ -720,7 +726,7 @@
     }
   ],
   "totals": {
-    "percent": 62,
+    "percent": 64,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
     "tests": 319,
@@ -728,6 +734,18 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T08:09:56+02:00",
+      "kind": "commit",
+      "ref": "535921b",
+      "text": "Merge wp/WP3: LangGraph-Ablauf, SSE, Vorfall-ID- und RAG-Audit-Pflicht (--no-ff)"
+    },
+    {
+      "at": "2026-09-13T07:43:59+02:00",
+      "kind": "commit",
+      "ref": "6236782",
+      "text": "feat(WP3): LangGraph-Ablauf, SSE, Hypothesis/RecommendedAction (Rettungs-Commit, hooks: übersprungen)"
+    },
     {
       "at": "2026-09-13T07:39:44+02:00",
       "kind": "commit",
@@ -1033,6 +1051,12 @@
       "kind": "tag",
       "ref": "wp/WP2b",
       "text": "Tag wp/WP2b"
+    },
+    {
+      "at": "",
+      "kind": "tag",
+      "ref": "wp/WP3",
+      "text": "Tag wp/WP3"
     }
   ],
   "guardian": {

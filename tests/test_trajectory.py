@@ -42,7 +42,9 @@ def _fixture_tools(alarm_count: int = 0):
         "get_active_alarms": lambda **_: _make_alarms(alarm_count),
         "search_maintenance_docs": lambda **_: json.dumps([]),
         "find_similar_incidents": lambda **_: json.dumps([]),
-        "estimate_impact": lambda **_: json.dumps({"expected_downtime_min": 25.0, "cost_eur": 5000}),
+        "estimate_impact": lambda **_: json.dumps(
+            {"expected_downtime_min": 25.0, "cost_eur": 5000}
+        ),
     }
 
 
@@ -80,9 +82,7 @@ def run(alarm_count: int) -> list[str]:
     g = build_graph(tools=_fixture_tools(alarm_count), llm=_FAKE_LLM)
     cfg = {"configurable": {"thread_id": f"traj-{alarm_count}"}}
     nodes: list[str] = []
-    for update in g.stream(
-        {"line_id": "L1", "trace": []}, cfg, stream_mode="updates"
-    ):
+    for update in g.stream({"line_id": "L1", "trace": []}, cfg, stream_mode="updates"):
         nodes.extend("approval_gate" if k == "__interrupt__" else k for k in update)
     return nodes
 
@@ -177,9 +177,7 @@ def test_verbotene_massnahme_erreicht_nie_freigabe():
     g = build_graph(tools=_fixture_tools(12), llm=fake_llm)
     cfg = {"configurable": {"thread_id": "traj-forbidden"}}
     last = {}
-    for update in g.stream(
-        {"line_id": "L1", "trace": []}, cfg, stream_mode="updates"
-    ):
+    for update in g.stream({"line_id": "L1", "trace": []}, cfg, stream_mode="updates"):
         last = update
     payload = last["__interrupt__"][0].value
     assert all("Not-Aus" not in a["title"] for a in payload["actions"])

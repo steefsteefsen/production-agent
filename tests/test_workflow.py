@@ -315,7 +315,9 @@ def test_flood_in_window_alte_alarme_ignoriert():
     from production_agent.graph.workflow import _flood_in_window
 
     now = datetime.now(UTC)
-    alarms = [{"ts": (now - timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")} for _ in range(12)]
+    alarms = [
+        {"ts": (now - timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")} for _ in range(12)
+    ]
     assert _flood_in_window(alarms, window_min=10, threshold=10) is False
 
 

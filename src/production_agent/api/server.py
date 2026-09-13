@@ -52,9 +52,7 @@ async def stream_investigation(line_id: str = "L1") -> EventSourceResponse:
 
     async def _generator():
         yield {"event": "start", "data": json.dumps({"thread_id": thread_id})}
-        for update in graph.stream(
-            {"line_id": line_id, "trace": []}, cfg, stream_mode="updates"
-        ):
+        for update in graph.stream({"line_id": line_id, "trace": []}, cfg, stream_mode="updates"):
             for node, state_update in update.items():
                 if node == "__interrupt__":
                     payload = state_update[0].value if state_update else {}
@@ -68,9 +66,7 @@ async def stream_investigation(line_id: str = "L1") -> EventSourceResponse:
                     trace = state_update.get("trace", []) if isinstance(state_update, dict) else []
                     yield {
                         "event": "node",
-                        "data": json.dumps(
-                            {"node": node, "payload": state_update, "trace": trace}
-                        ),
+                        "data": json.dumps({"node": node, "payload": state_update, "trace": trace}),
                     }
 
     return EventSourceResponse(_generator())

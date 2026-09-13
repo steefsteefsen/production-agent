@@ -48,7 +48,12 @@ def _acc_tools():
             [{"event_id": "EVT-001", "reason_code": "STO-FOLIE", "duration_min": 25}]
         ),
         "estimate_impact": lambda **_: json.dumps(
-            {"expected_downtime_min": 25.0, "lost_units": 1500, "cost_eur": 5000.0, "orders_at_risk": ["ORD1"]}
+            {
+                "expected_downtime_min": 25.0,
+                "lost_units": 1500,
+                "cost_eur": 5000.0,
+                "orders_at_risk": ["ORD1"],
+            }
         ),
     }
 
@@ -95,7 +100,9 @@ def _acc_actions(*rationales):
 def test_wp3_jede_massnahme_nennt_vorfall_id():
     """(a) Verifikation: jede in der Freigabe verbleibende Massnahme nennt eine Vorfall-ID (EVT-001)
     aus den ähnlichen Vorfaellen (downtime_events_gold)."""
-    result = _acc_run(_acc_actions("E-4711 historisch -> STO-FOLIE (EVT-001)"), "wp3-acc-vorfallid-1")
+    result = _acc_run(
+        _acc_actions("E-4711 historisch -> STO-FOLIE (EVT-001)"), "wp3-acc-vorfallid-1"
+    )
     payload = result["__interrupt__"][0].value
     assert len(payload["actions"]) >= 1
     assert all("EVT-001" in a["rationale"] for a in payload["actions"])
