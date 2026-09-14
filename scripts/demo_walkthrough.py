@@ -100,6 +100,25 @@ def main() -> int:
         if ok_badges == 0:
             findings.append("Lauf A: keine grünen Judge-Badges gefunden.")
 
+        # Folien-Ansicht: Karten aufklappen → drei Blöcke Eingang · Transformation · Bewertung
+        for label in ["Alarme analysieren", "Ursache eingrenzen", "Beleg-Prüfung"]:
+            page.get_by_text(label, exact=False).first.click()
+            page.wait_for_timeout(250)
+            has_blocks = (
+                page.get_by_text("Eingang", exact=True).count() > 0
+                and page.get_by_text("Transformation", exact=True).count() > 0
+                and page.get_by_text("Bewertung", exact=True).count() > 0
+            )
+            shot(
+                "folie",
+                f"Folie „{label}“: Eingang · Transformation · Bewertung "
+                f"(warum Schritt/Werkzeug, weitere Schritte).",
+            )
+            if not has_blocks:
+                findings.append(f"Folie „{label}“: nicht alle drei Blöcke sichtbar.")
+            page.get_by_text(label, exact=False).first.click()  # wieder zuklappen
+            page.wait_for_timeout(150)
+
         page.get_by_role("button", name="Freigeben").click()
         page.wait_for_selector("text=Freigegeben – regulärer Abschluss", timeout=30000)
         page.wait_for_timeout(400)

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-14T10:17:39",
-  "commit": "c1b3083a360b81afdc3da3f1ddb69eb2fcf12258",
+  "generated_at": "2026-09-14T10:45:04",
+  "commit": "3b93deb68e64836189ccb14b7d1dd9fb77533c6c",
   "branch": "main",
   "packages": [
     {
@@ -41,6 +41,11 @@
       "cost_usd": 0,
       "last_at": null,
       "commits": [
+        {
+          "sha": "3b93deb",
+          "title": "docs(P): Technologie-Entscheidungen und ehrlicher Retrieval-Befund",
+          "at": "2026-09-14T10:17:21+02:00"
+        },
         {
           "sha": "4e29241",
           "title": "docs(P): Scope-Entscheidungen und Qualitätsgrenzen in Präsentation",
@@ -783,6 +788,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-14T10:17:21+02:00",
+      "kind": "commit",
+      "ref": "3b93deb",
+      "text": "docs(P): Technologie-Entscheidungen und ehrlicher Retrieval-Befund"
+    },
     {
       "at": "2026-09-14T09:22:08+02:00",
       "kind": "commit",

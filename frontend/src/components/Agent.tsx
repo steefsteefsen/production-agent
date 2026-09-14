@@ -7,6 +7,7 @@ import {
 } from "./agentStream.ts";
 import { NODE_ANNOTATIONS } from "./demo_annotations.ts";
 import { INTRO, nodeNarrative, finalNarrative } from "./narrative.ts";
+import { nodeInputRows } from "./slide.ts";
 
 interface EvalResult {
   reason_hit: boolean;
@@ -302,6 +303,7 @@ export default function Agent() {
           const st = STATUS_STYLE[c.status];
           const ann = NODE_ANNOTATIONS[c.id];
           const isOpen = openCard === c.id;
+          const inputRows = isOpen ? nodeInputRows(c.id, cards, meta) : [];
           return (
             <div key={c.id} className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
               <button
@@ -332,21 +334,56 @@ export default function Agent() {
                 </div>
               )}
 
-              {showNotes && ann && (
-                <div className="px-4 pb-2 pt-0 space-y-1 border-t border-gray-800/60">
+              {/* Präsentations-Glance: Funktion inline, wenn Demo-Notizen an und Karte zu */}
+              {showNotes && ann && !isOpen && (
+                <div className="px-4 pb-2 pt-0 border-t border-gray-800/60">
                   <p className="text-xs text-gray-400">
                     <span className="text-teal-500 font-semibold">Funktion:</span> {ann.funktion}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    <span className="text-salbei-500 font-semibold">Ausblick:</span> {ann.ausblick}
                   </p>
                 </div>
               )}
 
-              {isOpen && c.payload && (
-                <pre className="px-4 py-2 text-xs text-gray-400 whitespace-pre-wrap border-t border-gray-800/60 max-h-56 overflow-auto">
-                  {JSON.stringify(c.payload, null, 2)}
-                </pre>
+              {/* Folie: Eingang · Transformation · Bewertung (aufgeklappt) */}
+              {isOpen && (
+                <div className="border-t border-gray-800/60 px-4 py-3 space-y-3 text-xs">
+                  <div>
+                    <p className="text-teal-500 font-semibold mb-1">Eingang</p>
+                    {inputRows.length ? (
+                      <table className="w-full">
+                        <tbody>
+                          {inputRows.map((r, i) => (
+                            <tr key={i}>
+                              <td className="text-gray-500 pr-3 align-top whitespace-nowrap">{r.label}</td>
+                              <td className="text-gray-300">{r.value}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-gray-600">—</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-salbei-500 font-semibold mb-1">Transformation</p>
+                    <p className="text-gray-300">{c.summary || "—"}</p>
+                    {ann && <p className="text-gray-500 mt-0.5">Weg: {ann.funktion}</p>}
+                  </div>
+                  {ann && (
+                    <div>
+                      <p className="text-wein-500 font-semibold mb-1">Bewertung</p>
+                      <p className="text-gray-300">{ann.bewertung}</p>
+                      <p className="text-gray-500 mt-0.5">Weitere Schritte: {ann.ausblick}</p>
+                    </div>
+                  )}
+                  {c.payload && (
+                    <details className="text-gray-500">
+                      <summary className="cursor-pointer select-none">Rohdaten</summary>
+                      <pre className="mt-1 whitespace-pre-wrap max-h-56 overflow-auto text-gray-400">
+                        {JSON.stringify(c.payload, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+                </div>
               )}
             </div>
           );

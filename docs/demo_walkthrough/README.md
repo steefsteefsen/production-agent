@@ -18,10 +18,13 @@ unter docs/status/ oder docs/images/ zu).
 - **08_lauf_erzaehltext.png** — Erzähltext synchron zur Karte: „2 Maßnahmen abgeleitet, jede mit Vorfall-ID belegt.“
 - **09_lauf_belegpruefung.png** — Erzähltext Beleg-Prüfung: „Ein zweites, unabhängiges Modell prüft jede Maßnahme gegen ihren Beleg – mit anderem Kontext als das vorschlagende Modell, damit es dessen Begründung nicht einfach übernimmt. Ergebnis: 2 von 2 bestätigt.“
 - **10_beleg_alle_gruen.png** — Beleg-Prüfung-Karte und Freigabe-Gate: alle Maßnahmen „vom Judge bestätigt“ (4 grün, 0 rot).
-- **11_abschluss_freigabe.png** — Abschluss nach Freigabe (reason_hit): „Untersuchung abgeschlossen. Ursache bestätigt gegen die verborgene Wahrheit (STO-FOLIE vs. Gold). Vollständiges Audit-Log verfügbar.“
-- **12_beleg_judge_lehnt_ab.png** — ENTSCHEIDEND: Beleg-Prüfung mit rotem Badge „✗ vom Judge nicht bestätigt“ – der Judge stützt eine Maßnahme ohne Beleg NICHT; das Badge ist auch am Gate sichtbar.
-- **13_beleg_judge_note.png** — Freigabe-Gate zeigt die Judge-Begründung zur abgelehnten Maßnahme.
-- **14_abschluss_ablehnung.png** — Ablehnen-Pfad: sauberer Abbruch. „Untersuchung abgebrochen. Keine Maßnahme freigegeben, die Empfehlung bleibt unausgeführt. Vollständiges Audit-Log verfügbar.“
+- **11_folie.png** — Folie „Alarme analysieren“: Eingang · Transformation · Bewertung (warum Schritt/Werkzeug, weitere Schritte).
+- **12_folie.png** — Folie „Ursache eingrenzen“: Eingang · Transformation · Bewertung (warum Schritt/Werkzeug, weitere Schritte).
+- **13_folie.png** — Folie „Beleg-Prüfung“: Eingang · Transformation · Bewertung (warum Schritt/Werkzeug, weitere Schritte).
+- **14_abschluss_freigabe.png** — Abschluss nach Freigabe (reason_hit): „Untersuchung abgeschlossen. Ursache bestätigt gegen die verborgene Wahrheit (STO-FOLIE vs. Gold). Vollständiges Audit-Log verfügbar.“
+- **15_beleg_judge_lehnt_ab.png** — ENTSCHEIDEND: Beleg-Prüfung mit rotem Badge „✗ vom Judge nicht bestätigt“ – der Judge stützt eine Maßnahme ohne Beleg NICHT; das Badge ist auch am Gate sichtbar.
+- **16_beleg_judge_note.png** — Freigabe-Gate zeigt die Judge-Begründung zur abgelehnten Maßnahme.
+- **17_abschluss_ablehnung.png** — Ablehnen-Pfad: sauberer Abbruch. „Untersuchung abgebrochen. Keine Maßnahme freigegeben, die Empfehlung bleibt unausgeführt. Vollständiges Audit-Log verfügbar.“
 
 ## Auffälligkeiten
 
