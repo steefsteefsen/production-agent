@@ -63,6 +63,15 @@ export function nodeNarrative(card: NodeCard): string {
       const n = Array.isArray(p.actions) ? p.actions.length : 0;
       return `${n} Maßnahme${n === 1 ? "" : "n"} abgeleitet, jede mit Vorfall-ID belegt.`;
     }
+    case "check_evidence": {
+      const jr = Array.isArray(p.judge_results)
+        ? (p.judge_results as Array<{ verified?: boolean }>)
+        : [];
+      const ok = jr.filter((r) => r && r.verified).length;
+      const base =
+        "Ein zweites, unabhängiges Modell prüft jede Maßnahme gegen ihren Beleg – mit anderem Kontext als das vorschlagende Modell, damit es dessen Begründung nicht einfach übernimmt.";
+      return jr.length ? `${base} Ergebnis: ${ok} von ${jr.length} bestätigt.` : base;
+    }
     case "approval_gate":
       return "Freigabe erforderlich – der Agent legt Empfehlung und Belege vor, der Mensch entscheidet.";
     default:

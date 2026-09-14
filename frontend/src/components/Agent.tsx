@@ -39,12 +39,36 @@ interface Gold {
   duration_min?: number;
 }
 
+interface JudgeResult {
+  title: string;
+  verified: boolean;
+  judge_note: string;
+}
+
 const STATUS_STYLE: Record<CardStatus, { dot: string; label: string; text: string }> = {
   wartend: { dot: "bg-gray-600", label: "wartend", text: "text-gray-500" },
   "läuft": { dot: "bg-teal-600 animate-pulse", label: "läuft", text: "text-teal-500" },
   fertig: { dot: "bg-salbei-500", label: "fertig", text: "text-salbei-500" },
   freigabe: { dot: "bg-wein-500 animate-pulse", label: "Freigabe", text: "text-wein-500" },
 };
+
+/** Judge-Ergebnis je Maßnahme als Badge; judge_note beim Hover/als title. */
+function JudgeBadge({ result }: { result?: JudgeResult }) {
+  if (!result) return null;
+  const ok = result.verified;
+  return (
+    <span
+      data-testid={ok ? "judge-ok" : "judge-fail"}
+      title={result.judge_note}
+      className={[
+        "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] cursor-help whitespace-nowrap",
+        ok ? "bg-salbei-500/15 text-salbei-500" : "bg-wein-600/25 text-wein-500",
+      ].join(" ")}
+    >
+      {ok ? "✓ vom Judge bestätigt" : "✗ vom Judge nicht bestätigt"}
+    </span>
+  );
+}
 
 export default function Agent() {
   const [eventId, setEventId] = useState(360);
@@ -154,6 +178,14 @@ export default function Agent() {
   const actions: Action[] = Array.isArray(interruptPayload?.actions)
     ? (interruptPayload!.actions as Action[])
     : [];
+  // Judge-Ergebnisse: bevorzugt aus der Interrupt-Payload, sonst aus der Beleg-Prüfung-Karte
+  const judgeResults: JudgeResult[] = Array.isArray(interruptPayload?.judge_results)
+    ? (interruptPayload!.judge_results as JudgeResult[])
+    : Array.isArray(cards.find((c) => c.id === "check_evidence")?.payload?.judge_results)
+      ? (cards.find((c) => c.id === "check_evidence")!.payload!.judge_results as JudgeResult[])
+      : [];
+  const judgeByTitle = (title?: string): JudgeResult | undefined =>
+    judgeResults.find((r) => r.title === title);
   const hypothesis = (cards.find((c) => c.id === "narrow_cause")?.payload?.hypothesis ??
     {}) as Record<string, unknown>;
   const predictedReason = hypothesis.reason_code as string | undefined;
@@ -284,6 +316,22 @@ export default function Agent() {
                 <span className={["text-xs shrink-0", st.text].join(" ")}>{st.label}</span>
               </button>
 
+              {c.id === "check_evidence" && judgeResults.length > 0 && (
+                <div className="px-4 pb-2 pt-1 space-y-1.5 border-t border-gray-800/60">
+                  {judgeResults.map((r, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <JudgeBadge result={r} />
+                      <span className="text-gray-400 truncate">{r.title}</span>
+                    </div>
+                  ))}
+                  {judgeResults.some((r) => !r.verified) && (
+                    <p className="text-[11px] text-gray-500 pt-0.5">
+                      Hinweis: nicht bestätigte Maßnahmen werden nicht automatisch verworfen – der Mensch entscheidet an der Freigabe.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {showNotes && ann && (
                 <div className="px-4 pb-2 pt-0 space-y-1 border-t border-gray-800/60">
                   <p className="text-xs text-gray-400">
@@ -312,15 +360,24 @@ export default function Agent() {
             Freigabe erforderlich – der Agent empfiehlt, er führt nicht aus
           </p>
           <div className="space-y-2">
-            {actions.map((a, i) => (
-              <div key={i} className="rounded border border-gray-700 p-2 text-xs">
-                <p className="text-gray-200 font-medium">{a.title}</p>
-                {a.description && <p className="text-gray-400 mt-0.5">{a.description}</p>}
-                {a.rationale && (
-                  <p className="text-salbei-500 mt-0.5">Beleg: {a.rationale}</p>
-                )}
-              </div>
-            ))}
+            {actions.map((a, i) => {
+              const jr = judgeByTitle(a.title);
+              return (
+                <div key={i} className="rounded border border-gray-700 p-2 text-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-gray-200 font-medium">{a.title}</p>
+                    <JudgeBadge result={jr} />
+                  </div>
+                  {a.description && <p className="text-gray-400 mt-0.5">{a.description}</p>}
+                  {a.rationale && (
+                    <p className="text-salbei-500 mt-0.5">Beleg: {a.rationale}</p>
+                  )}
+                  {jr && !jr.verified && (
+                    <p className="text-wein-500 mt-0.5">Judge: {jr.judge_note}</p>
+                  )}
+                </div>
+              );
+            })}
             {actions.length === 0 && (
               <p className="text-gray-500 text-xs">Keine Maßnahmen im Interrupt-Payload.</p>
             )}

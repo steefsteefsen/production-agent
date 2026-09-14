@@ -94,7 +94,10 @@ def _post_run_eval(event_id: int | None, state: dict) -> dict | None:
 
 @app.get("/investigations/stream")
 async def stream_investigation(
-    line_id: str = "L1", event_id: int = DEMO_EVENT_ID, delay_ms: int = 0
+    line_id: str = "L1",
+    event_id: int = DEMO_EVENT_ID,
+    delay_ms: int = 0,
+    tamper_evidence: bool = False,
 ) -> EventSourceResponse:
     """SSE-Stream: je Knoten ein Event {node, payload, trace}; stoppt am Freigabeknoten.
 
@@ -112,7 +115,8 @@ async def stream_investigation(
     """
     pace = _pace_seconds(delay_ms)  # Demo-Takt, gedeckelt
     thread_id = str(uuid.uuid4())
-    cfg = {"configurable": {"thread_id": thread_id}}
+    # demo_tamper nur für die geführte Demo (Beleg-Prüfung sichtbar ablehnen lassen); Default aus
+    cfg = {"configurable": {"thread_id": thread_id, "demo_tamper": tamper_evidence}}
     case = _replay_case(event_id)
     run_line = case.line_id if case else line_id
     if case:

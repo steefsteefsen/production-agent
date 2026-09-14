@@ -113,6 +113,7 @@ REF_ALLE = [
     "narrow_cause",
     "estimate_impact",
     "derive_actions",
+    "check_evidence",
     "approval_gate",
 ]
 

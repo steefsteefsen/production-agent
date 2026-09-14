@@ -19,6 +19,7 @@ export const NODE_ORDER = [
   "narrow_cause",
   "estimate_impact",
   "derive_actions",
+  "check_evidence",
   "approval_gate",
 ] as const;
 
@@ -29,7 +30,8 @@ export const NODE_LABEL: Record<string, string> = {
   narrow_cause: "4 · Ursache eingrenzen",
   estimate_impact: "5 · Wirkung schätzen",
   derive_actions: "6 · Maßnahmen ableiten",
-  approval_gate: "7 · Freigabe",
+  check_evidence: "7 · Beleg-Prüfung",
+  approval_gate: "8 · Freigabe",
 };
 
 export function initialCards(): NodeCard[] {
@@ -93,6 +95,11 @@ export function summarize(node: string, payload: Record<string, unknown>): strin
     case "derive_actions": {
       const n = Array.isArray(p.actions) ? p.actions.length : 0;
       return `${n} Maßnahme${n === 1 ? "" : "n"} · alle mit Vorfall-ID belegt`;
+    }
+    case "check_evidence": {
+      const jr = Array.isArray(p.judge_results) ? (p.judge_results as Array<{ verified?: boolean }>) : [];
+      const ok = jr.filter((r) => r && r.verified).length;
+      return `${ok}/${jr.length} Maßnahmen vom Judge bestätigt`;
     }
     case "approval_gate":
       return "Freigabe erforderlich – Mensch entscheidet";

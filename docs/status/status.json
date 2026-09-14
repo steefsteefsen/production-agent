@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-14T08:42:43",
-  "commit": "5c453af2d5e444cb7471dc6425318107eb567937",
+  "generated_at": "2026-09-14T09:14:17",
+  "commit": "0131dd4d92808b6db4f3b87e63fe8c8a8b0fcc5b",
   "branch": "main",
   "packages": [
     {
@@ -414,7 +414,7 @@
         {
           "name": "Commit",
           "done": true,
-          "at": "2026-09-13T21:34:55+02:00"
+          "at": "2026-09-14T08:42:30+02:00"
         },
         {
           "name": "Tag",
@@ -431,6 +431,11 @@
       "cost_usd": 0,
       "last_at": "2026-09-13 18:00",
       "commits": [
+        {
+          "sha": "0131dd4",
+          "title": "feat(WP5): Erzähltext je Knoten und reason_hit nach Freigabe",
+          "at": "2026-09-14T08:42:30+02:00"
+        },
         {
           "sha": "dd58a39",
           "title": "feat(WP5): Agent-Tab – geführte Demo, Funktion und Ausblick je Schritt",
@@ -773,11 +778,17 @@
     "percent": 85,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 392,
+    "tests": 397,
     "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-14T08:42:30+02:00",
+      "kind": "commit",
+      "ref": "0131dd4",
+      "text": "feat(WP5): Erzähltext je Knoten und reason_hit nach Freigabe"
+    },
     {
       "at": "2026-09-13T23:37:50+02:00",
       "kind": "commit",
@@ -1225,7 +1236,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 254,
+      "tests": 259,
       "coverage": 100
     },
     {
@@ -1242,8 +1253,8 @@
     },
     {
       "path": "src/production_agent/graph/",
-      "files": 6,
-      "tests": 100,
+      "files": 7,
+      "tests": 105,
       "coverage": 95
     },
     {

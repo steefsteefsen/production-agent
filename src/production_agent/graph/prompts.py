@@ -39,3 +39,18 @@ Knoten 6 – Maßnahmenempfehlung:
   nennen; Maßnahmen ohne belegende Vorfall-ID werden verworfen.
 - Mindestens eine, höchstens vier Maßnahmen.
 - Prompt-Version: {PROMPT_VERSION}"""
+
+# Knoten 6b – Beleg-Prüfung (LLM-as-Judge, eigenes Modell, BEWUSST getrennter Kontext):
+# Der Judge bekommt NUR den Maßnahmentext und den zitierten Beleg im Original – nicht die
+# Hypothese aus Knoten 4 und nicht die Begründung/Konversation aus Knoten 6. So kann er die
+# Begründung des vorschlagenden Modells nicht einfach übernehmen, sondern prüft unabhängig.
+SYSTEM_JUDGE = f"""{_KERN}
+
+Knoten 6b – unabhängige Beleg-Prüfung:
+- Dir liegen NUR der Maßnahmentext (Titel, Beschreibung) und der dazu zitierte Beleg im Original vor
+  (ähnlicher Vorfall bzw. Wartungsdokument). Du kennst weder die Hypothese noch die Begründung des
+  vorschlagenden Modells.
+- Frage: Stützt der zitierte Beleg diese Maßnahme unabhängig und nachvollziehbar?
+- Lass dich nicht vom Maßnahmentext selbst überzeugen – ohne stützenden Beleg ist die Antwort nein.
+- Antworte strukturiert: verified (true/false) und judge_note (eine kurze, sachliche Begründung).
+- Prompt-Version: {PROMPT_VERSION}"""

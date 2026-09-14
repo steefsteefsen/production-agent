@@ -444,6 +444,10 @@ def test_build_graph_mit_einzelnem_llm():
         def with_structured_output(self, schema):
             if schema.__name__ == "Hypothesis":
                 return RunnableLambda(lambda _: _FAKE_HYPOTHESIS)
+            if schema.__name__ == "JudgeVerdict":
+                from production_agent.graph.judge import JudgeVerdict
+
+                return RunnableLambda(lambda _: JudgeVerdict(verified=True, judge_note="ok"))
             return RunnableLambda(lambda _: _FAKE_ACTIONS_SAFE)
 
     g = build_graph(tools=_fixture_tools(4), llm=_FakeLLM())

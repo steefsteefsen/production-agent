@@ -40,6 +40,11 @@ export const NODE_ANNOTATIONS: Record<string, NodeAnnotation> = {
       "Leitet Maßnahmen ab. Nachbedingung: jede Maßnahme muss eine Vorfall-ID aus der Historie belegen. Policy: Empfehlung erst ab Konfidenz 0,60, Vier-Augen-Prinzip ab 5000 €.",
     ausblick: "Rollen-/Berechtigungsmodell, Anbindung an das Arbeitsauftrags-System.",
   },
+  check_evidence: {
+    funktion:
+      "Ein zweites, unabhängiges Modell (LLM-as-Judge) prüft jede Maßnahme gegen ihren zitierten Beleg – mit BEWUSST getrenntem Kontext (nur Maßnahmentext + Beleg im Original, nicht die Begründung des vorschlagenden Modells). Kein Auto-Verwerfen: das Ergebnis wird nur angezeigt.",
+    ausblick: "Judge-Modell je Maßnahmentyp, Schwellen und Eskalationsregeln nach Datenlage.",
+  },
   approval_gate: {
     funktion:
       "Der Graph hält an (interrupt) – der Mensch entscheidet. Der Agent EMPFIEHLT, er führt NICHT aus. Freigabe oder Ablehnung wird rollenbasiert im Audit protokolliert.",

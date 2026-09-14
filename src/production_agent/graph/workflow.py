@@ -25,6 +25,7 @@ from langgraph.graph import END, StateGraph
 from langgraph.types import Command, interrupt
 from pydantic import BaseModel
 
+from production_agent.graph.judge import JudgeVerdict, cited_evidence, judge_action
 from production_agent.graph.prompts import SYSTEM_DERIVE_ACTIONS, SYSTEM_NARROW_CAUSE
 from production_agent.graph.state import AgentState, Hypothesis
 from production_agent.security.action_policy import RecommendedAction, apply_policy
@@ -358,6 +359,36 @@ def _make_derive_actions(llm_chain):
 
 
 # ---------------------------------------------------------------------------
+# Knoten 6b – Beleg-Prüfung (LLM-as-Judge, eigenes Modell, getrennter Kontext)
+# ---------------------------------------------------------------------------
+
+
+def _make_check_evidence(judge_chain):
+    def check_evidence(state: AgentState, config=None) -> dict[str, Any]:
+        knowledge = state.get("knowledge", [])
+        actions = state.get("actions", [])
+        # geführte Demo: entfernt den Beleg der ersten Maßnahme (manipulierter/fehlender Beleg),
+        # damit der Judge sichtbar NICHT bestätigt. Default aus; Produktivpfad unberührt.
+        tamper = bool((config or {}).get("configurable", {}).get("demo_tamper", False))
+        results: list[dict[str, Any]] = []
+        for i, action in enumerate(actions):
+            evidence = cited_evidence(action, knowledge)
+            if tamper and i == 0:
+                evidence = []
+            results.append(judge_action(judge_chain, action, evidence))
+        confirmed = sum(1 for r in results if r["verified"])
+        return {
+            "judge_results": results,
+            "trace": _log(
+                state,
+                f"6b Beleg-Prüfung: {confirmed}/{len(results)} Maßnahmen unabhängig bestätigt",
+            ),
+        }
+
+    return check_evidence
+
+
+# ---------------------------------------------------------------------------
 # Knoten 7 – Freigabe (interrupt / Command)
 # ---------------------------------------------------------------------------
 
@@ -372,6 +403,7 @@ def approval_gate(state: AgentState) -> Command:
             "actions": state.get("actions", []),
             "impact": state.get("impact", {}),
             "hypothesis": state.get("hypothesis", {}),
+            "judge_results": state.get("judge_results", []),
         }
     )
     audit.record("approval", decision=decision, line_id=state.get("line_id"))
@@ -481,18 +513,25 @@ def build_graph(
     if isinstance(llm, dict):
         chain_narrow = llm["narrow_cause"]
         chain_derive = llm["derive_actions"]
+        chain_judge = llm.get("judge")
+        if chain_judge is None:
+            from production_agent.graph.mock_llm import mock_judge_chain
+
+            chain_judge = mock_judge_chain()
     else:
         base_llm = llm
+        judge_llm = llm
         if base_llm is None:
             from langchain_anthropic import ChatAnthropic
 
             settings = _get_settings()
-            base_llm = ChatAnthropic(
-                model=settings.llm_model_main,
-                api_key=settings.anthropic_api_key.get_secret_value(),
-            )
+            key = settings.anthropic_api_key.get_secret_value()
+            base_llm = ChatAnthropic(model=settings.llm_model_main, api_key=key)
+            # Judge nutzt bewusst ein EIGENES Modell (LLM_MODEL_JUDGE), getrennt von Knoten 4/6
+            judge_llm = ChatAnthropic(model=settings.llm_model_judge, api_key=key)
         chain_narrow = base_llm.with_structured_output(Hypothesis)
         chain_derive = base_llm.with_structured_output(_ActionsOutput)
+        chain_judge = judge_llm.with_structured_output(JudgeVerdict)
 
     g = StateGraph(AgentState)
     g.add_node("capture_status", _make_capture_status(resolved_tools))
@@ -501,6 +540,7 @@ def build_graph(
     g.add_node("narrow_cause", _make_narrow_cause(chain_narrow))
     g.add_node("estimate_impact", _make_estimate_impact(resolved_tools))
     g.add_node("derive_actions", _make_derive_actions(chain_derive))
+    g.add_node("check_evidence", _make_check_evidence(chain_judge))
     g.add_node("approval_gate", approval_gate)
 
     g.set_entry_point("capture_status")
@@ -509,7 +549,8 @@ def build_graph(
     g.add_edge("retrieve_knowledge", "narrow_cause")
     g.add_edge("narrow_cause", "estimate_impact")
     g.add_edge("estimate_impact", "derive_actions")
-    g.add_edge("derive_actions", "approval_gate")
+    g.add_edge("derive_actions", "check_evidence")  # 6b: unabhängige Beleg-Prüfung vor der Freigabe
+    g.add_edge("check_evidence", "approval_gate")
 
     if checkpoint_path is None:
         from langgraph.checkpoint.memory import InMemorySaver

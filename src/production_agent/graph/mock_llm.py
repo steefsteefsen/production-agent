@@ -15,6 +15,7 @@ from typing import Any
 
 from langchain_core.runnables import RunnableLambda
 
+from production_agent.graph.judge import JudgeVerdict
 from production_agent.graph.state import Hypothesis
 from production_agent.graph.workflow import _ActionsOutput, _first_alarm_code
 from production_agent.security.action_policy import ActionLevel, RecommendedAction
@@ -94,9 +95,36 @@ def _mock_derive_actions(messages) -> _ActionsOutput:
     return _ActionsOutput(actions=actions)
 
 
+def _mock_judge(messages) -> JudgeVerdict:
+    """Deterministischer Judge: bestätigt eine Maßnahme, wenn im zitierten Beleg-Kontext ein
+    Vorfall (event_id) vorliegt; fehlt der Beleg (manipuliert/entfernt), wird sie NICHT bestätigt.
+    Der Judge lässt sich bewusst nicht vom Maßnahmentext selbst überzeugen."""
+    ctx = _context(messages)
+    evidence = ctx.get("zitierter_beleg", []) or []
+    incident = next(
+        (e for e in evidence if isinstance(e, dict) and e.get("event_id") not in (None, "")),
+        None,
+    )
+    if incident is not None:
+        return JudgeVerdict(
+            verified=True,
+            judge_note=f"Beleg Vorfall {incident['event_id']} stützt die Maßnahme unabhängig.",
+        )
+    return JudgeVerdict(
+        verified=False,
+        judge_note="Kein belegender Vorfall im zitierten Kontext – nicht unabhängig gestützt.",
+    )
+
+
+def mock_judge_chain() -> RunnableLambda:
+    """Einzelne Judge-Chain (für build_graph-Fallback, wenn ein llm-dict kein 'judge' liefert)."""
+    return RunnableLambda(_mock_judge)
+
+
 def mock_chains() -> dict:
-    """Chains für build_graph(llm=...): {"narrow_cause": Runnable, "derive_actions": Runnable}."""
+    """Chains für build_graph(llm=...): narrow_cause, derive_actions und judge (Beleg-Prüfung)."""
     return {
         "narrow_cause": RunnableLambda(_mock_narrow_cause),
         "derive_actions": RunnableLambda(_mock_derive_actions),
+        "judge": RunnableLambda(_mock_judge),
     }

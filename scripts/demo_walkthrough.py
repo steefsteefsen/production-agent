@@ -5,9 +5,11 @@ Voraussetzung: API (Port 8000, LLM_MODE=mock) und Vite (Port 5173) laufen bereit
 Fährt zwei Läufe im echten Chromium und legt Screenshots + Video + README nach
 docs/demo_walkthrough/. NUR mock – nie live.
 
-  Lauf 1: Start (Ereignis 360) → Erzähltext wechselt je Knoten → Freigabeknoten mit Belegen
-          → Freigeben → Abschluss mit reason_hit.
-  Lauf 2: gleicher Fall → Ablehnen → sauberer Abbruch.
+  Lauf A (Ereignis 360): Erzähltext wechselt je Knoten inkl. Beleg-Prüfung (LLM-as-Judge),
+          alle Maßnahmen vom Judge bestätigt → Freigeben → Abschluss mit reason_hit.
+  Lauf B (Ereignis 360, tamper_evidence=1): der Beleg der ersten Maßnahme wird entfernt →
+          der Judge bestätigt sie NICHT; das rote Badge ist an der Beleg-Prüfung und am
+          Freigabe-Gate sichtbar (der entscheidende Screenshot). Danach Ablehnen.
 
 Aufruf:  python scripts/demo_walkthrough.py
 """
@@ -25,6 +27,7 @@ GATE_TEXT = "Freigabe erforderlich – der Agent empfiehlt"
 
 shots: list[tuple[str, str]] = []
 findings: list[str] = []
+_idx = [1]
 
 
 def main() -> int:
@@ -32,41 +35,44 @@ def main() -> int:
     with sync_playwright() as p:
         browser = p.chromium.launch()
         ctx = browser.new_context(
-            viewport={"width": 1280, "height": 1500},
+            viewport={"width": 1280, "height": 1600},
             record_video_dir=str(OUT / "video"),
         )
         page = ctx.new_page()
         js_errors: list[str] = []
         page.on("pageerror", lambda e: js_errors.append(str(e)))
+        state = {"tamper": False}
 
-        # Demo-Takt in den SSE-Stream injizieren, damit jeder Knoten-Erzähltext sichtbar wird
-        # (rein für die Aufzeichnung; die App selbst ruft den Stream ohne delay_ms auf).
-        def _pace(route):
+        # Demo-Takt (delay_ms) für sichtbare Knotenwechsel; in Lauf B zusätzlich tamper_evidence,
+        # damit der Judge eine Maßnahme sichtbar ablehnt. Die App selbst ruft ohne beides auf.
+        def _route(route):
             url = route.request.url
-            route.continue_(url=url + ("&" if "?" in url else "?") + "delay_ms=1000")
+            sep = "&" if "?" in url else "?"
+            extra = "delay_ms=1000" + ("&tamper_evidence=1" if state["tamper"] else "")
+            route.continue_(url=url + sep + extra)
 
-        page.route("**/investigations/stream*", _pace)
+        page.route("**/investigations/stream*", _route)
 
         def shot(name: str, caption: str) -> None:
-            page.screenshot(path=str(OUT / f"{name}.png"))
-            shots.append((f"{name}.png", caption))
+            fn = f"{_idx[0]:02d}_{name}"
+            page.screenshot(path=str(OUT / f"{fn}.png"))
+            shots.append((f"{fn}.png", caption))
+            _idx[0] += 1
+
+        narrative = page.get_by_test_id("narrative")
 
         page.goto(BASE, wait_until="networkidle")
         page.get_by_role("button", name="Agent", exact=True).click()
         page.wait_for_timeout(300)
         shot(
-            "01_agent_tab",
-            "Agent-Tab geöffnet: Steuerzeile (Ereignis 360, Modus mock), "
-            "Fortschrittsleiste und die sieben Schritt-Karten im Zustand wartend.",
+            "agent_tab",
+            "Agent-Tab: acht Karten inkl. neuer Karte 7 „Beleg-Prüfung“ vor der Freigabe.",
         )
 
-        idx = 2
-
-        # --- Lauf 1: Freigabe ---
+        # --- Lauf A: alle Maßnahmen vom Judge bestätigt ---
         page.get_by_role("button", name="Untersuchung starten").click()
         seen: list[str] = []
         deadline = time.time() + 90
-        narrative = page.get_by_test_id("narrative")
         while time.time() < deadline:
             if page.get_by_text(GATE_TEXT).count() > 0:
                 break
@@ -76,76 +82,64 @@ def main() -> int:
                 txt = ""
             if txt and (not seen or seen[-1] != txt):
                 seen.append(txt)
-                shot(f"{idx:02d}_lauf_erzaehltext", f"Erzähltext synchron zur Karte: „{txt}“")
-                idx += 1
+                if "unabhängiges Modell" in txt:
+                    shot("lauf_belegpruefung", f"Erzähltext Beleg-Prüfung: „{txt}“")
+                else:
+                    shot("lauf_erzaehltext", f"Erzähltext synchron zur Karte: „{txt}“")
             page.wait_for_timeout(50)
 
         page.wait_for_selector(f"text={GATE_TEXT}", timeout=30000)
         page.wait_for_timeout(300)
+        ok_badges = page.get_by_test_id("judge-ok").count()
+        fail_badges = page.get_by_test_id("judge-fail").count()
         shot(
-            f"{idx:02d}_freigabeknoten",
-            "Freigabeknoten erreicht: Maßnahmenliste mit Belegen (Beleg: ähnlicher Vorfall …) "
-            "und Erzähltext zur Freigabe. Der Agent empfiehlt, der Mensch entscheidet.",
+            "beleg_alle_gruen",
+            f"Beleg-Prüfung-Karte und Freigabe-Gate: alle Maßnahmen „vom Judge bestätigt“ "
+            f"({ok_badges} grün, {fail_badges} rot).",
         )
-        idx += 1
+        if ok_badges == 0:
+            findings.append("Lauf A: keine grünen Judge-Badges gefunden.")
 
-        # Belegte Knoten-Karten einzeln aufklappen (jede Karte sichtbar, mit Funktion/Ausblick)
-        for label in [
-            "Linienstatus & Plan",
-            "Alarme analysieren",
-            "Wissen abrufen",
-            "Ursache eingrenzen",
-            "Wirkung schätzen",
-            "Maßnahmen ableiten",
-        ]:
-            try:
-                page.get_by_text(label, exact=False).first.click()
-                page.wait_for_timeout(150)
-                cap = (
-                    f"Schritt-Karte „{label}“ aufgeklappt: Live-Zusammenfassung, "
-                    "Funktion/Ausblick-Annotation und Payload-Detail."
-                )
-                shot(f"{idx:02d}_karte", cap)
-                idx += 1
-            except Exception as e:  # pragma: no cover - defensiv
-                findings.append(f"Karte „{label}“ nicht aufklappbar: {e}")
-
-        # Freigeben
         page.get_by_role("button", name="Freigeben").click()
         page.wait_for_selector("text=Freigegeben – regulärer Abschluss", timeout=30000)
-        page.wait_for_timeout(500)
-        final_txt = narrative.inner_text().strip()
+        page.wait_for_timeout(400)
         shot(
-            f"{idx:02d}_abschluss_freigabe",
-            f"Abschluss nach Freigabe, reason_hit gegen die Gold-Wahrheit: „{final_txt}“",
+            "abschluss_freigabe",
+            f"Abschluss nach Freigabe (reason_hit): „{narrative.inner_text().strip()}“",
         )
-        idx += 1
-        if "verborgene Wahrheit" not in final_txt:
-            findings.append(
-                "Abschlusstext ohne reason_hit-Abgleich (erwartet: verborgene Wahrheit)."
-            )  # noqa: E501
 
-        # --- Lauf 2: Ablehnung ---
+        # --- Lauf B: Judge lehnt eine Maßnahme ab (manipulierter/fehlender Beleg) ---
+        state["tamper"] = True
         page.get_by_role("button", name="Untersuchung starten").click()
         page.wait_for_selector(f"text={GATE_TEXT}", timeout=90000)
-        page.wait_for_timeout(300)
+        page.wait_for_timeout(400)
+        fail_badges_b = page.get_by_test_id("judge-fail").count()
+        shot(
+            "beleg_judge_lehnt_ab",
+            "ENTSCHEIDEND: Beleg-Prüfung mit rotem Badge „✗ vom Judge nicht bestätigt“ – der "
+            "Judge stützt eine Maßnahme ohne Beleg NICHT; das Badge ist auch am Gate sichtbar.",
+        )
+        if fail_badges_b == 0:
+            findings.append(
+                "Lauf B: KEIN rotes Judge-Badge gefunden – Ablehnungsfall nicht sichtbar (Fund!)."
+            )
+        # Judge-Notiz am Gate sichtbar machen
+        if page.get_by_text("Judge:").count() > 0:
+            shot(
+                "beleg_judge_note",
+                "Freigabe-Gate zeigt die Judge-Begründung zur abgelehnten Maßnahme.",
+            )
+
         page.get_by_role("button", name="Ablehnen").click()
         page.wait_for_selector("text=Abgelehnt", timeout=30000)
-        page.wait_for_timeout(500)
-        reject_txt = narrative.inner_text().strip()
+        page.wait_for_timeout(400)
         shot(
-            f"{idx:02d}_abschluss_ablehnung",
-            f"Zweiter Lauf, Ablehnen: sauberer Abbruch, keine Maßnahme freigegeben. „{reject_txt}“",
+            "abschluss_ablehnung",
+            f"Ablehnen-Pfad: sauberer Abbruch. „{narrative.inner_text().strip()}“",
         )
-        idx += 1
 
         if js_errors:
             findings.append(f"Unbehandelte JS-Fehler im Browser: {js_errors}")
-        if len(seen) < 3:
-            findings.append(
-                f"Nur {len(seen)} unterschiedliche Erzähltexte live erfasst – der Mock-Lauf ist "
-                "sehr schnell; die Karten-Detailscreenshots belegen jeden Schritt zusätzlich."
-            )
 
         ctx.close()
         browser.close()
@@ -157,13 +151,13 @@ def main() -> int:
 
 def _write_readme() -> None:
     lines = [
-        "# UI-Walkthrough Agent-Tab (Mock)",
+        "# UI-Walkthrough Agent-Tab (Mock) – LLM-as-Judge",
         "",
-        "Echter Browser-Durchlauf (Playwright, Chromium, LLM_MODE=mock) des Agent-Tabs: ",
-        "laufbegleitender Erzähltext je Knoten, Freigabe- und Ablehnungspfad. Erzeugt mit ",
-        "`python scripts/demo_walkthrough.py` bei laufender API (8000) und Vite (5173). ",
-        "Die Bilddateien und das Video sind lokale Verifikationsartefakte (per .gitignore nicht ",
-        "committet – Guardian S9 lässt Binärdateien nur unter docs/status/ oder docs/images/ zu).",
+        "Echter Browser-Durchlauf (Playwright, Chromium, LLM_MODE=mock) des Agent-Tabs mit der neuen ",
+        "Beleg-Prüfung (Knoten 7, LLM-as-Judge). Erzeugt mit `python scripts/demo_walkthrough.py` bei ",
+        "laufender API (8000) und Vite (5173). Die Bilddateien und das Video sind lokale ",
+        "Verifikationsartefakte (per .gitignore nicht committet – Guardian S9 lässt Binärdateien nur ",
+        "unter docs/status/ oder docs/images/ zu).",
         "",
         "## Screenshots",
         "",
@@ -177,8 +171,9 @@ def _write_readme() -> None:
         lines += [f"- {f}" for f in findings]
     else:
         lines.append(
-            "- Keine. Jede Schrittkarte erschien, der Erzähltext wechselte synchron, "
-            "Freigabe- und Ablehnungspfad reagierten wie erwartet."
+            "- Keine. Die Beleg-Prüfung erschien als eigener Schritt; in Lauf A bestätigte der Judge "
+            "alle Maßnahmen (grün), in Lauf B lehnte er die Maßnahme mit entferntem Beleg sichtbar ab "
+            "(rotes Badge am Gate)."
         )
     lines.append("")
     (OUT / "README.md").write_text("\n".join(lines), encoding="utf-8")

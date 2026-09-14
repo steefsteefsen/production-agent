@@ -14,6 +14,7 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [adr/0008-modell-und-kontext.md](adr/0008-modell-und-kontext.md) – ADR-0008: Claude Sonnet 5 über langchain-anthropic, Context Engineering je Knoten: Datum: 2026-09-11 · Status: akzeptiert
 - [adr/0009-frontend.md](adr/0009-frontend.md) – ADR-0009: Vite + React + shadcn/ui + Recharts, FastAPI/SSE: Datum: 2026-09-11 · Status: akzeptiert
 - [adr/0010-mes-nachrichtenformat.md](adr/0010-mes-nachrichtenformat.md) – ADR-0010: MES-Nachrichtenformat – OPC UA A&C + ISA-95 JSON: Datum: 2026-09-12 · Status: akzeptiert
+- [adr/0011-beleg-pruefung-judge.md](adr/0011-beleg-pruefung-judge.md) – ADR-0011: Unabhängige Beleg-Prüfung der Maßnahmen (LLM-as-Judge): Datum: 2026-09-14 · Status: akzeptiert
 
 ## Betrieb
 - [betriebsanweisung/BA-01-stoerungsmeldung.md](betriebsanweisung/BA-01-stoerungsmeldung.md) – Betriebsanweisung BA-01 · Störungsmeldung, Freigabe und Wiederanlauf – Verpackungslinie 1: Gültig ab: 2026-09-11 · Version 1.0 · Verantwortlich: Produktionsleitung Werk Nord · Geltungsbereich: Zuführung, Folienwickler,
@@ -35,7 +36,7 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [contracts/api.md](contracts/api.md) – API-Vertrag: Production Agent – SSE-Stream und Freigabe: Alle Pfade unterhalb von `http://localhost:8000`.
 - [data_layer.md](data_layer.md) – Datenschicht Bronze→Silber→Gold: Technische Referenz für `src/production_agent/data/` (Simulator, Replay, Schema).
 - [demo_script.md](demo_script.md) – Demo-Skript – 60 Minuten (Production Agent PoC): Fahrplan für das Interview am 17.09. Drei Blöcke: **12 min Live-Demo**, **30 min Entscheidungen**,
-- [demo_walkthrough/README.md](demo_walkthrough/README.md) – UI-Walkthrough Agent-Tab (Mock): Echter Browser-Durchlauf (Playwright, Chromium, LLM_MODE=mock) des Agent-Tabs:
+- [demo_walkthrough/README.md](demo_walkthrough/README.md) – UI-Walkthrough Agent-Tab (Mock) – LLM-as-Judge: Echter Browser-Durchlauf (Playwright, Chromium, LLM_MODE=mock) des Agent-Tabs mit der neuen
 - [e2e.md](e2e.md) – Ende-zu-Ende-Replay: Der Ende-zu-Ende-Lauf prüft den kompletten LangGraph-Ablauf gegen die **echten** MES- und
 - [ops.md](ops.md) – Ops-Cockpit: Lokale Steuerungsoberfläche für den Orchestrator-Betrieb. Unabhängig vom Produktionsleiter-Frontend.
 - [plan.md](plan.md) – Projektplan – Scope, Budget, Gates: Minimalanforderungen: stehende Linie untersuchen, Alarme zu Ereignissen aggregieren, historisches Wissen abrufen,
