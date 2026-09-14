@@ -20,6 +20,13 @@ Status: ✅ umgesetzt · 🧪 diese Session · 📅 geplant (WP6) · 👤 manuel
 | E4 | Kurzstillstand unter fünf Minuten | kein Agentenlauf (unter der Ereignisschwelle) | 📅 |
 | E5 | keine ähnlichen Vorfälle abrufbar | niedrige Konfidenz statt erfundener Belege | 📅 |
 
+**Bekannte Grenze (Retrieval, zu E5):** Die Dokumentensuche läuft aktuell BM25-only (die
+Vektor-Seite – Qdrant + `intfloat/multilingual-e5-small` – ist als Extra `[embeddings]` angelegt,
+aber nicht installiert/ingestet). Eine funktionale Probe (2026-09) zeigt: Exakt- und Synonym-Treffer
+funktionieren über Wort-Overlap, aber eine **themenfremde** Anfrage liefert einen irrelevanten
+Top-Treffer mit positivem Score, weil es **keine Score-Schwelle** gibt. Nächste Schritte: Embeddings
+ingesten (echte Hybrid-Suche) und eine Mindest-Score-/Cutoff-Regel für den Negativfall.
+
 ### Achse 2 – Aktionspfad
 
 | ID | Fall | Erwartung | Status |

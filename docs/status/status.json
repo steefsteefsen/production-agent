@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-14T09:22:21",
-  "commit": "c58017a5b925da3169fa23fa7d889c8083507373",
+  "generated_at": "2026-09-14T10:17:39",
+  "commit": "c1b3083a360b81afdc3da3f1ddb69eb2fcf12258",
   "branch": "main",
   "packages": [
     {
@@ -783,6 +783,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-14T09:22:08+02:00",
+      "kind": "commit",
+      "ref": "c1b3083",
+      "text": "test(ui): E2E-Karten-Labels an Beleg-Prüfung angepasst"
+    },
     {
       "at": "2026-09-14T09:14:04+02:00",
       "kind": "commit",

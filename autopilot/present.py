@@ -29,6 +29,7 @@ SCOPE_RE = re.compile(r"^(feat|fix|test|docs|adr|sec|chore)\(([^)]+)\):\s*(.*)$"
 TABS = [
     ("ablauf", "Ablauf"),
     ("scope", "Scope-Entscheidungen"),
+    ("technik", "Technologie-Entscheidungen"),
     ("grenzen", "Nicht abgekürzt"),
     ("lanes", "Lanes"),
     ("entscheidungen", "Entscheidungen"),
@@ -49,9 +50,9 @@ SCOPE_DECISIONS = {
             "Feintuning/Klassifikator nach Datenlage",
         ],
         [
-            "RAG prototypisch (BM25+Vektor/RRF)",
+            "RAG prototypisch (aktuell BM25-only)",
             "reicht zur Validierung der Beleg-Pflicht je Maßnahme",
-            "Re-Ranking, Chunking-Tuning ~2–3 Tage",
+            "Embeddings ingesten (Vektor-Seite anschalten), Re-Ranking ~2–3 Tage",
         ],
         [
             "Ein Replay-Fall statt Eval-Harness",
@@ -87,6 +88,55 @@ QUALITY_GUARANTEES = {
         "Determinismus über die Replay-Uhr, keine verratene Gegenwart (ADR-0002)",
     ],
     "anchor": "Scope spart man vor dem Kauf – Qualität nie.",
+}
+# Technologie-Entscheidungen – jede Zeile entspricht dem tatsächlichen Repo-Stand (2026-09).
+STACK_DECISIONS = {
+    "title": "Technologie-Entscheidungen – bewusst gewählt, jede belegbar",
+    "columns": ["Kategorie", "Entscheidung bei uns", "Begründung"],
+    "rows": [
+        [
+            "LLMs",
+            "Claude Sonnet 5 (Knoten 4/6) + Haiku (Judge)",
+            "ein Anbieter bewusst; der PoC beweist die Architektur, nicht Vendor-Abstraktion",
+        ],
+        [
+            "Framework",
+            "LangGraph",
+            "State-Machine mit interrupt() + SQLite-Checkpointer; kein Multi-Agent-Overhead nötig",
+        ],
+        [
+            "Retrieval",
+            "BM25 (rank_bm25); Vektor-Seite (Qdrant + e5-small) angelegt, aktuell inaktiv → real BM25",
+            "an Exakt-/Synonym-/Negativfall geprüft; Vektor bräuchte Embeddings-Ingest; "
+            "Negativfall ohne Score-Schwelle ist bekannte Grenze (Testplan E5)",
+        ],
+        [
+            "Data Ingestion",
+            "keine; synthetische Daten (Simulator) + fester Dokumentenbestand",
+            "PoC-Scope; echte Erfassung (OPC UA/ISA-95) ist der erste Ausbauschritt",
+        ],
+        [
+            "Observability",
+            "Langfuse (WP6), optional aktivierbar",
+            "eingebaut, real noch nicht gegen einen laufenden Server verifiziert – offener Punkt",
+        ],
+        [
+            "Deployment/Infra",
+            "lokal (uvicorn + Vite); kein Docker/K8s für die App",
+            "Deployment-Entscheidung erst nach Kern-Validierung sinnvoll",
+        ],
+        [
+            "Evaluation",
+            "eigener Replay-Eval mit Gold-Wahrheit statt Ragas/DeepEval",
+            "domänenspezifische Gold-Fälle präziser als generische Faithfulness-Metriken",
+        ],
+        [
+            "LLM-as-Judge",
+            "aktiv im Graphen (Knoten 7, Haiku, getrennter Kontext)",
+            "zweites unabhängiges Modell prüft Maßnahmen-Belege; kein Auto-Verwerfen",
+        ],
+    ],
+    "anchor": "Jede Zeile spiegelt den echten Code-/Log-Stand – keine Behauptung ohne Beleg.",
 }
 
 
@@ -197,6 +247,7 @@ def build_presentation(
         "costs": {"per_wp": costs, "loops": loops, "total": round(sum(costs.values()), 2)},
         "sessions": sessions,
         "scope": SCOPE_DECISIONS,
+        "stack": STACK_DECISIONS,
         "guarantees": QUALITY_GUARANTEES,
     }
 
@@ -248,6 +299,7 @@ function render(){{
  const b=k=>document.querySelector('#panel-'+k+' .body');
  b('ablauf').innerHTML=D.commits.map(c=>`<div class="row"><span class="dot" style="background:${{C[c.type]||'#9aa5ab'}}"></span><b>${{esc(c.type)}}${{c.scope?'('+esc(c.scope)+')':''}}</b> ${{esc(c.title)}} <small>${{esc(c.at)}} · ${{c.sha}}</small></div>`).join('')||'<p>keine Commits</p>';
  b('scope').innerHTML=`<h3>${{esc(D.scope.title)}}</h3><table><thead><tr>${{D.scope.columns.map(h=>'<th>'+esc(h)+'</th>').join('')}}</tr></thead><tbody>${{D.scope.rows.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('')}}</tbody></table><p class="anchor">${{esc(D.scope.anchor)}}</p>`;
+ b('technik').innerHTML=`<h3>${{esc(D.stack.title)}}</h3><table><thead><tr>${{D.stack.columns.map(h=>'<th>'+esc(h)+'</th>').join('')}}</tr></thead><tbody>${{D.stack.rows.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('')}}</tbody></table><p class="anchor">${{esc(D.stack.anchor)}}</p>`;
  b('grenzen').innerHTML=`<h3>${{esc(D.guarantees.title)}}</h3>`+D.guarantees.items.map(i=>`<div class="row">${{esc(i)}}</div>`).join('')+`<p class="anchor">${{esc(D.guarantees.anchor)}}</p>`;
  b('lanes').innerHTML=Object.keys(D.lanes).length?Object.entries(D.lanes).map(([l,ws])=>`<div class="row"><b>${{esc(l)}}</b>: ${{ws.map(w=>esc(w.wp)+' ['+esc(w.status)+']').join(', ')}}</div>`).join(''):'<p>orchestrator.json noch nicht vorhanden – Lanes erscheinen nach dem ersten Lauf.</p>';
  b('entscheidungen').innerHTML=D.decisions.map(a=>`<div class="card"><b>${{esc(a.title)}}</b><br><small>${{esc(a.file)}}</small><p>${{esc(a.decision)}}</p></div>`).join('')||'<p>keine ADRs</p>';

@@ -43,14 +43,18 @@ def test_build_and_render_has_all_tabs_and_all_commits():
     m = re.search(r'<script id="data" type="application/json">(.*?)</script>', html, re.S)
     parsed = json.loads(m.group(1))
     assert len(parsed["commits"]) == 2
-    assert len(present.TABS) == 8
+    assert len(present.TABS) == 9
     for key, _label in present.TABS:
         assert f'data-tab="{key}"' in html
-    # kuratierte Scope-Panels: Daten vorhanden und im HTML sichtbar
-    assert {"scope", "grenzen"} <= {k for k, _ in present.TABS}
+    # kuratierte Panels: Daten vorhanden und im HTML sichtbar
+    assert {"scope", "technik", "grenzen"} <= {k for k, _ in present.TABS}
     assert parsed["scope"]["rows"] and parsed["guarantees"]["items"]
+    assert parsed["stack"]["rows"] and len(parsed["stack"]["columns"]) == 3
     assert "Kein ML-Training" in html
     assert "Scope spart man vor dem Kauf" in html
+    # Technologie-Entscheidungen mit ehrlichem Retrieval-Befund
+    assert "Technologie-Entscheidungen" in html
+    assert "LLM-as-Judge" in html and "BM25" in html
 
 
 def test_broken_journal_raises_falsification(tmp_path, monkeypatch):

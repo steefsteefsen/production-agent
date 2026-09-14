@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-14 · docs(P): Technologie-Entscheidungen und ehrlicher Retrieval-Befund
+**Was:** Neuer Präsentations-Tab „Technologie-Entscheidungen" (Quelle `autopilot/present.py`, generiert nach `docs/presentation/index.html`): Tabelle mit Kategorie/Entscheidung/Begründung über LLMs (Sonnet 5 + Haiku-Judge), Framework (LangGraph), Retrieval, Data Ingestion, Observability (Langfuse), Deployment, Evaluation (eigener Replay-Eval statt Ragas/DeepEval) und LLM-as-Judge (aktiv im Graphen, Knoten 7). Jede Zeile ist am echten Repo-Stand belegt. Der Judge wurde nur verifiziert (bereits committet/gepusht/CI grün), nicht neu gebaut. Ehrlicher Retrieval-Befund aus funktionaler Probe: die Dokumentensuche läuft real BM25-only (die Vektor-Seite – Qdrant + `intfloat/multilingual-e5-small` – ist als Extra angelegt, aber nicht installiert/ingestet); die Scope-Zeile wurde entsprechend korrigiert und der Negativfall ohne Score-Schwelle als bekannte Grenze in `docs/testplan_e2e.md` (E5) nachgetragen. Walkthrough neu erzeugt (Judge bestätigt + abgelehnt).
+**Warum (Problem oder Anlass):** Fürs Interview soll die Präsentation die Technologie-Wahl belegen – und zwar wahrheitsgemäß. Der Auftrag verlangte Verifikation statt Weiterbau; die funktionale Retrieval-Probe zeigte, dass „BM25+Vektor/RRF" nicht dem laufenden Stand entspricht.
+**Alternativen (verworfen, weil ...):** Die ursprünglich geplante Zeile „BM25+Vektor mit RRF" übernehmen – verworfen, weil die Vektorsuche real inaktiv ist (Beleg: `_EMBED_AVAILABLE=False`, kein `data/qdrant`); den Negativfall verschweigen – verworfen, gehört als bekannte Grenze offengelegt.
+**Auswirkung (Verträge, ADR, Tests):** `autopilot/present.py` (Tab `technik`, `STACK_DECISIONS`, ehrliche RAG-Scope-Zeile), `docs/testplan_e2e.md` (E5-Grenze), `tests/test_present.py` (9 Tabs + Stack-Assertions), `docs/presentation/index.html` (generiert), `docs/demo_walkthrough/README.md` (aktualisiert). Kein Graph-/Vertrags-/ADR-Eingriff.
+**Bezug (WP, ADR):** Präsentation; ADR-0004 (RAG)
+
 ## 2026-09-14 · test(ui): E2E-Karten-Labels an Beleg-Prüfung angepasst
 **Was:** Der E2E-Smoke `test_agent_tab_zeigt_gefuehrte_schritte` prüft jetzt „7 · Beleg-Prüfung" und „8 · Freigabe" statt „7 · Freigabe" – die neue Judge-Karte hat die Freigabe auf Position 8 verschoben.
 **Warum (Problem oder Anlass):** Nach Einführung der Beleg-Prüfung (Knoten 7) schlug der E2E-Job in der CI fehl, weil er noch das alte Label „7 · Freigabe" erwartete; die e2e-Tests laufen lokal nicht mit (Marker `not e2e`), daher erst in der CI aufgefallen.
