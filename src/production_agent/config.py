@@ -36,7 +36,7 @@ class Settings(BaseSettings):
 
     max_rows_per_tool: int = 200
     max_tool_result_chars: int = 8000
-    confidence_threshold_recommend: float = 0.70
+    confidence_threshold_recommend: float = 0.60  # = decisions.yaml konfidenz.schwelle_empfehlung
 
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""

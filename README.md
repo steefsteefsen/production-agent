@@ -11,7 +11,7 @@ Projektstatus (automatisch erzeugt): [docs/status/index.html](docs/status/index.
 python -m venv .venv && source .venv/bin/activate
 make install                            # deps + pre-commit
 cp .env.example .env                    # API-Key eintragen
-python -m production_agent.data.simulator   # 360 Störungsereignisse → data/gold/mes.sqlite
+python -m production_agent.data.simulator   # 348 Störungsereignisse (Gold; Kurzstillstände <5min zählen nicht, ADR-0001) → data/gold/mes.sqlite
 make test                               # Testsuite (<!-- auto:tests -->397<!-- /auto:tests --> Tests), läuft ohne API-Key
 python autopilot/run.py --dry-run       # Prompts der Arbeitspakete ansehen, dann ohne --dry-run laufen lassen
 ```

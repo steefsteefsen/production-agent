@@ -57,14 +57,23 @@ konfidenz = 0.5 * regeltreffer + 0.3 * beste_fallaehnlichkeit + 0.2 * ursachenan
 **Nachbedingung (erzwungen):** `hypothesis.confidence = min(llm_confidence, regel_konfidenz)`.
 Das LLM darf die berechnete Konfidenz nur senken, nicht erhöhen.
 
+## Ist-Zustand im PoC (Doku der Realität, 2026-09-14)
+
+Die Formel oben ist die vorgesehene Zielarchitektur. Im PoC ist sie **nicht** im Graphen verdrahtet:
+die Konfidenz stammt aus dem LLM in Knoten 4 (im Mock deterministisch, gedeckelt bei 0.80); der
+Kern-Prompt erlaubt dem LLM nur, sie zu senken. Die Bausteine der Formel – `graph/rules.py`
+(AI4I-Regeln) und `graph/cbr.py` (Fallähnlichkeit, WP4) – existieren und sind unit-getestet, aber
+bewusst **nicht** an `narrow_cause` angebunden; entsprechend gibt es (noch) kein `confidence_parts`
+und kein `rule_modes` im AgentState. Aktiv wirksam ist allein die **Schwelle 0.60**
+(`decisions.yaml` = `settings.env` = `config.py`, zuvor still auf 0.70 abweichend) in
+`security/action_policy.py`: darunter wird eine Maßnahme nur als `inform` geführt, keine Freigabe.
+
 ## Konsequenzen
 
-- `confidence_parts` im AgentState macht die Bausteine auditierbar
-  (rule_score, cbr_score, cause_score, computed, llm, final).
-- `rule_modes` im AgentState enthält die ausgelösten Regelcodes (TWF/HDF/PWF/OSF)
-  für das Cockpit und das Audit-Log.
 - Die Schwelle ist im Cockpit (Tab Config) sichtbar und änderbar; Änderungen werden auditiert.
-- Für den Offline-Arbeitspunkt: Replay-Eval mit Precision/Recall über replay_testfaelle Gold-Fälle.
+- Zielbild (nach Kauf): `confidence_parts`/`rule_modes` im AgentState auditierbar machen und
+  `rules.py`/`cbr.py` an Knoten 4 anbinden (die Formel oben tatsächlich implementieren).
+- Für den Offline-Arbeitspunkt: Replay-Eval über replay_testfaelle Gold-Fälle (reason_hit gegen Gold).
 
 ## Quellen (mit Datum)
 

@@ -2,74 +2,74 @@
   "beschreibung": "Replay-Fallauswahl der WP6-Eval: n jüngste Gold-Ereignisse (ADR-0002).",
   "faelle": [
     {
-      "event_id": 351,
+      "event_id": 81,
       "line_id": "L1",
-      "sim_now": "2026-08-25 21:51:19",
-      "gold_reason_code": "STO-SIEGEL",
-      "gold_duration_min": 34.9
-    },
-    {
-      "event_id": 352,
-      "line_id": "L1",
-      "sim_now": "2026-08-26 04:15:33",
+      "sim_now": "2026-06-24 05:12:49",
       "gold_reason_code": "MAT-LEER",
-      "gold_duration_min": 10.3
+      "gold_duration_min": 9.6
     },
     {
-      "event_id": 353,
+      "event_id": 82,
       "line_id": "L1",
-      "sim_now": "2026-08-26 05:19:06",
-      "gold_reason_code": "QUAL-NIO",
-      "gold_duration_min": 23.8
-    },
-    {
-      "event_id": 354,
-      "line_id": "L1",
-      "sim_now": "2026-08-26 08:38:25",
+      "sim_now": "2026-06-24 10:08:41",
       "gold_reason_code": "STO-SENSOR",
-      "gold_duration_min": 16.7
+      "gold_duration_min": 18.6
     },
     {
-      "event_id": 355,
+      "event_id": 83,
       "line_id": "L1",
-      "sim_now": "2026-08-26 10:23:31",
-      "gold_reason_code": "QUAL-HOLD",
-      "gold_duration_min": 29.6
+      "sim_now": "2026-06-24 17:40:58",
+      "gold_reason_code": "EXT-DOWN",
+      "gold_duration_min": 12.7
     },
     {
-      "event_id": 356,
+      "event_id": 84,
       "line_id": "L1",
-      "sim_now": "2026-08-27 03:44:11",
-      "gold_reason_code": "STO-FOLIE",
-      "gold_duration_min": 20.1
+      "sim_now": "2026-06-24 20:34:02",
+      "gold_reason_code": "STO-SIEGEL",
+      "gold_duration_min": 18.8
     },
     {
-      "event_id": 357,
+      "event_id": 85,
       "line_id": "L1",
-      "sim_now": "2026-08-27 05:39:35",
-      "gold_reason_code": "STO-ELEK",
-      "gold_duration_min": 21.2
-    },
-    {
-      "event_id": 358,
-      "line_id": "L1",
-      "sim_now": "2026-08-27 15:49:25",
-      "gold_reason_code": "STO-FOLIE",
-      "gold_duration_min": 11.9
-    },
-    {
-      "event_id": 359,
-      "line_id": "L1",
-      "sim_now": "2026-08-28 02:58:01",
+      "sim_now": "2026-06-25 05:02:14",
       "gold_reason_code": "MAT-LEER",
-      "gold_duration_min": 11.1
+      "gold_duration_min": 7.9
     },
     {
-      "event_id": 360,
+      "event_id": 86,
       "line_id": "L1",
-      "sim_now": "2026-08-28 07:23:44",
+      "sim_now": "2026-06-26 16:51:37",
+      "gold_reason_code": "MAT-KARTON",
+      "gold_duration_min": 11.6
+    },
+    {
+      "event_id": 87,
+      "line_id": "L1",
+      "sim_now": "2026-06-26 23:13:47",
+      "gold_reason_code": "STO-SENSOR",
+      "gold_duration_min": 19.6
+    },
+    {
+      "event_id": 88,
+      "line_id": "L1",
+      "sim_now": "2026-06-27 01:39:47",
+      "gold_reason_code": "QUAL-NIO",
+      "gold_duration_min": 22.6
+    },
+    {
+      "event_id": 89,
+      "line_id": "L1",
+      "sim_now": "2026-06-27 02:59:11",
+      "gold_reason_code": "MAT-STAU",
+      "gold_duration_min": 6.0
+    },
+    {
+      "event_id": 90,
+      "line_id": "L1",
+      "sim_now": "2026-06-27 05:18:13",
       "gold_reason_code": "STO-FOLIE",
-      "gold_duration_min": 10.9
+      "gold_duration_min": 21.6
     }
   ]
 }
