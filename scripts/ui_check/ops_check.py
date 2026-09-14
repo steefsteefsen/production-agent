@@ -62,29 +62,22 @@ def main() -> int:
             page.screenshot(path=str(OUT / f"{n:02d}_{key}.png"))
             shots.append((f"{n:02d}_{key}.png", f'Ops-Tab „{label}" geöffnet.'))
 
-        # Präsentation-Tab: Stack- und Scope-Tabelle im iframe prüfen
+        # Präsentation-Tab: bindet die React-App (:5173/presentation) per iframe ein –
+        # Scope- und Stack-Sektion darin ansteuern und prüfen (eine Quelle, kein eigenes HTML mehr).
         page.get_by_role("button", name="Präsentation", exact=True).click()
-        page.wait_for_timeout(800)
+        page.wait_for_timeout(1000)
         stack_ok = scope_ok = False
         try:
             frame = page.frame_locator("#pres-frame")
-            # In den Präsentations-Tab „Technologie-Entscheidungen" navigieren (auf Laden warten)
-            tech = frame.get_by_role("button", name="Technologie-Entscheidungen")
-            tech.wait_for(state="visible", timeout=8000)
-            tech.click()
-            # panel-scoped, damit nicht die (versteckte) Commit-Zeile im Ablauf-Tab matcht
-            frame.locator("#panel-technik").get_by_text("keine Behauptung ohne Beleg").wait_for(
-                state="visible", timeout=5000
-            )
+            frame.get_by_test_id("presentation").wait_for(state="visible", timeout=10000)
+            frame.get_by_role("button", name="5. Stack").click()
+            frame.get_by_text("keine Behauptung ohne Beleg").wait_for(state="visible", timeout=5000)
             stack_ok = True
-            scope = frame.get_by_role("button", name="Scope-Entscheidungen")
-            scope.click()
-            frame.locator("#panel-scope").get_by_text("Kein ML-Training").wait_for(
-                state="visible", timeout=5000
-            )
+            frame.get_by_role("button", name="4. Scope").click()
+            frame.get_by_text("Kein ML-Training").wait_for(state="visible", timeout=5000)
             scope_ok = True
         except Exception as e:  # pragma: no cover - defensiv
-            problems.append(f"Präsentations-iframe nicht prüfbar: {e}")
+            problems.append(f"Präsentations-iframe (React) nicht prüfbar: {e}")
         if not stack_ok:
             problems.append(
                 "Stack-Tabelle (Technologie-Entscheidungen) im Präsentation-Tab nicht sichtbar."
