@@ -28,6 +28,7 @@ from pydantic import BaseModel
 from production_agent.graph.judge import JudgeVerdict, cited_evidence, judge_action
 from production_agent.graph.prompts import SYSTEM_DERIVE_ACTIONS, SYSTEM_NARROW_CAUSE
 from production_agent.graph.state import AgentState, Hypothesis
+from production_agent.graph.structured import invoke_structured
 from production_agent.security.action_policy import RecommendedAction, apply_policy
 from production_agent.security.audit import AuditLog
 
@@ -247,7 +248,7 @@ def _make_narrow_cause(llm_chain):
             SystemMessage(content=SYSTEM_NARROW_CAUSE),
             HumanMessage(content=f"Kontext:\n{context}"),
         ]
-        hypo: Hypothesis = llm_chain.invoke(messages)
+        hypo: Hypothesis = invoke_structured(llm_chain, messages, Hypothesis)
         return {
             "hypothesis": hypo.model_dump(),
             "trace": _log(
@@ -335,7 +336,7 @@ def _make_derive_actions(llm_chain):
             SystemMessage(content=SYSTEM_DERIVE_ACTIONS),
             HumanMessage(content=f"Kontext:\n{context}"),
         ]
-        out: _ActionsOutput = llm_chain.invoke(messages)
+        out: _ActionsOutput = invoke_structured(llm_chain, messages, _ActionsOutput)
         safe = apply_policy(out.actions, settings.confidence_threshold_recommend)
         # Nachbedingung (Stefan): jede Maßnahme muss mindestens eine Vorfall-ID aus
         # downtime_events_gold nennen. Sind ähnliche Vorfälle abrufbar, werden Maßnahmen
@@ -529,9 +530,11 @@ def build_graph(
             base_llm = ChatAnthropic(model=settings.llm_model_main, api_key=key)
             # Judge nutzt bewusst ein EIGENES Modell (LLM_MODEL_JUDGE), getrennt von Knoten 4/6
             judge_llm = ChatAnthropic(model=settings.llm_model_judge, api_key=key)
-        chain_narrow = base_llm.with_structured_output(Hypothesis)
-        chain_derive = base_llm.with_structured_output(_ActionsOutput)
-        chain_judge = judge_llm.with_structured_output(JudgeVerdict)
+        # include_raw=True: robust gegen als JSON-String kodierte Tool-Ergebnisse (nur live),
+        # invoke_structured entschachtelt statt zu crashen (siehe graph/structured.py).
+        chain_narrow = base_llm.with_structured_output(Hypothesis, include_raw=True)
+        chain_derive = base_llm.with_structured_output(_ActionsOutput, include_raw=True)
+        chain_judge = judge_llm.with_structured_output(JudgeVerdict, include_raw=True)
 
     g = StateGraph(AgentState)
     g.add_node("capture_status", _make_capture_status(resolved_tools))

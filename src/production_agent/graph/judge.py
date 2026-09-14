@@ -15,6 +15,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
 from production_agent.graph.prompts import SYSTEM_JUDGE
+from production_agent.graph.structured import invoke_structured
 
 
 class JudgeVerdict(BaseModel):
@@ -58,7 +59,7 @@ def judge_action(chain, action: dict, evidence: list[dict]) -> dict:
         SystemMessage(content=SYSTEM_JUDGE),
         HumanMessage(content=f"Prüfauftrag:\n{_judge_input(action, evidence)}"),
     ]
-    verdict: JudgeVerdict = chain.invoke(messages)
+    verdict: JudgeVerdict = invoke_structured(chain, messages, JudgeVerdict)
     return {
         "title": action.get("title", ""),
         "verified": bool(verdict.verified),

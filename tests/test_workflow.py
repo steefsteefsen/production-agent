@@ -441,7 +441,7 @@ def test_build_graph_mit_einzelnem_llm():
     from langchain_core.runnables import RunnableLambda
 
     class _FakeLLM:
-        def with_structured_output(self, schema):
+        def with_structured_output(self, schema, **_kwargs):
             if schema.__name__ == "Hypothesis":
                 return RunnableLambda(lambda _: _FAKE_HYPOTHESIS)
             if schema.__name__ == "JudgeVerdict":
