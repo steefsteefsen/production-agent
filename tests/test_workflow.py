@@ -366,49 +366,54 @@ def test_default_tools_lädt_bei_replay_env(replay_env, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-class _FakeMCPTool:
-    """Minimale MCP-Tool-Attrappe für build_tools_from_mcp-Tests."""
-
-    name = "get_line_status"
-
-    def invoke(self, kw):
-        return '{"packml_state": "Running"}'
+class _FakeText:
+    def __init__(self, text):
+        self.text = text
 
 
-def _mock_mcp_imports(monkeypatch):
-    """Installiert gefälschte MCP-Module in sys.modules (MCP-Version inkompatibel)."""
-    import sys
-    from types import ModuleType
-    from unittest.mock import MagicMock
+class _FakeResult:
+    def __init__(self, text):
+        self.content = [_FakeText(text)]
 
-    # Stub für das nicht importierbare mcp.shared.context
-    ctx_mod = ModuleType("mcp.shared.context")
-    ctx_mod.RequestContext = MagicMock()
-    monkeypatch.setitem(sys.modules, "mcp.shared.context", ctx_mod)
 
-    # Stub für langchain_mcp_adapters.client
-    client_mod = ModuleType("langchain_mcp_adapters.client")
-    client_mod.MultiServerMCPClient = MagicMock()
-    monkeypatch.setitem(sys.modules, "langchain_mcp_adapters.client", client_mod)
+class _FakeToolInfo:
+    def __init__(self, name):
+        self.name = name
+
+
+class _FakeClient:
+    """fastmcp.Client-Attrappe (async), damit build_tools_from_mcp ohne echte Subprozesse testbar ist."""
+
+    def __init__(self, _config):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_a):
+        return False
+
+    async def list_tools(self):
+        return [_FakeToolInfo("get_line_status")]
+
+    async def call_tool(self, name, kwargs):
+        return _FakeResult(f'{{"tool": "{name}", "kwargs": {list(kwargs)!r}}}')
 
 
 def test_build_tools_from_mcp_gibt_werkzeug_dict(monkeypatch):
-    """Verifikation: build_tools_from_mcp gibt Werkzeug-Dict mit aufrufbaren Callables zurück."""
-    _mock_mcp_imports(monkeypatch)
-    monkeypatch.setattr("asyncio.run", lambda _coro: [_FakeMCPTool()])
+    """Verifikation: build_tools_from_mcp (fastmcp.Client) gibt aufrufbare Callables zurück."""
+    monkeypatch.setattr("fastmcp.Client", _FakeClient)
     from production_agent.graph.workflow import build_tools_from_mcp
 
     tools = build_tools_from_mcp()
-    assert "get_line_status" in tools
-    assert callable(tools["get_line_status"])
+    assert "get_line_status" in tools and callable(tools["get_line_status"])
     result = tools["get_line_status"](line_id="L1")
-    assert result == '{"packml_state": "Running"}'
+    assert "get_line_status" in result and "line_id" in result
 
 
 def test_build_tools_from_mcp_mit_sim_now(monkeypatch):
     """Verifikation: sim_now-Pfad (env["SIM_NOW"]=…) wird durchlaufen ohne Fehler."""
-    _mock_mcp_imports(monkeypatch)
-    monkeypatch.setattr("asyncio.run", lambda _coro: [_FakeMCPTool()])
+    monkeypatch.setattr("fastmcp.Client", _FakeClient)
     from production_agent.graph.workflow import build_tools_from_mcp
 
     tools = build_tools_from_mcp(sim_now="2024-06-01T08:00:00")
@@ -416,15 +421,14 @@ def test_build_tools_from_mcp_mit_sim_now(monkeypatch):
 
 
 def test_build_tools_from_mcp_falsification(monkeypatch):
-    """Falsifikation: asyncio.run wirft RuntimeError → build_tools_from_mcp propagiert ihn."""
+    """Falsifikation: bricht der Protokoll-Handshake ab, propagiert build_tools_from_mcp den Fehler."""
     import pytest
 
-    _mock_mcp_imports(monkeypatch)
+    class _BrokenClient(_FakeClient):
+        async def list_tools(self):
+            raise RuntimeError("MCP-Subprozess nicht verfügbar")
 
-    def _failing(_coro):
-        raise RuntimeError("MCP-Subprozess nicht verfügbar")
-
-    monkeypatch.setattr("asyncio.run", _failing)
+    monkeypatch.setattr("fastmcp.Client", _BrokenClient)
     from production_agent.graph.workflow import build_tools_from_mcp
 
     with pytest.raises(RuntimeError, match="MCP-Subprozess"):

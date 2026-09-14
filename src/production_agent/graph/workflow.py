@@ -7,7 +7,7 @@ Knotenreihenfolge (decisions.yaml „einfachster Graph: keine Verzweigung"):
 Werkzeuge werden über build_graph(tools=...) injiziert:
   dict[str, Callable[..., str]]  (Schlüssel = MCP-Werkzeugname)
 Für Tests: Python-Funktionen mit identischer Signatur.
-Für Produktion: via langchain-mcp-adapters MultiServerMCPClient geladen.
+Für echten Protokollbetrieb: via fastmcp.Client über stdio (build_tools_from_mcp, opt-in).
 """
 
 from __future__ import annotations
@@ -443,44 +443,54 @@ def _default_tools() -> _Tools:
 
 
 def build_tools_from_mcp(sim_now: str = "") -> _Tools:
-    """Werkzeuge aus laufenden MCP-Subprozessen (mes + maintenance_docs).
+    """Werkzeuge über das ECHTE MCP-Protokoll (fastmcp.Client, stdio-Subprozesse) statt In-Process.
 
-    Da MultiServerMCPClient async ist, wrappen wir die invoke()-Methode
-    (synchron, langchain-mcp-adapters >= 0.1).
+    Ersetzt den kaputten `langchain-mcp-adapters` MultiServerMCPClient (Import-Konflikt mit mcp 2.x:
+    `RequestContext`). fastmcp.Client ist die bereits getestete Protokollebene (test_mcp_protocol).
+    Ein persistenter Client läuft in einem Hintergrund-Event-Loop; jede Werkzeugausführung ist ein
+    echter Protokollaufruf. SIM_NOW wird den Subprozessen beim Start mitgegeben (Replay-Uhr).
     """
     import asyncio
+    import os
+    import threading
 
-    from langchain_mcp_adapters.client import MultiServerMCPClient
+    from fastmcp import Client
 
-    env: dict[str, str] = {}
+    env = {**os.environ}
     if sim_now:
         env["SIM_NOW"] = sim_now
+    servers = {
+        "mes": {"command": "python", "args": ["-m", "production_agent.mcp.mes_server"], "env": env},
+        "maintenance_docs": {
+            "command": "python",
+            "args": ["-m", "production_agent.mcp.rag_server"],
+            "env": env,
+        },
+    }
 
-    async def _get():
-        cfg: dict[str, Any] = {
-            "mes": {
-                "command": "python",
-                "args": ["-m", "production_agent.mcp.mes_server"],
-                "transport": "stdio",
-            },
-            "maintenance_docs": {
-                "command": "python",
-                "args": ["-m", "production_agent.mcp.rag_server"],
-                "transport": "stdio",
-            },
-        }
-        if env:
-            cfg["mes"]["env"] = env
-            cfg["maintenance_docs"]["env"] = env
-        async with MultiServerMCPClient(cfg) as client:
-            tool_list = await client.get_tools()
-        return tool_list
+    loop = asyncio.new_event_loop()
+    threading.Thread(target=loop.run_forever, daemon=True).start()
 
-    def _wrap(tool):
-        return lambda **kw: tool.invoke(kw)
+    def _run(coro):
+        return asyncio.run_coroutine_threadsafe(coro, loop).result()
 
-    tool_list = asyncio.run(_get())
-    return {t.name: _wrap(t) for t in tool_list}
+    def _wrap(client: Any, name: str):
+        def _call(**kwargs: Any) -> str:
+            result = _run(client.call_tool(name, kwargs))
+            content = getattr(result, "content", None)
+            return content[0].text if content else str(result)
+
+        return _call
+
+    # Ein Client JE Server: bei mehreren Servern präfixiert fastmcp die Werkzeugnamen
+    # (mes_get_line_status …); der Graph erwartet die unpräfixierten Namen.
+    tools: _Tools = {}
+    for name, spec in servers.items():
+        client = Client({"mcpServers": {name: spec}})
+        _run(client.__aenter__())
+        for tool in _run(client.list_tools()):
+            tools[tool.name] = _wrap(client, tool.name)
+    return tools
 
 
 def build_graph(
@@ -488,22 +498,30 @@ def build_graph(
     checkpoint_path: str | None = None,
     sim_now: str = "",
     llm=None,
+    use_mcp: bool | None = None,
 ):
     """Graph kompilieren.
 
     Args:
         tools: Werkzeug-Dict {name: callable(**kwargs)->str}.
-               None → direkter Import aus MES/RAG-Modulen.
+               None → echtes MCP-Protokoll (use_mcp/settings) oder direkter In-Process-Import.
         checkpoint_path: Pfad zur SQLite-Checkpointer-Datenbank (None → InMemory).
         sim_now: ISO-Timestamp der Replay-Uhr; wird als SIM_NOW gesetzt.
         llm: BaseChatModel für Knoten 4 und 6 (None → ChatAnthropic aus Settings).
              Alternativ: dict {"narrow_cause": Runnable, "derive_actions": Runnable}
              mit bereits gewrappten Chains (z. B. für Tests).
+        use_mcp: True → Werkzeuge über das echte MCP-Protokoll (fastmcp.Client, stdio); None →
+                 settings.mcp_via_protocol (Default False, In-Process – schneller/deterministisch
+                 für Tests). Der Aufrufpfad ist gekapselt, das Ergebnis identisch.
     """
     if sim_now:
         os.environ["SIM_NOW"] = sim_now
 
-    resolved_tools = tools if tools is not None else _default_tools()
+    if tools is not None:
+        resolved_tools = tools
+    else:
+        via_mcp = use_mcp if use_mcp is not None else _get_settings().mcp_via_protocol
+        resolved_tools = build_tools_from_mcp(sim_now) if via_mcp else _default_tools()
 
     # LLM-Chains auflösen. Ohne explizites llm entscheidet LLM_MODE: mock → deterministisches
     # Mock-LLM (kein API-Schlüssel, für E2E/CI); live → ChatAnthropic aus den Settings.

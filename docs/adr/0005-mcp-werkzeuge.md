@@ -18,8 +18,24 @@ Eigener Server (FastMCP standalone 4.x, stdio). Werkzeuge: get_line_status, get_
 ## Konsequenzen / Kurzfassung für die Präsentation
 „Werkzeugauswahl kippt jenseits von 30–50 Tools; sechs klar benannte sind trivial. Read-only und Allowlist gehören in die Fachlogik, nicht in freies SQL.“ Anthropics Tool Search / deferred loading existiert, ist hier unnötig; Anbieter-Benchmarks dazu (88 % vs. 34 %) sind umstritten.
 
-## Ist-Zustand MCP-Aufrufpfad (Doku der Realität, 2026-09-14)
-Die MCP-Server sind eigenständig protokollfähig und werden über das Protokoll getestet (In-Memory-`fastmcp.Client` in `tests/test_mcp_protocol.py`). Der **Live-Graph** ruft die Werkzeuge im PoC jedoch aus Latenz- und Robustheitsgründen **in-process** direkt auf (`build_graph`/`_default_tools`), nicht über einen MCP-Subprozess. Grund: `MultiServerMCPClient` (langchain-mcp-adapters 0.3.1) und die installierte `mcp` 2.2.0 sind inkompatibel (`ImportError: RequestContext` aus `mcp.shared.context`); ein kompatibles Versionspaar ist ohne Risiko für die an `mcp` gekoppelte `fastmcp`-Abhängigkeit nicht kurzfristig auflösbar. Echter Protokollbetrieb im Graphen ist damit eine Konfigurations-/Abhängigkeitsänderung nach dem PoC, kein Neubau (der Aufrufpfad ist gekapselt).
+## Ist-Zustand MCP-Aufrufpfad (Doku der Realität, aktualisiert 2026-09-14)
+Der Live-Graph kann die Werkzeuge über das **echte MCP-Protokoll** laden: `build_tools_from_mcp`
+nutzt `fastmcp.Client` und startet die Server `mes` und `maintenance_docs` als eigenständige
+**stdio-Subprozesse**; jede Werkzeugausführung ist ein Protokollaufruf. Belegt durch
+`LLM_MODE=mock MCP_VIA_PROTOCOL=1 python scripts/e2e_replay.py` (Transport-Log „Starting MCP server
+… transport 'stdio'", `reason_hit: True`) sowie `tests/test_mcp_protocol.py` (In-Memory-Protokoll).
+
+Der zuvor genutzte `MultiServerMCPClient` (langchain-mcp-adapters 0.3.1) ist mit `mcp` 2.2.0
+inkompatibel (`ImportError: RequestContext` aus `mcp.shared.context`; `mcp` ist an `fastmcp 4.x`
+gekoppelt) – er wurde durch den schlanken `fastmcp.Client` ersetzt.
+
+**Standard (Default) ist bewusst weiter In-Process** (`_default_tools`, Schalter
+`settings.mcp_via_protocol=False`): schneller und deterministisch für Tests/CI, und die Replay-Uhr
+`SIM_NOW` wird pro Untersuchung im Prozess gesetzt. Der Protokollpfad wird per `MCP_VIA_PROTOCOL=1`
+aktiviert (dann baut der Graph pro Lauf einen Client mit der passenden `SIM_NOW`). **Offener Punkt:**
+den Protokollpfad für die dauerhaft laufende API (einmalig gebauter Graph) mit korrekter
+`SIM_NOW`-Propagation pro Request zu verdrahten (Server baut den Graphen je Untersuchung neu) –
+geschätzt ein halber Tag nach dem Interview; die Kernmechanik läuft und ist belegt.
 
 ## Quellen (mit Datum)
 - MCP-Spezifikation 2026-07-28 – blog.modelcontextprotocol.io, 28.07.2026

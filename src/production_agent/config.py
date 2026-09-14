@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     max_rows_per_tool: int = 200
     max_tool_result_chars: int = 8000
     confidence_threshold_recommend: float = 0.60  # = decisions.yaml konfidenz.schwelle_empfehlung
+    # True → Live-Graph lädt die Werkzeuge über das echte MCP-Protokoll (fastmcp.Client, stdio);
+    # False (Default) → In-Process (schneller, deterministisch für Tests). ENV: MCP_VIA_PROTOCOL
+    mcp_via_protocol: bool = False
 
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
