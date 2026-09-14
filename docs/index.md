@@ -35,6 +35,7 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [contracts/api.md](contracts/api.md) – API-Vertrag: Production Agent – SSE-Stream und Freigabe: Alle Pfade unterhalb von `http://localhost:8000`.
 - [data_layer.md](data_layer.md) – Datenschicht Bronze→Silber→Gold: Technische Referenz für `src/production_agent/data/` (Simulator, Replay, Schema).
 - [demo_script.md](demo_script.md) – Demo-Skript – 60 Minuten (Production Agent PoC): Fahrplan für das Interview am 17.09. Drei Blöcke: **12 min Live-Demo**, **30 min Entscheidungen**,
+- [demo_walkthrough/README.md](demo_walkthrough/README.md) – UI-Walkthrough Agent-Tab (Mock): Echter Browser-Durchlauf (Playwright, Chromium, LLM_MODE=mock) des Agent-Tabs:
 - [e2e.md](e2e.md) – Ende-zu-Ende-Replay: Der Ende-zu-Ende-Lauf prüft den kompletten LangGraph-Ablauf gegen die **echten** MES- und
 - [ops.md](ops.md) – Ops-Cockpit: Lokale Steuerungsoberfläche für den Orchestrator-Betrieb. Unabhängig vom Produktionsleiter-Frontend.
 - [plan.md](plan.md) – Projektplan – Scope, Budget, Gates: Minimalanforderungen: stehende Linie untersuchen, Alarme zu Ereignissen aggregieren, historisches Wissen abrufen,

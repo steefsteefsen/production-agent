@@ -6,6 +6,15 @@ import {
   type CardStatus,
 } from "./agentStream.ts";
 import { NODE_ANNOTATIONS } from "./demo_annotations.ts";
+import { INTRO, nodeNarrative, finalNarrative } from "./narrative.ts";
+
+interface EvalResult {
+  reason_hit: boolean;
+  reason_code_pred?: string | null;
+  reason_code_gold?: string | null;
+  supported_actions?: number;
+  total_actions?: number;
+}
 
 type Phase = "idle" | "running" | "interrupt" | "approving" | "done" | "error";
 
@@ -45,6 +54,7 @@ export default function Agent() {
   const [interruptPayload, setInterruptPayload] = useState<Record<string, unknown> | null>(null);
   const [approval, setApproval] = useState<{ approved: boolean } | null>(null);
   const [gold, setGold] = useState<Gold | null>(null);
+  const [evalResult, setEvalResult] = useState<EvalResult | null>(null);
   const [error, setError] = useState("");
   const [comment, setComment] = useState("");
   const [showNotes, setShowNotes] = useState(true);
@@ -98,6 +108,7 @@ export default function Agent() {
     setInterruptPayload(null);
     setApproval(null);
     setGold(null);
+    setEvalResult(null);
     setError("");
     setOpenCard(null);
     setPhaseSync("running");
@@ -116,10 +127,13 @@ export default function Agent() {
           approved,
           comment,
           approved_action_titles: [],
+          event_id: meta.event_id,
         }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      await r.json();
+      const data = await r.json();
+      // reason_hit + belegte Maßnahmen kommen serverseitig aus replay.score (nur bei bekanntem Gold)
+      setEvalResult((data?.eval as EvalResult) ?? null);
       setApproval({ approved });
       setPhaseSync("done");
       // Eval nach dem Lauf: Hypothese gegen die Gold-Wahrheit (kein Leck während des Laufs)
@@ -145,6 +159,26 @@ export default function Agent() {
   const predictedReason = hypothesis.reason_code as string | undefined;
   const reasonHit =
     gold && predictedReason ? gold.reason_code === predictedReason : null;
+
+  // zuletzt abgeschlossene Karte (hat echte Daten) treibt den laufbegleitenden Erzähltext
+  const lastDoneCard =
+    [...cards].reverse().find((c) => c.status === "fertig" || c.status === "freigabe") ?? null;
+  const narrativeText =
+    phase === "done" && approval
+      ? finalNarrative({
+          approved: approval.approved,
+          reasonHit: evalResult ? evalResult.reason_hit : reasonHit,
+          reasonCodePred: evalResult?.reason_code_pred ?? predictedReason ?? null,
+          reasonCodeGold: evalResult?.reason_code_gold ?? gold?.reason_code ?? null,
+          supportedActions: evalResult?.supported_actions ?? null,
+        })
+      : phase === "error"
+        ? ""
+        : lastDoneCard
+          ? nodeNarrative(lastDoneCard)
+          : phase === "running"
+            ? INTRO
+            : "";
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -208,6 +242,21 @@ export default function Agent() {
           </div>
         ))}
       </div>
+
+      {/* Laufbegleitender Erzähltext: aktive bzw. zuletzt abgeschlossene Karte, sichtbar per Default */}
+      {narrativeText && (
+        <div
+          data-testid="narrative"
+          className="rounded-lg border border-gray-700 bg-gray-900/60 px-4 py-3 min-h-[3rem] flex items-center"
+        >
+          <p
+            key={narrativeText}
+            className="text-sm text-gray-200 leading-relaxed narrative-fade"
+          >
+            {narrativeText}
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-wein-600 bg-wein-700/20 p-3 text-wein-500 text-xs">

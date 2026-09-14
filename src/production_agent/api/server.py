@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sqlite3
@@ -15,7 +16,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from production_agent.api.mes_router import router as mes_router
 from production_agent.config import get_settings
-from production_agent.data.replay import case_for_event_id
+from production_agent.data.replay import case_for_event_id, score
 from production_agent.graph.workflow import build_graph
 
 DEMO_EVENT_ID = 360  # jüngstes Gold-Ereignis (STO-FOLIE); Default der geführten Demo
@@ -53,11 +54,47 @@ class ApprovalRequest(BaseModel):
     approved: bool
     comment: str = ""
     approved_action_titles: list[str] = []
+    # optional: nur für Replay-Fälle mit bekanntem Gold – ermöglicht die Eval NACH der Freigabe
+    event_id: int | None = None
+
+
+def _pace_seconds(delay_ms: int) -> float:
+    """Demo-Takt in Sekunden, auf [0, 2] gedeckelt (0 = Produktivpfad, unverändert schnell)."""
+    return max(0, min(delay_ms, 2000)) / 1000
+
+
+def _post_run_eval(event_id: int | None, state: dict) -> dict | None:
+    """Eval NACH der Freigabe (ADR-0002-konform, kein Leck während des Laufs).
+
+    Vergleicht die Hypothese des Agenten mit der verborgenen Gold-Wahrheit über den kanonischen
+    replay.score und zählt die belegten Maßnahmen (mit Beleg/rationale). Gibt None zurück, wenn
+    kein event_id übergeben wurde oder der Fall keine Gold-Zeile hat (nichts raten)."""
+    if event_id is None:
+        return None
+    case = _replay_case(event_id)
+    if case is None or not case.truth:
+        return None
+    hypothesis = state.get("hypothesis") or {}
+    impact = state.get("impact") or {}
+    actions = state.get("actions") or []
+    prediction = {
+        "reason_code": hypothesis.get("reason_code"),
+        "expected_downtime_min": impact.get("expected_downtime_min"),
+    }
+    scored = score(prediction, case.truth)
+    supported = sum(1 for a in actions if isinstance(a, dict) and a.get("rationale"))
+    return {
+        "reason_hit": scored["reason_hit"],
+        "reason_code_pred": hypothesis.get("reason_code"),
+        "reason_code_gold": case.truth.get("reason_code"),
+        "supported_actions": supported,
+        "total_actions": len(actions),
+    }
 
 
 @app.get("/investigations/stream")
 async def stream_investigation(
-    line_id: str = "L1", event_id: int = DEMO_EVENT_ID
+    line_id: str = "L1", event_id: int = DEMO_EVENT_ID, delay_ms: int = 0
 ) -> EventSourceResponse:
     """SSE-Stream: je Knoten ein Event {node, payload, trace}; stoppt am Freigabeknoten.
 
@@ -65,11 +102,15 @@ async def stream_investigation(
     Lauf gesetzt (die MES-Werkzeuge lesen sie zur Laufzeit). Der Modus mock/live steckt im
     Backend-LLM_MODE und wird nur mitgeschickt, nicht hier gesetzt.
 
+    delay_ms taktet die Knoten-Events optional für die geführte Demo (Default 0 = unverändert
+    schnell); der Produktivpfad ist davon unberührt. Obergrenze 2000 ms je Knoten.
+
     Events:
     - event: start  → {"thread_id", "event_id", "sim_now", "line_id", "mode"}
     - event: node   → {"node": "<name>", "payload": {...}, "trace": [...]}
     - event: interrupt → {"node": "approval_gate", "payload": {...}, "thread_id": "..."}
     """
+    pace = _pace_seconds(delay_ms)  # Demo-Takt, gedeckelt
     thread_id = str(uuid.uuid4())
     cfg = {"configurable": {"thread_id": thread_id}}
     case = _replay_case(event_id)
@@ -107,6 +148,8 @@ async def stream_investigation(
                         "event": "node",
                         "data": json.dumps({"node": node, "payload": state_update, "trace": trace}),
                     }
+                    if pace:
+                        await asyncio.sleep(pace)  # geführte Demo: Knoten sichtbar takten
 
     return EventSourceResponse(_generator())
 
@@ -128,8 +171,13 @@ def approve(req: ApprovalRequest) -> dict:
         raise HTTPException(
             status_code=409, detail="Kein wartender Freigabeknoten für diesen Thread"
         )
-    result = graph.invoke(Command(resume=req.model_dump()), config=cfg)
-    return {"thread_id": req.thread_id, "state": result}
+    # event_id nur für die Eval nach dem Lauf, nicht Teil des Resume-Werts (Verhalten unverändert)
+    result = graph.invoke(Command(resume=req.model_dump(exclude={"event_id"})), config=cfg)
+    response: dict = {"thread_id": req.thread_id, "state": result}
+    ev = _post_run_eval(req.event_id, result if isinstance(result, dict) else {})
+    if ev is not None:
+        response["eval"] = ev
+    return response
 
 
 @app.get("/investigations/gold/{event_id}")

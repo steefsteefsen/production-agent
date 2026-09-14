@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-13T23:38:04",
-  "commit": "b8a3d73f2ef455022fb1ebc480cc00f856c47cf7",
+  "generated_at": "2026-09-14T08:42:43",
+  "commit": "5c453af2d5e444cb7471dc6425318107eb567937",
   "branch": "main",
   "packages": [
     {
@@ -514,7 +514,7 @@
         {
           "name": "Commit",
           "done": true,
-          "at": "2026-09-13T23:31:59+02:00"
+          "at": "2026-09-13T23:37:50+02:00"
         },
         {
           "name": "Tag",
@@ -531,6 +531,11 @@
       "cost_usd": 0,
       "last_at": null,
       "commits": [
+        {
+          "sha": "5c453af",
+          "title": "docs(WP7): README-Demostart, Architekturbild und CHANGELOG",
+          "at": "2026-09-13T23:37:50+02:00"
+        },
         {
           "sha": "b8a3d73",
           "title": "docs(WP7): Demo-Skript 60 min, ADR-Vollständigkeit bestätigt",
@@ -768,11 +773,17 @@
     "percent": 85,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 388,
+    "tests": 392,
     "coverage_total": 87,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-13T23:37:50+02:00",
+      "kind": "commit",
+      "ref": "5c453af",
+      "text": "docs(WP7): README-Demostart, Architekturbild und CHANGELOG"
+    },
     {
       "at": "2026-09-13T23:31:59+02:00",
       "kind": "commit",
@@ -1214,14 +1225,14 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 250,
+      "tests": 254,
       "coverage": 100
     },
     {
       "path": "src/production_agent/api/",
       "files": 2,
-      "tests": 36,
-      "coverage": 77
+      "tests": 40,
+      "coverage": 76
     },
     {
       "path": "src/production_agent/data/",
