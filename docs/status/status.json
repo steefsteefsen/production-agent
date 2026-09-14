@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-14T10:45:04",
-  "commit": "3b93deb68e64836189ccb14b7d1dd9fb77533c6c",
+  "generated_at": "2026-09-14T15:12:23",
+  "commit": "0fc699435fb2f14c0be93ec3d32d7bc32e9ffeae",
   "branch": "main",
   "packages": [
     {
@@ -788,6 +788,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-14T10:44:49+02:00",
+      "kind": "commit",
+      "ref": "0fc6994",
+      "text": "feat(ui): Schritt-Karten als Folie mit Eingang/Transformation/Bewertung"
+    },
     {
       "at": "2026-09-14T10:17:21+02:00",
       "kind": "commit",

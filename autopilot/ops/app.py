@@ -324,9 +324,12 @@ function selectWP(pkg) {
   document.getElementById('detail-review').textContent =
     rev ? JSON.stringify(rev, null, 2) : '(kein Reviewer-Urteil)';
   const syncDiv = document.getElementById('detail-sync');
+  // kein inline-onclick mit verschachtelten Quotes (bricht im Python-String) – data-Attribut + Handler
   syncDiv.innerHTML = pkg.worktree
-    ? '<a href="#" onclick="actionSyncWP(\'' + pkg.id + '\');return false">Sync-Paket für ' + pkg.id + ' erzeugen</a>'
+    ? '<a href="#" class="sync-link" data-wp="' + pkg.id + '">Sync-Paket für ' + pkg.id + ' erzeugen</a>'
     : '';
+  const syncLink = syncDiv.querySelector('.sync-link');
+  if (syncLink) syncLink.onclick = function () { actionSyncWP(syncLink.dataset.wp); return false; };
   // Log laden
   document.getElementById('log-wp-sel').value = pkg.id;
   loadLog(pkg.id);
@@ -465,7 +468,7 @@ async function loadConfig() {
           html += '<option value="' + o + '"' + (o===cfg.value?' selected':'') + '>' + o + '</option>';
         });
         html += '</select><button class="btn btn-sage" onclick="saveCf(' + JSON.stringify(key) +
-          ',document.getElementById(\'cf-' + key + '\').value)">Speichern</button></div>';
+          ',document.getElementById(\\'cf-' + key + '\\').value)">Speichern</button></div>';
         if (cfg.descriptions && cfg.value && cfg.descriptions[cfg.value]) {
           html += '<div class="cf-desc">' + cfg.descriptions[cfg.value] + '</div>';
         }
@@ -473,10 +476,10 @@ async function loadConfig() {
         html += '<div class="cf-row">' +
           '<input type="range" id="cf-' + key + '" min="' + cfg.min + '" max="' + cfg.max +
           '" step="' + cfg.step + '" value="' + cfg.value + '" ' +
-          'oninput="document.getElementById(\'cf-' + key + '-val\').textContent=this.value">' +
+          'oninput="document.getElementById(\\'cf-' + key + '-val\\').textContent=this.value">' +
           '<span id="cf-' + key + '-val">' + cfg.value + '</span>' +
           '<button class="btn btn-sage" onclick="saveCf(' + JSON.stringify(key) +
-          ',parseFloat(document.getElementById(\'cf-' + key + '\').value))">Speichern</button></div>';
+          ',parseFloat(document.getElementById(\\'cf-' + key + '\\').value))">Speichern</button></div>';
         if (cfg.begruendung) html += '<div class="cf-desc">' + cfg.begruendung + '</div>';
       }
       html += '</div>';

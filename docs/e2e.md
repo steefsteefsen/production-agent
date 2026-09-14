@@ -69,3 +69,21 @@ Gold-Wahrheit (`/investigations/gold/{event_id}`, nur für die Eval, kein Leck a
 3. Die sieben Karten füllen sich der Reihe nach; am Ende erscheint **Freigabe erforderlich**.
 4. **Freigeben** → Abschlusskarte „regulärer Abschluss" mit Audit-Hinweis und Eval (`reason_hit`).
 5. Erneut starten, diesmal **Ablehnen** → „sauberer Abbruch, kein Maßnahmen-Abschluss".
+
+## Browser-Konsolenchecks (Pflicht bei UI-Änderungen)
+
+Jede Änderung an den generierten HTML-Oberflächen (Agent-Cockpit, Ops-Cockpit, Präsentation) MUSS
+durch die folgenden Playwright-Checks laufen, bevor sie als „fertig" gilt – 0 Browser-Konsolenfehler
+ist Pflichtbedingung (HTTP 200 / ruff / pytest reichen NICHT, siehe docs/system_audit_2026-09-14.md).
+
+Voraussetzung: Server laufen (`make run-api`, `make ui`, `make ops`), `LLM_MODE=mock`.
+
+```bash
+python scripts/ui_check/ops_check.py     # Ops-Cockpit :8010 – alle 4 Tabs, 0 Konsolenfehler
+python scripts/ui_check/agent_check.py   # Agent-Tab :5173 – Lauf bis Freigabe, 0 Konsolenfehler
+python scripts/demo_walkthrough.py       # ausführlicher erzählerischer Durchlauf (Screenshots)
+```
+
+Exit-Code 0 = bestanden. Screenshots/READMEs landen unter `docs/demo_walkthrough/` (Bilder gitignored,
+Guardian S9). Beide Checks scheitern hart bei ≥1 Konsolenfehler – genau der Fall, der das Ops-Cockpit
+unbemerkt unbedienbar gemacht hatte.

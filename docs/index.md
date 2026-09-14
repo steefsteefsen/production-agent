@@ -37,9 +37,12 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [data_layer.md](data_layer.md) – Datenschicht Bronze→Silber→Gold: Technische Referenz für `src/production_agent/data/` (Simulator, Replay, Schema).
 - [demo_script.md](demo_script.md) – Demo-Skript – 60 Minuten (Production Agent PoC): Fahrplan für das Interview am 17.09. Drei Blöcke: **12 min Live-Demo**, **30 min Entscheidungen**,
 - [demo_walkthrough/README.md](demo_walkthrough/README.md) – UI-Walkthrough Agent-Tab (Mock) – LLM-as-Judge: Echter Browser-Durchlauf (Playwright, Chromium, LLM_MODE=mock) des Agent-Tabs mit der neuen
+- [demo_walkthrough/agent/README.md](demo_walkthrough/agent/README.md) – Agent-Tab – Browser-Check (localhost:5173): Erzeugt mit `python scripts/ui_check/agent_check.py` bei laufender API + Vite. Konsolenfehler: **0** (0 = Pflicht). Bilder gitignored (Guard
+- [demo_walkthrough/ops/README.md](demo_walkthrough/ops/README.md) – Ops-Cockpit – Browser-Check (localhost:8010): Erzeugt mit `python scripts/ui_check/ops_check.py` bei laufendem Ops (`make ops`). Konsolenfehler: **0** (0 = Pflicht). Bilder sind lokale A
 - [e2e.md](e2e.md) – Ende-zu-Ende-Replay: Der Ende-zu-Ende-Lauf prüft den kompletten LangGraph-Ablauf gegen die **echten** MES- und
 - [ops.md](ops.md) – Ops-Cockpit: Lokale Steuerungsoberfläche für den Orchestrator-Betrieb. Unabhängig vom Produktionsleiter-Frontend.
 - [plan.md](plan.md) – Projektplan – Scope, Budget, Gates: Minimalanforderungen: stehende Linie untersuchen, Alarme zu Ereignissen aggregieren, historisches Wissen abrufen,
 - [references.md](references.md) – Externe Quellen: was übernommen wurde, wie und unter welcher Lizenz: Drei Stufen – nie „Repo klonen und anpassen":
 - [stack.md](stack.md) – Stack und Entscheidungsgrundlage: Jede Zeile verweist auf eine ADR mit Alternativen, Kriterien und Quellen. Versionen: Stand 11.09.2026, vor Nutzung mit `pip index versions` 
+- [system_audit_2026-09-14.md](system_audit_2026-09-14.md) – Systemaudit 2026-09-14: Systematischer Funktionsnachweis mit **vorab definierter Erwartung** je Test, echtem Kommandozeilen-/
 - [testplan_e2e.md](testplan_e2e.md) – Testplan Ende-zu-Ende: Die Ende-zu-Ende-Fälle prüfen den kompletten LangGraph-Ablauf gegen die **echten** MES/RAG-Werkzeuge
