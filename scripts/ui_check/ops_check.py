@@ -42,6 +42,15 @@ def main() -> int:
             lambda m: errors.append(f"[console.{m.type}] {m.text}") if m.type == "error" else None,
         )
         page.on("pageerror", lambda e: errors.append(f"[pageerror] {e}"))
+        puts: list[int] = []
+        page.on(
+            "response",
+            lambda r: (
+                puts.append(r.status)
+                if (r.request.method == "PUT" and "/api/config" in r.url)
+                else None
+            ),
+        )
 
         page.goto(BASE, wait_until="networkidle")
         page.wait_for_timeout(400)
@@ -61,6 +70,23 @@ def main() -> int:
             n = TABS.index((label, key)) + 1
             page.screenshot(path=str(OUT / f"{n:02d}_{key}.png"))
             shots.append((f"{n:02d}_{key}.png", f'Ops-Tab „{label}" geöffnet.'))
+
+        # Konfiguration: „Speichern" muss ein PUT /api/config auslösen (der zuvor stumme Bug:
+        # JSON.stringify(key) im doppelt-gequoteten onclick brach das Attribut → kein PUT).
+        page.get_by_role("button", name="Konfiguration", exact=True).click()
+        page.wait_for_timeout(500)
+        save = page.get_by_role("button", name="Speichern")
+        if save.count() == 0:
+            problems.append("Konfiguration: kein Speichern-Button gefunden.")
+        else:
+            save.first.click()
+            page.wait_for_timeout(900)
+            if not any(s == 200 for s in puts):
+                problems.append("Config-Speichern löste kein erfolgreiches PUT /api/config aus.")
+            page.screenshot(path=str(OUT / "06_config_speichern.png"))
+            shots.append(
+                ("06_config_speichern.png", "Konfiguration: Speichern löst PUT /api/config aus.")
+            )
 
         # Präsentation-Tab: Stack- und Scope-Tabelle im iframe prüfen
         page.get_by_role("button", name="Präsentation", exact=True).click()

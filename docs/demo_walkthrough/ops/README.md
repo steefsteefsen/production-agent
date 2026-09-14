@@ -8,6 +8,7 @@ Erzeugt mit `python scripts/ui_check/ops_check.py` bei laufendem Ops (`make ops`
 - **02_stand.png** — Ops-Tab „Stand" geöffnet.
 - **03_config.png** — Ops-Tab „Konfiguration" geöffnet.
 - **04_presentation.png** — Ops-Tab „Präsentation" geöffnet.
+- **06_config_speichern.png** — Konfiguration: Speichern löst PUT /api/config aus.
 - **05_presentation_stack.png** — Präsentation-Tab: Stack-Tabelle und Scope sichtbar (im iframe).
 
 ## Auffälligkeiten

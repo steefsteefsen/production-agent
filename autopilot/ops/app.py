@@ -463,28 +463,40 @@ async function loadConfig() {
     for (const [key, cfg] of Object.entries(data)) {
       html += '<div class="cf-block"><div class="cf-label">' + key + '</div>';
       if (cfg.type === 'select') {
-        html += '<div class="cf-row"><select id="cf-' + key + '" onchange="">';
+        html += '<div class="cf-row"><select id="cf-' + key + '">';
         (cfg.options || []).forEach(o => {
           html += '<option value="' + o + '"' + (o===cfg.value?' selected':'') + '>' + o + '</option>';
         });
-        html += '</select><button class="btn btn-sage" onclick="saveCf(' + JSON.stringify(key) +
-          ',document.getElementById(\\'cf-' + key + '\\').value)">Speichern</button></div>';
+        html += '</select><button class="btn btn-sage cf-save" data-key="' + key +
+          '" data-input="cf-' + key + '" data-num="0">Speichern</button></div>';
         if (cfg.descriptions && cfg.value && cfg.descriptions[cfg.value]) {
           html += '<div class="cf-desc">' + cfg.descriptions[cfg.value] + '</div>';
         }
       } else if (cfg.type === 'slider') {
         html += '<div class="cf-row">' +
-          '<input type="range" id="cf-' + key + '" min="' + cfg.min + '" max="' + cfg.max +
-          '" step="' + cfg.step + '" value="' + cfg.value + '" ' +
-          'oninput="document.getElementById(\\'cf-' + key + '-val\\').textContent=this.value">' +
+          '<input type="range" class="cf-slider" id="cf-' + key + '" data-val="cf-' + key + '-val" min="' +
+          cfg.min + '" max="' + cfg.max + '" step="' + cfg.step + '" value="' + cfg.value + '">' +
           '<span id="cf-' + key + '-val">' + cfg.value + '</span>' +
-          '<button class="btn btn-sage" onclick="saveCf(' + JSON.stringify(key) +
-          ',parseFloat(document.getElementById(\\'cf-' + key + '\\').value))">Speichern</button></div>';
+          '<button class="btn btn-sage cf-save" data-key="' + key +
+          '" data-input="cf-' + key + '" data-num="1">Speichern</button></div>';
         if (cfg.begruendung) html += '<div class="cf-desc">' + cfg.begruendung + '</div>';
       }
       html += '</div>';
     }
-    document.getElementById('cf-container').innerHTML = html || '<p style="color:#999">Keine konfigurierbaren Felder gefunden.</p>';
+    const cont = document.getElementById('cf-container');
+    cont.innerHTML = html || '<p style="color:#999">Keine konfigurierbaren Felder gefunden.</p>';
+    // Handler per data-Attribut + Delegation – kein inline-onclick mit verschachtelten Quotes
+    // (JSON.stringify(key) hätte im doppelt-gequoteten Attribut das onclick vorzeitig geschlossen).
+    cont.querySelectorAll('.cf-save').forEach(btn => {
+      btn.onclick = () => {
+        const el = document.getElementById(btn.dataset.input);
+        const val = btn.dataset.num === '1' ? parseFloat(el.value) : el.value;
+        saveCf(btn.dataset.key, val);
+      };
+    });
+    cont.querySelectorAll('.cf-slider').forEach(sl => {
+      sl.oninput = () => { document.getElementById(sl.dataset.val).textContent = sl.value; };
+    });
   } catch(e) { console.error(e); }
 }
 

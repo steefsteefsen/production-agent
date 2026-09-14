@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-14T17:06:54",
-  "commit": "870d40150c804e904a0da5740ced167b7520b792",
+  "generated_at": "2026-09-14T17:24:40",
+  "commit": "c61cca2df3f37e89d5be5b792434695688ecea0a",
   "branch": "main",
   "packages": [
     {
@@ -788,6 +788,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-14T17:06:36+02:00",
+      "kind": "commit",
+      "ref": "c61cca2",
+      "text": "fix(graph): robuste strukturierte LLM-Ausgabe (JSON-String im Live-Lauf)"
+    },
     {
       "at": "2026-09-14T16:50:40+02:00",
       "kind": "commit",
