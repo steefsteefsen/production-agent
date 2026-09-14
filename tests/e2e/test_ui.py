@@ -54,12 +54,13 @@ def _open_agent_tab(page):
 
 
 def test_agent_tab_zeigt_gefuehrte_schritte(page):
-    """Agent-Tab rendert die sieben Knoten-Schritte, den Start-Knopf und den Demo-Notizen-Umschalter
-    (statisch, ohne Lauf)."""
+    """Agent-Tab rendert die acht Knoten-Schritte (inkl. Beleg-Prüfung), den Start-Knopf und den
+    Demo-Notizen-Umschalter (statisch, ohne Lauf)."""
     _open_agent_tab(page)
     assert page.get_by_role("button", name="Untersuchung starten").is_visible()
     assert page.get_by_text("1 · Linienstatus & Plan").is_visible()
-    assert page.get_by_text("7 · Freigabe", exact=True).is_visible()
+    assert page.get_by_text("7 · Beleg-Prüfung", exact=True).is_visible()
+    assert page.get_by_text("8 · Freigabe", exact=True).is_visible()
     assert page.get_by_text("Demo-Notizen", exact=False).is_visible()
     # Präsentationsmodus: eine Funktion-Annotation ist sichtbar
     assert page.get_by_text("Funktion:", exact=False).first.is_visible()

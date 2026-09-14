@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-14T09:14:17",
-  "commit": "0131dd4d92808b6db4f3b87e63fe8c8a8b0fcc5b",
+  "generated_at": "2026-09-14T09:22:21",
+  "commit": "c58017a5b925da3169fa23fa7d889c8083507373",
   "branch": "main",
   "packages": [
     {
@@ -783,6 +783,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-14T09:14:04+02:00",
+      "kind": "commit",
+      "ref": "c58017a",
+      "text": "feat(graph): LLM-as-Judge validiert Maßnahmen-Belege unabhängig"
+    },
     {
       "at": "2026-09-14T08:42:30+02:00",
       "kind": "commit",

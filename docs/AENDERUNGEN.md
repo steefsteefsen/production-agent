@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-14 · test(ui): E2E-Karten-Labels an Beleg-Prüfung angepasst
+**Was:** Der E2E-Smoke `test_agent_tab_zeigt_gefuehrte_schritte` prüft jetzt „7 · Beleg-Prüfung" und „8 · Freigabe" statt „7 · Freigabe" – die neue Judge-Karte hat die Freigabe auf Position 8 verschoben.
+**Warum (Problem oder Anlass):** Nach Einführung der Beleg-Prüfung (Knoten 7) schlug der E2E-Job in der CI fehl, weil er noch das alte Label „7 · Freigabe" erwartete; die e2e-Tests laufen lokal nicht mit (Marker `not e2e`), daher erst in der CI aufgefallen.
+**Alternativen (verworfen, weil ...):** Kartennummerierung unverändert lassen und die neue Karte anders einordnen – verworfen, die Reihenfolge 1–8 spiegelt den echten Graphen wider.
+**Auswirkung (Verträge, ADR, Tests):** `tests/e2e/test_ui.py` (zwei Label-Assertions). Kein Code-/Vertrags-/ADR-Bezug; lokal gegen laufende Server verifiziert (5 e2e-Tests grün).
+**Bezug (WP, ADR):** ADR-0011
+
 ## 2026-09-14 · feat(graph): LLM-as-Judge validiert Maßnahmen-Belege unabhängig
 **Was:** Neuer linearer Knoten „Beleg-Prüfung" (`check_evidence`) zwischen Maßnahmen (Knoten 6) und Freigabe-Gate. Ein zweites, unabhängiges Modell (`LLM_MODEL_JUDGE`) prüft je Maßnahme, ob der zitierte Beleg sie stützt – mit BEWUSST getrenntem Kontext: es sieht nur Maßnahmentext und Beleg im Original, nicht die Hypothese (Knoten 4) oder die Begründung/Konversation (Knoten 6). Neu `graph/judge.py` (`JudgeVerdict`, `cited_evidence`, `judge_action`), deterministischer Mock-Judge in `mock_llm.py`, `SYSTEM_JUDGE` in `prompts.py`, State-Feld `judge_results`. Kein Auto-Verwerfen: das Ergebnis (verified + judge_note) wird durchgereicht, im SSE-Knoten-Event und in der Interrupt-Payload geführt und im Cockpit angezeigt (neue Karte 7 mit Badges „vom Judge bestätigt/nicht bestätigt", Judge-Status je Maßnahme an der Freigabekarte, Erzähltext-Baustein). Optionaler `tamper_evidence`-Parameter am Stream (Demo, Default aus) für den sichtbaren Ablehnungsfall. ADR-0011. Verifikation als echter UI-Walkthrough (bestätigter und abgelehnter Fall).
 **Warum (Problem oder Anlass):** Die Beleg-Nennung aus Knoten 6 stammt vom selben Modell und Kontext, der die Maßnahme vorschlägt – es kann sich selbst bestätigen. Eine unabhängige Kontrolle vor der Freigabe fehlte; `LLM_MODEL_JUDGE` war definiert, aber im Live-Graphen ungenutzt.
