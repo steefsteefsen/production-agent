@@ -1,9 +1,15 @@
 """Zentrale Konfiguration. Geheimnisse ausschließlich über .env / Umgebungsvariablen."""
 
 from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
+import yaml
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Im Ops-Cockpit überschriebene configurable Felder (Guardian S5: NICHT decisions.yaml).
+RUNTIME_YAML = Path(__file__).resolve().parents[2] / "config" / "runtime.yaml"
 
 # Modell-IDs zentral und über Umgebungsvariablen überschreibbar (LLM_MODEL_MAIN / LLM_MODEL_JUDGE).
 # Default = Sonnet 5 für die Begründungsknoten 4 (Ursache) und 6 (Maßnahmen): Kostenentscheidung,
@@ -53,3 +59,21 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def runtime_value(dotted_key: str, default: Any) -> Any:
+    """Liest einen im Ops-Cockpit gespeicherten Override aus config/runtime.yaml – FRISCH (nicht
+    gecacht), damit eine Änderung im Cockpit ohne Neustart wirkt. Fehlt Datei/Schlüssel: default.
+
+    So wird der gespeicherte Wert vom Graphen tatsächlich GENUTZT (z. B. die Konfidenzschwelle),
+    nicht nur angezeigt. Guardian S5 bleibt gewahrt: decisions.yaml wird nie geschrieben."""
+    try:
+        data = yaml.safe_load(RUNTIME_YAML.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return default
+    node: Any = data
+    for part in dotted_key.split("."):
+        if not isinstance(node, dict) or part not in node:
+            return default
+        node = node[part]
+    return node

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-14T17:43:21",
-  "commit": "5b1309e171e72f4e95083eb6455d5c384b1aff24",
+  "generated_at": "2026-09-15T00:30:41",
+  "commit": "b34028b03e6133b9452bbbb88703076a23ffaf37",
   "branch": "main",
   "packages": [
     {
@@ -783,11 +783,17 @@
     "percent": 85,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 406,
-    "coverage_total": 87,
+    "tests": 408,
+    "coverage_total": 88,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-14T17:43:07+02:00",
+      "kind": "commit",
+      "ref": "b34028b",
+      "text": "fix(mcp): echter MCP-Protokollpfad via fastmcp.Client (opt-in, belegt)"
+    },
     {
       "at": "2026-09-14T17:24:22+02:00",
       "kind": "commit",
@@ -1289,8 +1295,8 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 268,
-      "coverage": 100
+      "tests": 270,
+      "coverage": 98
     },
     {
       "path": "src/production_agent/api/",
@@ -1308,7 +1314,7 @@
       "path": "src/production_agent/graph/",
       "files": 8,
       "tests": 114,
-      "coverage": 95
+      "coverage": 96
     },
     {
       "path": "src/production_agent/mcp/",
@@ -1319,7 +1325,7 @@
     {
       "path": "src/production_agent/security/",
       "files": 4,
-      "tests": 70,
+      "tests": 72,
       "coverage": 100
     }
   ]

@@ -337,7 +337,13 @@ def _make_derive_actions(llm_chain):
             HumanMessage(content=f"Kontext:\n{context}"),
         ]
         out: _ActionsOutput = invoke_structured(llm_chain, messages, _ActionsOutput)
-        safe = apply_policy(out.actions, settings.confidence_threshold_recommend)
+        # im Cockpit gespeicherte Schwelle wird genutzt (runtime.yaml-Override, frisch gelesen)
+        from production_agent.config import runtime_value
+
+        threshold = runtime_value(
+            "konfidenz.schwelle_empfehlung", settings.confidence_threshold_recommend
+        )
+        safe = apply_policy(out.actions, threshold)
         # Nachbedingung (Stefan): jede Maßnahme muss mindestens eine Vorfall-ID aus
         # downtime_events_gold nennen. Sind ähnliche Vorfälle abrufbar, werden Maßnahmen
         # ohne gültigen Beleg verworfen.
