@@ -534,26 +534,35 @@ def approval_gate(state: AgentState) -> Command:
 # ---------------------------------------------------------------------------
 
 
+# Die drei MCP-Server (mes/knowledge/business_rules) tragen fachliche Werkzeugnamen; der Graph nutzt
+# intern stabile Schlüssel (Rückwärtskompatibilität mit den Verträgen/Tests). Diese Alias-Abbildung
+# übersetzt MCP-Werkzeugname → interner Graph-Schlüssel.
+_MCP_TOOL_ALIAS = {
+    "search_documents": "search_maintenance_docs",
+    "search_incidents": "find_similar_incidents",
+}
+
+
 def _default_tools() -> _Tools:
-    """Direktimport der MES/RAG-Funktionen für lokale Nutzung ohne MCP-Subprocess."""
+    """Direktimport der Werkzeuge aus den drei Servern (In-Process, ohne MCP-Subprozess).
+
+    Der Graph spricht seine stabilen Schlüssel (search_maintenance_docs, find_similar_incidents,
+    estimate_impact); die Funktionen stammen aus mes/knowledge/business_rules."""
+    from production_agent.mcp.business_rules_server import estimate_impact
     from production_agent.mcp.mes_server import (
-        estimate_impact as _estimate_impact,
-    )
-    from production_agent.mcp.mes_server import (
-        find_similar_incidents,
         get_active_alarms,
         get_line_status,
         get_production_plan,
     )
-    from production_agent.mcp.rag_server import search_maintenance_docs
+    from production_agent.mcp.rag_server import search_documents, search_incidents
 
     return {
         "get_line_status": lambda **kw: get_line_status(**kw),
         "get_production_plan": lambda **kw: get_production_plan(**kw),
         "get_active_alarms": lambda **kw: get_active_alarms(**kw),
-        "search_maintenance_docs": lambda **kw: search_maintenance_docs(**kw),
-        "find_similar_incidents": lambda **kw: find_similar_incidents(**kw),
-        "estimate_impact": lambda **kw: _estimate_impact(**kw),
+        "search_maintenance_docs": lambda **kw: search_documents(**kw),
+        "find_similar_incidents": lambda **kw: search_incidents(**kw),
+        "estimate_impact": lambda **kw: estimate_impact(**kw),
     }
 
 
@@ -580,9 +589,14 @@ def build_tools_from_mcp(sim_now: str = "") -> _Tools:
     py = sys.executable or "python3"
     servers = {
         "mes": {"command": py, "args": ["-m", "production_agent.mcp.mes_server"], "env": env},
-        "maintenance_docs": {
+        "knowledge": {
             "command": py,
             "args": ["-m", "production_agent.mcp.rag_server"],
+            "env": env,
+        },
+        "business_rules": {
+            "command": py,
+            "args": ["-m", "production_agent.mcp.business_rules_server"],
             "env": env,
         },
     }
@@ -608,7 +622,9 @@ def build_tools_from_mcp(sim_now: str = "") -> _Tools:
         client = Client({"mcpServers": {name: spec}})
         _run(client.__aenter__())
         for tool in _run(client.list_tools()):
-            tools[tool.name] = _wrap(client, tool.name)
+            # MCP-Werkzeugname → stabiler Graph-Schlüssel (Alias), sonst unverändert.
+            key = _MCP_TOOL_ALIAS.get(tool.name, tool.name)
+            tools[key] = _wrap(client, tool.name)
     return tools
 
 

@@ -6,7 +6,7 @@ ein kontextfreier Doku-Konsistenz-Check über claude -p (manuell, nicht im Hook 
 Regeln (S1–S9, K1–K9, D1–D11), je eine Zeile – hieraus erzeugt status.py den Marker auto:guardian_rules:
  S1  keine Secrets, keine .env committet
  S2  keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
- S3  MES-Server genau 6 Werkzeuge, RAG genau 1, kein Werkzeug *sql/query/write/exec*
+ S3  drei MCP-Server (mes=3 Live, knowledge=3 Suche/Verlauf, business_rules=1 Regel), kein *sql/query/write/exec*
  S4  schema.sql und ALLOWED_TABLES identisch
  S5  decisions.yaml eingefroren (Hash; Aenderung nur mit GUARDIAN_ALLOW_DECISIONS=1)
  S6  Sicherheitsmodul geaendert -> Sicherheits-, Protokoll- und Trajektorientests gruen
@@ -79,6 +79,7 @@ TEST_MAP = {
     "audit": ["test_security.py", "test_mcp_protocol.py"],
     "mes_server": ["test_mcp_protocol.py"],
     "rag_server": ["test_rag_server.py"],
+    "business_rules_server": ["test_business_rules_server.py"],
     "workflow": ["test_workflow.py", "test_trajectory.py"],
     "simulator": ["test_simulator.py"],
     "replay": ["test_replay.py"],
@@ -443,15 +444,21 @@ def main(use_llm: bool = False) -> int:  # noqa: C901
                         f"S2 verbotene Bibliothek '{lib}' in {f} (Ausschlussliste CLAUDE.md)"
                     )
 
-    # S3 Werkzeuganzahl
+    # S3 Werkzeuganzahl: drei fachlich getrennte Server (mes=3 Live, knowledge=3 Suche/Verlauf,
+    # business_rules=1 Regel); gesamt genau 7 Werkzeuge, kein generisches SQL-Werkzeug.
     mes = (ROOT / "src/production_agent/mcp/mes_server.py").read_text(encoding="utf-8")
     rag = (ROOT / "src/production_agent/mcp/rag_server.py").read_text(encoding="utf-8")
-    n_mes, n_rag = mes.count("@mcp.tool"), rag.count("@mcp.tool")
-    if n_mes != 6:
-        errors.append(f"S3 MES-Server hat {n_mes} Werkzeuge, erlaubt sind genau 6")
-    if n_rag != 1:
-        errors.append(f"S3 RAG-Server hat {n_rag} Werkzeuge, erlaubt ist genau 1")
-    for name in re.findall(r"@mcp\.tool\(\)\s*\ndef\s+(\w+)", mes + rag):
+    biz = (ROOT / "src/production_agent/mcp/business_rules_server.py").read_text(encoding="utf-8")
+    n_mes, n_rag, n_biz = mes.count("@mcp.tool"), rag.count("@mcp.tool"), biz.count("@mcp.tool")
+    if n_mes != 3:
+        errors.append(
+            f"S3 mes-Server hat {n_mes} Werkzeuge, erlaubt sind genau 3 (Live-Simulation)"
+        )
+    if n_rag != 3:
+        errors.append(f"S3 knowledge-Server hat {n_rag} Werkzeuge, erlaubt sind genau 3")
+    if n_biz != 1:
+        errors.append(f"S3 business_rules-Server hat {n_biz} Werkzeuge, erlaubt ist genau 1")
+    for name in re.findall(r"@mcp\.tool\(\)\s*\ndef\s+(\w+)", mes + rag + biz):
         if any(x in name.lower() for x in ("sql", "query", "write", "exec")):
             errors.append(f"S3 Werkzeugname '{name}' deutet auf freies SQL/Schreiben hin")
 

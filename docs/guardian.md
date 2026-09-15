@@ -12,7 +12,7 @@ Regeln: S1–S9, K1–K10, D1–D9.
 
 - **S1**: keine Secrets, keine .env committet
 - **S2**: keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
-- **S3**: MES-Server genau 6 Werkzeuge, RAG genau 1, kein Werkzeug *sql/query/write/exec*
+- **S3**: drei MCP-Server (mes=3 Live, knowledge=3 Suche/Verlauf, business_rules=1 Regel), kein *sql/query/write/exec*
 - **S4**: schema.sql und ALLOWED_TABLES identisch
 - **S5**: decisions.yaml eingefroren (Hash; Aenderung nur mit GUARDIAN_ALLOW_DECISIONS=1)
 - **S6**: Sicherheitsmodul geaendert -> Sicherheits-, Protokoll- und Trajektorientests gruen

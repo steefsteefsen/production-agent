@@ -1,4 +1,10 @@
-"""MCP-Server 2: RAG über simulierte Wartungsdokumente (hybride Suche: BM25 + Vektor, RRF).
+"""MCP-Server 2: knowledge – Wissenssuche über Dokumente UND historische Vorfälle.
+
+Zwei Suchwege plus ein Verlaufswerkzeug:
+  - search_documents: hybride Dokumentsuche (BM25 + Vektor, RRF) über simulierte Wartungsdokumente.
+  - search_incidents: strukturierte Vorfallsuche (Case-Based Reasoning) in downtime_events_gold.
+  - get_alarm_history: historische Störungsereignisse zu einem Erstalarmcode.
+Fachlich getrennt von der Live-Simulation (mes) und den Geschäftsregeln (business_rules).
 
 Vektorseite: Qdrant lokal (data/qdrant), Modell intfloat/multilingual-e5-small.
 Ingest: python -m production_agent.mcp.rag_server --ingest
@@ -8,8 +14,11 @@ Start:  python -m production_agent.mcp.rag_server  (stdio-Transport)
 from __future__ import annotations
 
 import json
+import os
 import re
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from fastmcp import FastMCP
 from rank_bm25 import BM25Okapi
@@ -17,16 +26,44 @@ from rank_bm25 import BM25Okapi
 from production_agent.config import get_settings
 from production_agent.security.audit import AuditLog
 from production_agent.security.injection_guard import sanitize_tool_result
+from production_agent.security.sql_guard import open_readonly, run_readonly
 
 settings = get_settings()
 audit = AuditLog(settings.audit_log_path)
-mcp = FastMCP("maintenance_docs")
+mcp = FastMCP("knowledge")
 
 DOC_DIR = Path("data/docs")
 QDRANT_PATH = "data/qdrant"
 EMBED_MODEL = "intfloat/multilingual-e5-small"
 _COLLECTION = "maintenance_docs"
 _CODE_RE = re.compile(r"\b[EWI]-\d{4}\b")
+_MAX_ALARM_HISTORY = 20
+_MAX_SIMILAR_INCIDENTS = 5
+
+
+def _now() -> str:
+    """Replay-Uhr: SIM_NOW-Vorrang, dann settings.sim_now, sonst echte Zeit (ADR-0002)."""
+    return (
+        os.environ.get("SIM_NOW")
+        or settings.sim_now
+        or datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+    )
+
+
+def _sql_query(sql: str, params: tuple[Any, ...], tool: str, limit: int) -> str:
+    """SELECT über sql_guard (Read-only, Allowlist), auditiert, injection-sicher gekapselt."""
+    conn = open_readonly(settings.mes_db_path)
+    try:
+        rows = run_readonly(conn, sql, params, max_rows=limit)
+    finally:
+        conn.close()
+    audit.record("tool_call", tool=tool, sql=sql, params=params, rows=len(rows))
+    return sanitize_tool_result(
+        json.dumps(rows, ensure_ascii=False, default=str),
+        max_chars=settings.max_tool_result_chars * 2,
+        source=f"knowledge.{tool}",
+    )
+
 
 try:
     from sentence_transformers import SentenceTransformer  # noqa: F401
@@ -227,22 +264,57 @@ def search_hits(query: str, top_k: int = 5) -> list[dict]:
 
 
 @mcp.tool()
-def search_maintenance_docs(query: str, top_k: int = 5) -> str:
-    """Sucht in Wartungsanleitungen, Störungsberichten und Fehlercode-Listen.
+def search_documents(query: str, top_k: int = 5) -> str:
+    """Sucht in Wartungsanleitungen, Störungsberichten und Fehlercode-Listen (BM25 + Vektor, RRF).
 
     Nutze exakte Fehlercodes (E-####, W-####, I-####) im Query – die BM25-Suche
     trifft sie exakt; bei erkanntem Code wird BM25 doppelt gewichtet (RRF k=60).
     """
     if not _BM25:
-        return sanitize_tool_result('{"error": "keine Dokumente in data/docs"}', source="rag")
-
+        return sanitize_tool_result('{"error": "keine Dokumente in data/docs"}', source="knowledge")
     hits = search_hits(query, top_k)
-    audit.record("tool_call", tool="search_maintenance_docs", query=query, hits=len(hits))
+    audit.record("tool_call", tool="search_documents", query=query, hits=len(hits))
     return sanitize_tool_result(
         json.dumps(hits, ensure_ascii=False),
         max_chars=settings.max_tool_result_chars,
-        source="rag",
+        source="knowledge",
     )
+
+
+@mcp.tool()
+def search_incidents(alarm_codes: list[str], packml_state: str, limit: int = 5) -> str:
+    """Case-Based Reasoning: ähnliche frühere Störungen nach Alarmcodes und PackML-Zustand.
+
+    Nutze dies, wenn du Belege aus der Vergangenheit suchst, die deine Hypothese zur
+    Ursache stützen oder widerlegen (max. 5 Einträge; strukturierte Suche in downtime_events_gold).
+    """
+    placeholders = ",".join("?" for _ in alarm_codes) or "''"
+    sql = f"""
+        SELECT g.event_id, g.start_ts, g.duration_min, g.first_alarm_code, g.reason_code,
+               g.resolution_action, i.root_cause, i.action_taken, i.outcome, i.doc_ref
+        FROM downtime_events_gold g LEFT JOIN incident_history i ON i.event_id = g.event_id
+        WHERE g.first_alarm_code IN ({placeholders}) AND g.packml_state = ? AND g.end_ts <= ?
+        ORDER BY g.start_ts DESC LIMIT ?
+    """  # noqa: S608  # nosec B608 – nur "?"-Platzhalter, Werte laufen als Parameter
+    params = (*alarm_codes, packml_state, _now(), min(int(limit), _MAX_SIMILAR_INCIDENTS))
+    return _sql_query(sql, params, tool="search_incidents", limit=_MAX_SIMILAR_INCIDENTS)
+
+
+@mcp.tool()
+def get_alarm_history(alarm_code: str, limit: int = 20) -> str:
+    """Historische Störungsereignisse (Gold) mit diesem Erstalarmcode – Dauer, Ursache, Maßnahme.
+
+    Nutze dies, wenn du verstehen willst, wie oft und wie lange dieser Alarm in der
+    Vergangenheit zur Störung geführt hat (max. 20 Einträge).
+    """
+    sql = """
+        SELECT event_id, start_ts, duration_min, packml_state, reason_code,
+               alarm_count, alarm_flood, resolution_action
+        FROM downtime_events_gold WHERE first_alarm_code = ? AND end_ts <= ?
+        ORDER BY start_ts DESC LIMIT ?
+    """
+    params = (alarm_code, _now(), min(int(limit), _MAX_ALARM_HISTORY))
+    return _sql_query(sql, params, tool="get_alarm_history", limit=_MAX_ALARM_HISTORY)
 
 
 if __name__ == "__main__":

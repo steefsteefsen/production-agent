@@ -41,6 +41,10 @@
 .ck-root .op-status .txt{font-size:15px;}
 .ck-root .op-status .txt b{display:block; font-size:16px; margin-bottom:2px;}
 .ck-root .op-status .txt span{color:var(--dim); font-size:13px;}
+.ck-root .op-status.done-approved{background:#16261c; border-color:var(--green);}
+.ck-root .op-status.done-approved .badge{background:var(--green); color:#0d1015;}
+.ck-root .op-status.done-rejected{background:#241a1a; border-color:var(--dimmer);}
+.ck-root .op-status.done-rejected .badge{background:var(--dimmer); color:#0d1015;}
 .ck-root .op-hero{background:var(--panel); border:1px solid var(--line-strong); border-radius:12px; padding:24px 26px; margin-bottom:24px;}
 .ck-root .op-hero-h{font-family:var(--mono); font-size:11px; color:var(--dim); letter-spacing:.05em; margin-bottom:16px;}
 
@@ -164,4 +168,13 @@
 .ck-root .cfg-toggle.off{background:var(--dimmer);}
 .ck-root .cfg-toggle::after{content:""; position:absolute; right:2px; top:2px; width:16px; height:16px; background:#0d1015; border-radius:50%;}
 .ck-root .cfg-toggle.off::after{right:auto; left:2px;}
+.ck-root .cfg-status{font-family:var(--mono); font-size:11.5px; color:var(--dim); background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:4px 10px; cursor:default; white-space:nowrap;}
 .ck-root .muted{color:var(--dimmer); font-size:12px; padding:16px 0;}
+.ck-root .no-data{display:inline-block; font-size:12px; color:var(--amber); background:#2a2416; border:1px dashed var(--amber); border-radius:6px; padding:6px 12px;}
+
+/* KPI-Kachel + Drill-down (Finding 5): Kachel ist Default, Rohdaten sind aufklappbar */
+.ck-root .kpi{display:flex; align-items:center; justify-content:space-between; gap:16px; background:var(--panel); border:1px solid var(--line-strong); border-radius:10px; padding:16px 20px; cursor:pointer; user-select:none; margin-bottom:14px;}
+.ck-root .kpi:hover{border-color:var(--blue);}
+.ck-root .kpi .kpi-main{font-size:15px; color:var(--text); font-weight:600;}
+.ck-root .kpi .kpi-sub{font-size:11.5px; color:var(--dim); margin-top:3px; font-family:var(--mono);}
+.ck-root .kpi .kpi-toggle{font-family:var(--mono); font-size:11px; color:var(--blue); white-space:nowrap;}

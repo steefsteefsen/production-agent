@@ -53,12 +53,29 @@ interface Judge {
   verified: boolean;
   judge_note: string;
 }
+interface Impact {
+  cost_eur?: number;
+  lost_units?: number;
+  expected_downtime_min?: number;
+  orders_at_risk?: string[];
+  orders?: { order_id: string }[];
+}
 interface Payload {
   hypotheses?: Hyp[];
   hypothesis?: Hyp;
   actions?: Action[];
   applied_threshold?: number | null;
   judge_results?: Judge[];
+  impact?: Impact;
+}
+
+/** Explizite „keine Aussage möglich"-Anzeige statt stillschweigend leer (ehrliche Grenze). */
+function NoData({ text }: { text: string }) {
+  return (
+    <span className="no-data" data-testid="no-data">
+      {text}
+    </span>
+  );
 }
 
 function OperatorTab() {
@@ -185,13 +202,32 @@ function OperatorTab() {
         <div className="op-sub">Replay-Uhr aktiv · Agent empfiehlt, er führt nicht aus</div>
       </div>
 
-      <div className="op-status">
-        <span className="badge">STÖRUNG</span>
-        <div className="txt">
-          <b>{hyps[0]?.reason_code ?? "—"} · beste Hypothese</b>
-          <span>{hyps[0]?.cause ?? ""}</span>
+      {phase === "done" ? (
+        <div
+          className={`op-status ${approved ? "done-approved" : "done-rejected"}`}
+          data-testid="op-status-done"
+        >
+          <span className="badge">{approved ? "FREIGEGEBEN" : "ABGELEHNT"}</span>
+          <div className="txt">
+            <b>
+              {approved
+                ? "Maßnahmen freigegeben — regulärer Abschluss"
+                : "Maßnahmen abgelehnt — sauberer Abbruch, kein Abschluss"}
+            </b>
+            <span>
+              {hyps[0]?.reason_code ?? "—"} · rollenbasiert im Audit protokolliert
+            </span>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="op-status" data-testid="op-status">
+          <span className="badge">STÖRUNG</span>
+          <div className="txt">
+            <b>{hyps[0]?.reason_code ?? "—"} · beste Hypothese</b>
+            <span>{hyps[0]?.cause ?? ""}</span>
+          </div>
+        </div>
+      )}
 
       <div className="op-hero" data-testid="op-hero">
         <div className="op-hero-h">URSACHENHYPOTHESEN — ALLE KANDIDATEN, NICHT NUR DIE BESTE</div>
@@ -274,6 +310,29 @@ function OperatorTab() {
           </div>
         );
       })}
+
+      {/* Wirkung (business_rules) – explizite Anzeige, wenn nichts ableitbar ist */}
+      <div className="op-actions-h">WIRKUNG (DETERMINISTISCHE REGEL, KEIN MODELL)</div>
+      <div className="op-action" data-testid="impact-box">
+        {payload?.impact && typeof payload.impact.cost_eur === "number" ? (
+          <>
+            <div className="op-action-desc">
+              Stillstandskosten: <b>{Math.round(payload.impact.cost_eur)} €</b> ·{" "}
+              {payload.impact.lost_units ?? 0} Einheiten Verlust ·{" "}
+              {payload.impact.expected_downtime_min ?? "?"} min Stillstand
+            </div>
+            {payload.impact.orders_at_risk && payload.impact.orders_at_risk.length > 0 ? (
+              <div className="op-action-desc" data-testid="orders-at-risk">
+                Gefährdete Aufträge: {payload.impact.orders_at_risk.join(", ")}
+              </div>
+            ) : (
+              <NoData text="Keine Leistungsdaten ableitbar — kein Auftrag im gefährdeten Bereich (außerhalb des heutigen Modellumfangs)." />
+            )}
+          </>
+        ) : (
+          <NoData text="Keine Wirkungsschätzung verfügbar — außerhalb des heutigen Modellumfangs." />
+        )}
+      </div>
 
       {/* Rückkopplung mit LLM-Vervollständigung (zwei getrennte Freigabe-Schritte) */}
       {phase === "interrupt" && (
@@ -467,6 +526,7 @@ interface ToolCall {
 function McpTab() {
   const [servers, setServers] = useState<ServerDef[]>([]);
   const [calls, setCalls] = useState<ToolCall[]>([]);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     getJSON<{ servers: ServerDef[] }>("/mcp/servers").then((d) => setServers(d.servers)).catch(() => {});
     getJSON<{ tools: ToolCall[] }>("/observability").then((d) => setCalls(d.tools)).catch(() => {});
@@ -501,22 +561,34 @@ function McpTab() {
         ))}
       </div>
       <div className="section-h">LIVE-AUFRUFE IN DIESEM LAUF</div>
-      {calls.map((c, i) => (
-        <div className="log-entry" data-testid="mcp-call" key={i}>
-          <div className="log-line1">
-            <span className="log-tag tool">tool_call</span>
-            <span className="log-server">
-              {c.server}.{c.tool}
-            </span>
-            <span className="log-time">{c.ts}</span>
+      <div className="kpi" data-testid="kpi-mcp" onClick={() => setOpen((o) => !o)}>
+        <div>
+          <div className="kpi-main">{calls.length} Werkzeugaufrufe · alle erfolgreich</div>
+          <div className="kpi-sub">
+            {[...new Set(calls.map((c) => c.server))].join(", ") || "kein Lauf"} · Antworten gekapselt
           </div>
-          <div className="log-body">
-            <span className="k">params:</span> {JSON.stringify(c.params)}
-          </div>
-          <div className="log-raw">{JSON.stringify(c.raw)}</div>
         </div>
-      ))}
-      {!calls.length && <div className="muted">Noch keine Aufrufe — im Bediener-Tab einen Lauf starten.</div>}
+        <span className="kpi-toggle">{open ? "▲ Details verbergen" : "▼ Rohdaten anzeigen"}</span>
+      </div>
+      {open &&
+        calls.map((c, i) => (
+          <div className="log-entry" data-testid="mcp-call" key={i}>
+            <div className="log-line1">
+              <span className="log-tag tool">tool_call</span>
+              <span className="log-server">
+                {c.server}.{c.tool}
+              </span>
+              <span className="log-time">{c.ts}</span>
+            </div>
+            <div className="log-body">
+              <span className="k">params:</span> {JSON.stringify(c.params)}
+            </div>
+            <div className="log-raw">{JSON.stringify(c.raw)}</div>
+          </div>
+        ))}
+      {open && !calls.length && (
+        <div className="muted">Noch keine Aufrufe — im Bediener-Tab einen Lauf starten.</div>
+      )}
     </div>
   );
 }
@@ -562,6 +634,7 @@ const NORMS = [
 function RagTab() {
   const [inv, setInv] = useState<{ documents: [string, number][]; total_chunks: number; runtime_count: number } | null>(null);
   const [res, setRes] = useState<{ hits: Hit[]; code_match: boolean } | null>(null);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     getJSON<typeof inv>("/knowledge/documents").then(setInv).catch(() => {});
     getJSON<{ hits: Hit[]; code_match: boolean }>(
@@ -612,23 +685,37 @@ function RagTab() {
         ))}
       </div>
       <div className="section-h">SUCHLAUF (MIT RRF-RANG)</div>
-      <div className="log-entry">
-        <div className="log-line1">
-          <span className="log-tag query">query</span>
-          <span className="log-server">"Folienbahn läuft schräg, Siegelnaht unvollständig"</span>
+      <div className="kpi" data-testid="kpi-rag" onClick={() => setOpen((o) => !o)}>
+        <div>
+          <div className="kpi-main">
+            1 Suche · Top-Treffer rrf_rank {res?.hits?.[0]?.rrf_rank ?? "–"}
+          </div>
+          <div className="kpi-sub">
+            {inv?.total_chunks ?? "…"} Chunks im Bestand ·{" "}
+            {res?.code_match ? "Fehlercode erkannt (BM25×2)" : "kein Code (BM25≈Vektor)"}
+          </div>
         </div>
-        <div className="log-body">
-          Exakter Fehlercode erkannt: <span className="k">{res?.code_match ? "ja" : "nein"}</span> →{" "}
-          {res?.code_match ? "BM25 doppelt gewichtet" : "gleiche Gewichtung BM25/Vektor"}
-        </div>
-        <div className="rag-rank">
-          {(res?.hits ?? []).slice(0, 4).map((h, i) => (
-            <span className={`rag-rank-item ${i === 0 ? "top" : ""}`} data-testid="rrf-rank" key={i}>
-              {h.doc} · rrf_rank {h.rrf_rank}
-            </span>
-          ))}
-        </div>
+        <span className="kpi-toggle">{open ? "▲ Details verbergen" : "▼ Rohdaten anzeigen"}</span>
       </div>
+      {open && (
+        <div className="log-entry">
+          <div className="log-line1">
+            <span className="log-tag query">query</span>
+            <span className="log-server">"Folienbahn läuft schräg, Siegelnaht unvollständig"</span>
+          </div>
+          <div className="log-body">
+            Exakter Fehlercode erkannt: <span className="k">{res?.code_match ? "ja" : "nein"}</span>{" "}
+            → {res?.code_match ? "BM25 doppelt gewichtet" : "gleiche Gewichtung BM25/Vektor"}
+          </div>
+          <div className="rag-rank">
+            {(res?.hits ?? []).slice(0, 4).map((h, i) => (
+              <span className={`rag-rank-item ${i === 0 ? "top" : ""}`} data-testid="rrf-rank" key={i}>
+                {h.doc} · rrf_rank {h.rrf_rank}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -642,9 +729,11 @@ interface SecEntry {
 }
 function SecurityTab() {
   const [sec, setSec] = useState<SecEntry[]>([]);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     getJSON<{ security: SecEntry[] }>("/observability").then((d) => setSec(d.security)).catch(() => {});
   }, []);
+  const blocked = sec.filter((s) => !s.allowed).length;
   return (
     <div data-testid="security-tab">
       <div className="log-header">
@@ -659,20 +748,34 @@ function SecurityTab() {
           Regeln sind fest programmiert, nicht Teil des Modells.
         </div>
       </div>
-      {sec.map((s, i) => (
-        <div className="log-entry" data-testid="sec-entry" key={i}>
-          <div className="sec-entry">
-            <div className={`sec-icon ${s.allowed ? "allow" : "block"}`}>{s.allowed ? "✓" : "✗"}</div>
-            <div>
-              <div className="log-body">
-                <span className="k">{s.guard}</span> — {s.detail}
+      <div className="kpi" data-testid="kpi-security" onClick={() => setOpen((o) => !o)}>
+        <div>
+          <div className="kpi-main">
+            {sec.length} Prüfungen · {blocked} blockiert{blocked ? " (erwartet)" : ""}
+          </div>
+          <div className="kpi-sub">sql_guard · injection_guard · judge — fest programmiert</div>
+        </div>
+        <span className="kpi-toggle">{open ? "▲ Details verbergen" : "▼ Rohdaten anzeigen"}</span>
+      </div>
+      {open &&
+        sec.map((s, i) => (
+          <div className="log-entry" data-testid="sec-entry" key={i}>
+            <div className="sec-entry">
+              <div className={`sec-icon ${s.allowed ? "allow" : "block"}`}>
+                {s.allowed ? "✓" : "✗"}
               </div>
-              <div className="log-time">{s.ts}</div>
+              <div>
+                <div className="log-body">
+                  <span className="k">{s.guard}</span> — {s.detail}
+                </div>
+                <div className="log-time">{s.ts}</div>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-      {!sec.length && <div className="muted">Noch keine Guard-Entscheidungen — im Bediener-Tab einen Lauf starten.</div>}
+        ))}
+      {open && !sec.length && (
+        <div className="muted">Noch keine Guard-Entscheidungen — im Bediener-Tab einen Lauf starten.</div>
+      )}
     </div>
   );
 }
@@ -783,20 +886,28 @@ function ConfigTab() {
         )}
       </div>
       <div className="cfg-card">
-        <div className="h">SYSTEMSCHALTER (Anzeige des echten Zustands)</div>
+        <div className="h">SYSTEMZUSTAND (beim Start gesetzt, zur Laufzeit nicht änderbar)</div>
         <div className="cfg-row">
           <div className="l">
             MCP-Protokollpfad
-            <span>Live-Aufrufe über echtes MCP-Protokoll statt In-Process</span>
+            <span>Wird beim Start gesetzt (MCP_VIA_PROTOCOL), zur Laufzeit nicht änderbar.</span>
           </div>
-          <div className={`cfg-toggle ${cfg.mcp_via_protocol ? "" : "off"}`} data-testid="toggle-mcp" />
+          <span
+            className="cfg-status"
+            data-testid="status-mcp"
+            title="Wird beim Start gesetzt (MCP_VIA_PROTOCOL), zur Laufzeit nicht änderbar."
+          >
+            {cfg.mcp_via_protocol ? "Protokoll (stdio)" : "In-Process"}
+          </span>
         </div>
         <div className="cfg-row">
           <div className="l">
             Langfuse-Tracing
-            <span>Beobachtbarkeit im Produktivbetrieb</span>
+            <span>Wird beim Start aus den Umgebungsvariablen gesetzt; zur Laufzeit nicht änderbar.</span>
           </div>
-          <div className={`cfg-toggle ${cfg.langfuse ? "" : "off"}`} data-testid="toggle-langfuse" />
+          <span className="cfg-status" data-testid="status-langfuse">
+            {cfg.langfuse ? "aktiv" : "inaktiv"}
+          </span>
         </div>
       </div>
     </div>

@@ -54,12 +54,15 @@ def _observe_node(node: str, upd: dict) -> None:
         inc = [str(k.get("event_id")) for k in know if isinstance(k, dict) and k.get("event_id")]
         top = docs[0].get("doc") if docs else None
         obs.record_tool_call(
-            "maintenance_docs", "search", {"query": "Störungsbild"}, {"hits": len(docs), "top": top}
+            "knowledge",
+            "search_documents",
+            {"query": "Störungsbild"},
+            {"hits": len(docs), "top": top},
         )
-        obs.record_tool_call("mes", "find_similar_incidents", {"limit": 5}, {"incidents": inc[:5]})
+        obs.record_tool_call("knowledge", "search_incidents", {"limit": 5}, {"incidents": inc[:5]})
     elif node == "estimate_impact":
         imp = upd.get("impact", {}) or {}
-        obs.record_tool_call("mes", "estimate_impact", {"line_id": "L1"}, imp)
+        obs.record_tool_call("business_rules", "estimate_impact", {"line_id": "L1"}, imp)
     elif node == "check_evidence":
         for jr in upd.get("judge_results", []) or []:
             v = bool(jr.get("verified"))
@@ -296,7 +299,7 @@ def observability() -> dict:
 @app.get("/mcp/servers")
 async def mcp_servers() -> dict:
     """Server + Werkzeuge aus der echten MCP-Definition (introspektiert, nicht hartkodiert)."""
-    from production_agent.mcp import mes_server, rag_server
+    from production_agent.mcp import business_rules_server, mes_server, rag_server
 
     async def _tools(srv) -> list[dict]:
         items = await srv.mcp._list_tools()
@@ -309,13 +312,18 @@ async def mcp_servers() -> dict:
         "servers": [
             {
                 "name": "mes",
-                "desc": "Zugriff auf Linienstatus, Alarme und Produktionsplan – schreibgeschützt.",
+                "desc": "Reine Live-Simulation: Status, aktive Alarme, Plan – schreibgeschützt.",
                 "tools": await _tools(mes_server),
             },
             {
-                "name": "maintenance_docs",
-                "desc": "Durchsucht Wartungsdokumente – BM25 + Vektorsuche, RRF-fusioniert.",
+                "name": "knowledge",
+                "desc": "Wissenssuche: Dokumente (BM25 + Vektor, RRF) und historische Vorfälle.",
                 "tools": await _tools(rag_server),
+            },
+            {
+                "name": "business_rules",
+                "desc": "Deterministische Geschäftsregeln (Wirkungsschätzung), kein Modell.",
+                "tools": await _tools(business_rules_server),
             },
         ]
     }

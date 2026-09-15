@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-15T14:15:08",
-  "commit": "f872c37ee8857be8d0f08d35e17e1f31fe273fdc",
+  "generated_at": "2026-09-15T15:49:40",
+  "commit": "efad8478b5cd971f002bb7e995a74a2359e758a7",
   "branch": "main",
   "packages": [
     {
@@ -472,7 +472,7 @@
         {
           "name": "Commit",
           "done": true,
-          "at": "2026-09-13T23:17:08+02:00"
+          "at": "2026-09-15T14:14:47+02:00"
         },
         {
           "name": "Tag",
@@ -489,6 +489,11 @@
       "cost_usd": 0,
       "last_at": null,
       "commits": [
+        {
+          "sha": "efad847",
+          "title": "fix(WP6): e2e-UI-Tests + CI auf Sechs-Tab-Cockpit umgestellt",
+          "at": "2026-09-15T14:14:47+02:00"
+        },
         {
           "sha": "ee7c2cd",
           "title": "feat(WP6): Replay-Eval, Langfuse-Tracing und Observability-ADR",
@@ -783,11 +788,17 @@
     "percent": 85,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 417,
-    "coverage_total": 82,
+    "tests": 411,
+    "coverage_total": 83,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-15T14:14:47+02:00",
+      "kind": "commit",
+      "ref": "efad847",
+      "text": "fix(WP6): e2e-UI-Tests + CI auf Sechs-Tab-Cockpit umgestellt"
+    },
     {
       "at": "2026-09-15T13:56:13+02:00",
       "kind": "commit",
@@ -1332,7 +1343,7 @@
       "path": "src/production_agent/",
       "files": 2,
       "tests": 279,
-      "coverage": 83
+      "coverage": 98
     },
     {
       "path": "src/production_agent/api/",
@@ -1354,9 +1365,9 @@
     },
     {
       "path": "src/production_agent/mcp/",
-      "files": 2,
+      "files": 3,
       "tests": 20,
-      "coverage": 74
+      "coverage": 79
     },
     {
       "path": "src/production_agent/security/",

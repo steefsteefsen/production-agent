@@ -12,7 +12,7 @@ python -m venv .venv && source .venv/bin/activate
 make install                            # deps + pre-commit
 cp .env.example .env                    # API-Key eintragen
 python -m production_agent.data.simulator   # 348 Störungsereignisse (Gold; Kurzstillstände <5min zählen nicht, ADR-0001) → data/gold/mes.sqlite
-make test                               # Testsuite (<!-- auto:tests -->417<!-- /auto:tests --> Tests), läuft ohne API-Key
+make test                               # Testsuite (<!-- auto:tests -->411<!-- /auto:tests --> Tests), läuft ohne API-Key
 python autopilot/run.py --dry-run       # Prompts der Arbeitspakete ansehen, dann ohne --dry-run laufen lassen
 ```
 
@@ -75,7 +75,7 @@ fällt gratis ab. Alle Stellschrauben stehen in `decisions.yaml`.
 | `security/action_policy.py` | Maßnahmen klassifizieren (inform / approval_required / forbidden), Konfidenzschwelle |
 | `security/audit.py` | JSONL-Audit jedes Tool-Aufrufs und jeder Freigabe |
 | `graph/workflow.py` | 7 Knoten, Verzweigung bei Alarmflut, `interrupt()` am Freigabeknoten, Checkpointer |
-| `mcp/mes_server.py` | fachliche Werkzeuge (Anzahl <!-- auto:tools_mes -->6<!-- /auto:tools_mes -->), alle über den Guard |
+| `mcp/mes_server.py` | fachliche Werkzeuge (Anzahl <!-- auto:tools_mes -->3<!-- /auto:tools_mes -->), alle über den Guard |
 | `mcp/rag_server.py` | BM25-Suche + RRF-Fusion (Vektorseite folgt in WP2) |
 | `data/simulator.py`, `data/replay.py` | deterministischer MES-Simulator (Seed 42), Replay-Uhr, Replay-Fälle, Scoring |
 | `autopilot/status.py` | erzeugt docs/status/ und füllt die auto-Marker in der Doku (Fakten statt Handarbeit) |
@@ -100,7 +100,7 @@ Regeln: S1–S9, K1–K10, D1–D9.
 
 - **S1**: keine Secrets, keine .env committet
 - **S2**: keine verbotene Bibliothek der Ausschlussliste (CLAUDE.md)
-- **S3**: MES-Server genau 6 Werkzeuge, RAG genau 1, kein Werkzeug *sql/query/write/exec*
+- **S3**: drei MCP-Server (mes=3 Live, knowledge=3 Suche/Verlauf, business_rules=1 Regel), kein *sql/query/write/exec*
 - **S4**: schema.sql und ALLOWED_TABLES identisch
 - **S5**: decisions.yaml eingefroren (Hash; Aenderung nur mit GUARDIAN_ALLOW_DECISIONS=1)
 - **S6**: Sicherheitsmodul geaendert -> Sicherheits-, Protokoll- und Trajektorientests gruen

@@ -1,8 +1,9 @@
-"""MCP-Server 1: MES – sechs fachlich geschnittene Werkzeuge.
+"""MCP-Server 1: MES – reine Live-Simulation der Linie (drei fachlich geschnittene Werkzeuge).
 
-Bewusst KEIN generisches SQL-Werkzeug. Jedes Werkzeug spricht die Sprache des
-Produktionsleiters, läuft durch sql_guard (Read-only, Allowlist, Zeilenlimit),
-wird auditiert und liefert kompakte, injection-sichere Ergebnisse.
+Nur der aktuelle Anlagenzustand: Linienstatus, aktive Alarme, offener Produktionsplan. Historische
+Vorfallsuche liegt im knowledge-Server, die Wirkungsschätzung im business_rules-Server (fachliche
+Trennung). Bewusst KEIN generisches SQL-Werkzeug: jedes Werkzeug läuft durch sql_guard (Read-only,
+Allowlist, Zeilenlimit), wird auditiert und liefert kompakte, injection-sichere Ergebnisse.
 
 Start: python -m production_agent.mcp.mes_server   (stdio-Transport)
 """
@@ -26,8 +27,6 @@ audit = AuditLog(settings.audit_log_path)
 mcp = FastMCP("mes")
 
 _MAX_ACTIVE_ALARMS = 100
-_MAX_ALARM_HISTORY = 20
-_MAX_SIMILAR_INCIDENTS = 5
 
 
 def _now() -> str:
@@ -108,27 +107,6 @@ def get_active_alarms(line_id: str, minutes: int = 30) -> str:
 
 
 @mcp.tool()
-def get_alarm_history(alarm_code: str, limit: int = 20) -> str:
-    """Historische Störungsereignisse (Gold) mit diesem Erstalarmcode – Dauer, Ursache, Maßnahme.
-
-    Nutze dies, wenn du verstehen willst, wie oft und wie lange dieser Alarm in der
-    Vergangenheit zur Störung geführt hat (max. 20 Einträge).
-    """
-    sql = """
-        SELECT event_id, start_ts, duration_min, packml_state, reason_code,
-               alarm_count, alarm_flood, resolution_action
-        FROM downtime_events_gold WHERE first_alarm_code = ? AND end_ts <= ?
-        ORDER BY start_ts DESC LIMIT ?
-    """
-    return _query(
-        sql,
-        (alarm_code, _now(), min(int(limit), _MAX_ALARM_HISTORY)),
-        tool="get_alarm_history",
-        limit=_MAX_ALARM_HISTORY,
-    )
-
-
-@mcp.tool()
 def get_production_plan(line_id: str) -> str:
     """Offene Aufträge der Linie mit Soll/Ist-Menge, Termin und Priorität.
 
@@ -141,89 +119,6 @@ def get_production_plan(line_id: str) -> str:
         ORDER BY priority, due_ts
     """
     return _query(sql, (line_id,), tool="get_production_plan")
-
-
-@mcp.tool()
-def estimate_impact(line_id: str, expected_downtime_min: float) -> str:
-    """Schätzt Produktionsverlust, Kosten (EUR) und Termingefährdung je Auftrag. Regelbasiert.
-
-    Nutze dies, wenn du dem Produktionsleiter zeigen willst, was der Stillstand kostet
-    und welche Aufträge ihren Termin reißen.
-    """
-    conn = open_readonly(settings.mes_db_path)
-    try:
-        line = run_readonly(conn, "SELECT * FROM lines WHERE line_id = ?", (line_id,), 1)
-        orders = run_readonly(
-            conn,
-            "SELECT order_id, planned_qty, produced_qty, due_ts FROM production_orders "
-            "WHERE line_id = ? AND produced_qty < planned_qty ORDER BY due_ts",
-            (line_id,),
-            settings.max_rows_per_tool,
-        )
-    finally:
-        conn.close()
-    if not line:
-        return sanitize_tool_result('{"error": "line not found"}', source="mes.estimate_impact")
-    rate = line[0]["design_rate_per_hour"]
-    cost_rate = line[0]["cost_per_downtime_minute_eur"]
-    lost_units = round(rate * expected_downtime_min / 60)
-
-    now_dt = datetime.fromisoformat(_now().replace(" ", "T"))
-    orders_detail = []
-    for o in orders:
-        remaining = o["planned_qty"] - o["produced_qty"]
-        production_time_min = remaining / rate * 60
-        try:
-            due_dt = datetime.fromisoformat(o["due_ts"].replace(" ", "T"))
-            time_until_due_min = (due_dt - now_dt).total_seconds() / 60
-        except (ValueError, AttributeError):
-            time_until_due_min = float("inf")
-        # Puffer = Zeit bis Termin − Restproduktionszeit − erwarteter Stillstand
-        buffer_min = time_until_due_min - production_time_min - expected_downtime_min
-        orders_detail.append(
-            {
-                "order_id": o["order_id"],
-                "buffer_min": round(buffer_min, 1),
-                "at_risk": buffer_min < 0,
-            }
-        )
-
-    result = {
-        "expected_downtime_min": expected_downtime_min,
-        "lost_units": lost_units,
-        "cost_eur": round(cost_rate * expected_downtime_min, 2),
-        "orders": orders_detail,
-        "orders_at_risk": [o["order_id"] for o in orders_detail if o["at_risk"]],
-        "method": (
-            "regelbasiert: Nennleistung × Dauer; Kostensatz je Minute aus Stammdaten; "
-            "Puffer = Zeit bis Termin − Restproduktionszeit − Stillstand"
-        ),
-    }
-    audit.record(
-        "tool_call", tool="estimate_impact", line_id=line_id, minutes=expected_downtime_min
-    )
-    return sanitize_tool_result(
-        json.dumps(result, ensure_ascii=False), source="mes.estimate_impact"
-    )
-
-
-@mcp.tool()
-def find_similar_incidents(alarm_codes: list[str], packml_state: str, limit: int = 5) -> str:
-    """Case-Based Reasoning: ähnliche frühere Störungen nach Alarmcodes und PackML-Zustand.
-
-    Nutze dies, wenn du Belege aus der Vergangenheit suchst, die deine Hypothese zur
-    Ursache stützen oder widerlegen (max. 5 Einträge).
-    """
-    placeholders = ",".join("?" for _ in alarm_codes) or "''"
-    sql = f"""
-        SELECT g.event_id, g.start_ts, g.duration_min, g.first_alarm_code, g.reason_code,
-               g.resolution_action, i.root_cause, i.action_taken, i.outcome, i.doc_ref
-        FROM downtime_events_gold g LEFT JOIN incident_history i ON i.event_id = g.event_id
-        WHERE g.first_alarm_code IN ({placeholders}) AND g.packml_state = ? AND g.end_ts <= ?
-        ORDER BY g.start_ts DESC LIMIT ?
-    """  # noqa: S608  # nosec B608 – nur "?"-Platzhalter, Werte laufen als Parameter
-    params = (*alarm_codes, packml_state, _now(), min(int(limit), _MAX_SIMILAR_INCIDENTS))
-    return _query(sql, params, tool="find_similar_incidents", limit=_MAX_SIMILAR_INCIDENTS)
 
 
 if __name__ == "__main__":

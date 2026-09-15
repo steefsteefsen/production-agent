@@ -91,14 +91,7 @@ async def test_alle_werkzeuge_liefern_untrusted_huelle(replay_env):
     calls = {
         "get_line_status": {"line_id": "L1"},
         "get_active_alarms": {"line_id": "L1", "minutes": 30},
-        "get_alarm_history": {"alarm_code": "E-4711", "limit": 5},
         "get_production_plan": {"line_id": "L1"},
-        "estimate_impact": {"line_id": "L1", "expected_downtime_min": 15},
-        "find_similar_incidents": {
-            "alarm_codes": ["E-4711"],
-            "packml_state": "Held",
-            "limit": 3,
-        },
     }
     async with Client(await _server()) as c:
         for name, args in calls.items():
@@ -205,47 +198,6 @@ async def test_get_active_alarms_limit_100_falsification(fixture_env):
     assert len(real_rows) <= 100, f"Limit 100 verletzt: {len(real_rows)} Zeilen zurückgegeben"
 
 
-# ── get_alarm_history ──────────────────────────────────────────────────────
-
-
-async def test_get_alarm_history_liefert_historische_ereignisse(fixture_env):
-    """Verifikation: liefert abgeschlossene Gold-Ereignisse für den gesuchten Alarmcode."""
-    from fastmcp import Client
-
-    async with Client(await _server()) as c:
-        r = await c.call_tool("get_alarm_history", {"alarm_code": "E-TEST", "limit": 5})
-    rows = _body(r)
-    assert isinstance(rows, list)
-    assert len(rows) > 0
-    for row in rows:
-        assert "event_id" in row
-
-
-async def test_get_alarm_history_limit_20_falsification(fixture_env):
-    """Falsifikation: 25 historische Ereignisse in DB → maximal 20 zurückgegeben (limit=100 ignoriert)."""
-    from fastmcp import Client
-
-    async with Client(await _server()) as c:
-        r = await c.call_tool("get_alarm_history", {"alarm_code": "E-TEST", "limit": 100})
-    rows = _body(r)
-    real_rows = [row for row in rows if "_truncated" not in row]
-    assert len(real_rows) <= 20, f"Limit 20 verletzt: {len(real_rows)} Zeilen zurückgegeben"
-
-
-async def test_get_alarm_history_leck_test(fixture_env):
-    """Falsifikation (Leck-Test): Ereignis mit end_ts > sim_now erscheint NICHT in der Historie."""
-    from fastmcp import Client
-
-    async with Client(await _server()) as c:
-        # event_id=99 hat first_alarm_code='E-LEAK' und end_ts='2026-06-15 10:30:00' > sim_now
-        r = await c.call_tool("get_alarm_history", {"alarm_code": "E-LEAK", "limit": 100})
-    rows = _body(r)
-    event_ids = {row.get("event_id") for row in rows if "_truncated" not in row}
-    assert 99 not in event_ids, (
-        "Leck! Laufendes Ereignis (event_id=99) erscheint in get_alarm_history"
-    )
-
-
 # ── get_production_plan ────────────────────────────────────────────────────
 
 
@@ -270,94 +222,3 @@ async def test_get_production_plan_schliesst_abgeschlossene_aus_falsification(fi
     rows = _body(r)
     order_ids = {row.get("order_id") for row in rows}
     assert "A-DONE" not in order_ids, "Abgeschlossener Auftrag A-DONE erscheint fälschlich im Plan"
-
-
-# ── estimate_impact ────────────────────────────────────────────────────────
-
-
-async def test_estimate_impact_liefert_kosten_und_puffer(fixture_env):
-    """Verifikation: Kosten = cost_rate × downtime, Puffer-Formel korrekt berechnet."""
-    from fastmcp import Client
-
-    async with Client(await _server()) as c:
-        r = await c.call_tool("estimate_impact", {"line_id": "L1", "expected_downtime_min": 45})
-    data = _body(r)
-    # Kosten: 45 min × 200 €/min = 9000 €
-    assert data["cost_eur"] == pytest.approx(9000.0)
-    # Produktionsverlust: 45/60 × 3600 = 2700 Stück
-    assert data["lost_units"] == 2700
-    # Detailliste muss vorhanden sein
-    assert "orders" in data
-    assert isinstance(data["orders"], list)
-
-
-async def test_estimate_impact_genau_ein_gefaehrdeter_auftrag_falsification(fixture_env):
-    """Falsifikation: Pufferformel – bei expected_downtime_min=45 ist genau A-AT-RISK gefährdet.
-
-    A-AT-RISK: buffer = (10:20-10:00) - (600/3600×60) - 45 = 20 - 10 - 45 = -35 min → at_risk
-    A-SAFE:    buffer = (12:00-10:00) - (600/3600×60) - 45 = 120 - 10 - 45 = +65 min → sicher
-    """
-    from fastmcp import Client
-
-    async with Client(await _server()) as c:
-        r = await c.call_tool("estimate_impact", {"line_id": "L1", "expected_downtime_min": 45})
-    data = _body(r)
-    assert "orders_at_risk" in data, "Feld orders_at_risk fehlt"
-    assert data["orders_at_risk"] == ["A-AT-RISK"], (
-        f"Erwarte genau ['A-AT-RISK'], bekam: {data['orders_at_risk']}"
-    )
-    # Pufferwert für den gefährdeten Auftrag muss negativ sein
-    at_risk_detail = next(o for o in data["orders"] if o["order_id"] == "A-AT-RISK")
-    assert at_risk_detail["buffer_min"] < 0
-    safe_detail = next(o for o in data["orders"] if o["order_id"] == "A-SAFE")
-    assert safe_detail["buffer_min"] > 0
-
-
-# ── find_similar_incidents ─────────────────────────────────────────────────
-
-
-async def test_find_similar_incidents_liefert_aehnliche_faelle(fixture_env):
-    """Verifikation: liefert historische Fälle mit passendem Alarmcode und PackML-Zustand."""
-    from fastmcp import Client
-
-    async with Client(await _server()) as c:
-        r = await c.call_tool(
-            "find_similar_incidents",
-            {"alarm_codes": ["E-TEST"], "packml_state": "Held", "limit": 3},
-        )
-    rows = _body(r)
-    assert isinstance(rows, list)
-    assert len(rows) > 0
-    for row in rows:
-        assert "event_id" in row
-
-
-async def test_find_similar_incidents_limit_5_falsification(fixture_env):
-    """Falsifikation: 25 passende Ereignisse in DB → maximal 5 zurückgegeben (limit=100 ignoriert)."""
-    from fastmcp import Client
-
-    async with Client(await _server()) as c:
-        r = await c.call_tool(
-            "find_similar_incidents",
-            {"alarm_codes": ["E-TEST"], "packml_state": "Held", "limit": 100},
-        )
-    rows = _body(r)
-    real_rows = [row for row in rows if "_truncated" not in row]
-    assert len(real_rows) <= 5, f"Limit 5 verletzt: {len(real_rows)} Zeilen zurückgegeben"
-
-
-async def test_find_similar_incidents_leck_test(fixture_env):
-    """Falsifikation (Leck-Test): Ereignis mit end_ts > sim_now erscheint NICHT in ähnlichen Fällen."""
-    from fastmcp import Client
-
-    async with Client(await _server()) as c:
-        # event_id=99 hat first_alarm_code='E-LEAK' und end_ts > sim_now
-        r = await c.call_tool(
-            "find_similar_incidents",
-            {"alarm_codes": ["E-LEAK"], "packml_state": "Held", "limit": 100},
-        )
-    rows = _body(r)
-    event_ids = {row.get("event_id") for row in rows if "_truncated" not in row}
-    assert 99 not in event_ids, (
-        "Leck! Laufendes Ereignis (event_id=99) erscheint in find_similar_incidents"
-    )

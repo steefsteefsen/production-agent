@@ -75,14 +75,18 @@ def main() -> int:
             page.get_by_test_id("fb-note").wait_for(state="visible", timeout=15000)
         except Exception:
             problems.append("Rückkopplung: Übernahme-Bestätigung (fb-note) fehlt.")
-        # eigentliche Maßnahmen-Freigabe (zweiter, getrennter Schritt)
+        # eigentliche Maßnahmen-Freigabe (zweiter, getrennter Schritt) – sichtbare Statusänderung
         page.get_by_test_id("op-approve").click()
         try:
             page.get_by_test_id("op-result").wait_for(state="visible", timeout=15000)
         except Exception:
             problems.append("Bediener: Freigabe-Ergebnis (op-result) fehlt.")
+        if page.get_by_test_id("op-status-done").count() == 0:
+            problems.append("Bediener: Kopf-Banner wechselt nach Freigabe nicht auf FREIGEGEBEN.")
         page.screenshot(path=str(OUT / "03_freigegeben.png"), full_page=True)
-        shots.append(("03_freigegeben.png", "Bediener: übernommen + freigegeben (zwei Schritte)."))
+        shots.append(
+            ("03_freigegeben.png", "Bediener: übernommen + freigegeben (sichtbarer Status).")
+        )
 
         # --- übrige Tabs ---
         for tab, testid, label in [
@@ -113,26 +117,37 @@ def main() -> int:
             problems.append("Live-Daten: weniger als 7 Stationen.")
         page.get_by_test_id("tab-mcp").click()
         page.wait_for_timeout(400)
-        if page.get_by_test_id("server-card").count() < 2:
-            problems.append("MCP: weniger als 2 Server-Karten.")
+        if page.get_by_test_id("server-card").count() < 3:
+            problems.append("MCP: weniger als 3 Server-Karten (mes/knowledge/business_rules).")
+        # KPI-Kachel als Default, Rohdaten per Klick aufklappen (Drill-down)
+        page.get_by_test_id("kpi-mcp").click()
+        page.wait_for_timeout(300)
         if page.get_by_test_id("mcp-call").count() == 0:
-            problems.append("MCP: keine Live-Aufrufe sichtbar.")
+            problems.append("MCP: keine Live-Aufrufe nach Aufklappen sichtbar.")
+        page.screenshot(path=str(OUT / "05b_mcp_aufgeklappt.png"), full_page=True)
+        shots.append(("05b_mcp_aufgeklappt.png", "MCP: KPI-Kachel aufgeklappt (Rohaufrufe)."))
         page.get_by_test_id("tab-rag").click()
         page.wait_for_timeout(600)
         if page.get_by_test_id("rag-runtime").count() == 0:
             problems.append(
                 "RAG: eingespeister Rückkopplungstext nicht im Bestand (kein Voll-Kreis)."
             )
+        page.get_by_test_id("kpi-rag").click()
+        page.wait_for_timeout(300)
         if page.get_by_test_id("rrf-rank").count() == 0:
-            problems.append("RAG: keine rrf_rank-Anzeige.")
+            problems.append("RAG: keine rrf_rank-Anzeige nach Aufklappen.")
         page.get_by_test_id("tab-security").click()
         page.wait_for_timeout(400)
+        page.get_by_test_id("kpi-security").click()
+        page.wait_for_timeout(300)
         if page.get_by_test_id("sec-entry").count() == 0:
-            problems.append("Sicherheit: keine Guard-Entscheidungen.")
+            problems.append("Sicherheit: keine Guard-Entscheidungen nach Aufklappen.")
         page.get_by_test_id("tab-config").click()
         page.wait_for_timeout(400)
         if page.get_by_test_id("slider-konfidenz.schwelle_empfehlung").count() == 0:
             problems.append("Konfiguration: kein Konfidenz-Slider.")
+        if page.get_by_test_id("status-mcp").count() == 0:
+            problems.append("Konfiguration: MCP-Statusanzeige (kein Toggle) fehlt.")
 
         browser.close()
 
