@@ -22,7 +22,9 @@ def test_mock_narrow_cause_leitet_reason_code_aus_vorfaellen_ab():
         "alarms": [{"alarm_code": "E-4711", "ts": "2026-08-28 07:18:44"}],
         "knowledge": [{"event_id": "7", "reason_code": "STO-FOLIE", "duration_min": 20}],
     }
-    hyp = mock_chains()["narrow_cause"].invoke(_msgs(ctx))
+    out = mock_chains()["narrow_cause"].invoke(_msgs(ctx))
+    assert len(out.candidates) >= 1  # Knoten 4 liefert mehrere Kandidaten
+    hyp = out.candidates[0]  # beste zuerst
     assert hyp.reason_code == "STO-FOLIE"
     assert "E-4711" in hyp.evidence  # Erstalarm als Evidenz
     assert any("7" == e for e in hyp.evidence)  # Vorfall-ID als Evidenz

@@ -35,3 +35,7 @@ docs/demo_walkthrough/video/
 
 # LangGraph-Checkpointer: Laufzeitzustand (SQLite + WAL), nicht versionieren
 data/checkpoints.sqlite*
+
+# RAG-Laufzeit-Einspeisung (Bediener-Rückkopplung): lokaler Bestand, nicht versionieren
+data/rag_runtime.jsonl
+ui_mockup_tabs.html

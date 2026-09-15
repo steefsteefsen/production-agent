@@ -17,7 +17,11 @@ from langchain_core.runnables import RunnableLambda
 
 from production_agent.graph.judge import JudgeVerdict
 from production_agent.graph.state import Hypothesis
-from production_agent.graph.workflow import _ActionsOutput, _first_alarm_code
+from production_agent.graph.workflow import (
+    _ActionsOutput,
+    _first_alarm_code,
+    _HypothesesOutput,
+)
 from production_agent.security.action_policy import ActionLevel, RecommendedAction
 
 
@@ -38,24 +42,51 @@ def _incidents(knowledge: list) -> list[dict]:
     return [k for k in knowledge if isinstance(k, dict) and k.get("event_id") not in (None, "")]
 
 
-def _mock_narrow_cause(messages) -> Hypothesis:
+def _mock_narrow_cause(messages) -> _HypothesesOutput:
+    """Mehrere Ursachenkandidaten (nicht nur die beste), deterministisch aus den Vorfällen:
+    die häufigste reason_code ist die beste (Konfidenz 0.80, über Default-Schwelle 0.60), weitere
+    reason_codes bzw. plausible Standardcodes werden als Alternativen mit fallender Konfidenz
+    (unter Schwelle) ergänzt – so zeigt der Bediener-Tab das Balkendiagramm realistisch."""
     ctx = _context(messages)
     alarms = ctx.get("alarms", [])
     incidents = _incidents(ctx.get("knowledge", []))
     reason_codes = [str(i.get("reason_code")) for i in incidents if i.get("reason_code")]
-    reason_code = Counter(reason_codes).most_common(1)[0][0] if reason_codes else "STO-UNBEKANNT"
+    ranking = [c for c, _ in Counter(reason_codes).most_common()]
+    best_code = ranking[0] if ranking else "STO-UNBEKANNT"
     first_code = _first_alarm_code(alarms)
     event_ids = [str(i["event_id"]) for i in incidents[:2]]
     evidence = [e for e in ([first_code] + event_ids) if e] or ["(keine Evidenz)"]
     durations = [float(i.get("duration_min", 0) or 0) for i in incidents if i.get("duration_min")]
     downtime = round(sum(durations) / len(durations), 1) if durations else 30.0
-    return Hypothesis(
-        cause=f"Störung {reason_code}, abgeleitet aus {len(incidents)} ähnlichen Vorfällen",
-        reason_code=reason_code,
-        confidence=0.80,
-        evidence=evidence,
-        expected_downtime_min=downtime,
-    )
+
+    candidates = [
+        Hypothesis(
+            cause=f"Störung {best_code}, abgeleitet aus {len(incidents)} ähnlichen Vorfällen",
+            reason_code=best_code,
+            confidence=0.80,
+            evidence=evidence,
+            expected_downtime_min=downtime,
+        )
+    ]
+    # Alternativen: weitere reason_codes aus den Vorfällen, sonst plausible Standardcodes.
+    fallback = ["STO-SENSOR", "QUAL-NIO", "STO-ELEK", "STO-ANTRIEB", "MAT-STAU"]
+    seen = {best_code}
+    alt_codes: list[str] = []
+    for c in [*ranking[1:], *fallback]:
+        if c not in seen:
+            seen.add(c)
+            alt_codes.append(c)
+    for code, conf in zip(alt_codes[:3], (0.45, 0.34, 0.22), strict=False):
+        candidates.append(
+            Hypothesis(
+                cause=f"Alternative Ursache {code} (nachrangig)",
+                reason_code=code,
+                confidence=conf,
+                evidence=[first_code] if first_code else [],
+                expected_downtime_min=round(downtime * 0.8, 1),
+            )
+        )
+    return _HypothesesOutput(candidates=candidates)
 
 
 def _mock_derive_actions(messages) -> _ActionsOutput:

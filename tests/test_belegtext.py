@@ -15,6 +15,7 @@ from langchain_core.runnables import RunnableLambda
 from production_agent.graph.state import Hypothesis
 from production_agent.graph.workflow import (
     _ActionsOutput,
+    _HypothesesOutput,
     _original_passage,
     attach_belegtext,
     build_graph,
@@ -61,12 +62,16 @@ def test_original_passage_loest_ueberschrift_zu_abschnitt():
 
 _FAKE_LLM = {
     "narrow_cause": RunnableLambda(
-        lambda _: Hypothesis(
-            cause="Folienriss",
-            reason_code="STO-FOLIE",
-            confidence=0.82,
-            evidence=["E-4711"],
-            expected_downtime_min=25.0,
+        lambda _: _HypothesesOutput(
+            candidates=[
+                Hypothesis(
+                    cause="Folienriss",
+                    reason_code="STO-FOLIE",
+                    confidence=0.82,
+                    evidence=["E-4711"],
+                    expected_downtime_min=25.0,
+                )
+            ]
         )
     ),
     "derive_actions": RunnableLambda(

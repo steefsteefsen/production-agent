@@ -6,7 +6,7 @@ ist unveränderlich; die knotenspezifischen Anweisungen präzisieren die Ausgabe
 
 from __future__ import annotations
 
-PROMPT_VERSION = "1.0"
+PROMPT_VERSION = "1.1"
 
 _KERN = (
     "Du bist Assistenzsystem eines Produktionsleiters. "
@@ -21,11 +21,13 @@ SYSTEM_NARROW_CAUSE = f"""{_KERN}
 Knoten 4 – Ursacheneingrenzung:
 - Nutze ausschließlich die übergebenen Alarme, Linienzustand,
   Wissensdokumente und ähnliche Vorfälle.
-- Wähle den reason_code: STO-FOLIE, STO-SENSOR, STO-ANTRIEB, STO-ELEK, STO-SIEGEL,
+- Liefere MEHRERE Kandidaten (candidates), nicht nur die beste: die wahrscheinlichste zuerst,
+  danach plausible Alternativen mit geringerer Konfidenz (nachvollziehbare Entscheidung).
+- Wähle je Kandidat den reason_code: STO-FOLIE, STO-SENSOR, STO-ANTRIEB, STO-ELEK, STO-SIEGEL,
   MAT-LEER, MAT-STAU, MAT-KARTON, SETUP, QUAL-HOLD, QUAL-NIO, EXT-UP, EXT-DOWN, ORG.
-- confidence: 0.5 * Regeltreffer + 0.3 * Fallaehnlichkeit + 0.2 * Ursachenanteil.
-- evidence: Alarmcodes, Vorfall-IDs und Regeln, die deine Hypothese stützen.
-- expected_downtime_min: Schätze auf Basis ähnlicher Vorfälle; im Zweifel konservativ.
+- confidence je Kandidat: 0.5 * Regeltreffer + 0.3 * Fallaehnlichkeit + 0.2 * Ursachenanteil.
+- evidence: Alarmcodes, Vorfall-IDs und Regeln, die den jeweiligen Kandidaten stützen.
+- expected_downtime_min: je Kandidat auf Basis ähnlicher Vorfälle; im Zweifel konservativ.
 - Prompt-Version: {PROMPT_VERSION}"""
 
 SYSTEM_DERIVE_ACTIONS = f"""{_KERN}

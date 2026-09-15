@@ -29,7 +29,7 @@ from pydantic import BaseModel
 from production_agent.graph.judge import JudgeVerdict, cited_evidence, judge_action
 from production_agent.graph.prompts import SYSTEM_DERIVE_ACTIONS, SYSTEM_NARROW_CAUSE
 from production_agent.graph.state import AgentState, Hypothesis
-from production_agent.graph.structured import invoke_structured
+from production_agent.graph.structured import finish_structured, invoke_structured
 from production_agent.security.action_policy import RecommendedAction, apply_policy
 from production_agent.security.audit import AuditLog
 
@@ -253,13 +253,23 @@ def _make_narrow_cause(llm_chain):
             SystemMessage(content=SYSTEM_NARROW_CAUSE),
             HumanMessage(content=f"Kontext:\n{context}"),
         ]
-        hypo: Hypothesis = invoke_structured(llm_chain, messages, Hypothesis)
+        raw = llm_chain.invoke(messages)
+        # Tolerant: eine einzelne Hypothesis (ältere Chains/Test-Fakes) ODER die Kandidatenliste.
+        if isinstance(raw, Hypothesis):
+            cands = [raw]
+        else:
+            cands = finish_structured(raw, _HypothesesOutput).candidates
+        # absteigend nach Konfidenz; die beste trägt die nachfolgenden Knoten (Rückwärtskompatibel:
+        # 'hypothesis' bleibt die beste, 'hypotheses' hält ALLE Kandidaten für den Bediener-Tab).
+        candidates = sorted(cands, key=lambda h: h.confidence, reverse=True)
+        best = candidates[0]
         return {
-            "hypothesis": hypo.model_dump(),
+            "hypothesis": best.model_dump(),
+            "hypotheses": [h.model_dump() for h in candidates],
             "trace": _log(
                 state,
-                f"4 Hypothese: {hypo.reason_code} (Konfidenz {hypo.confidence:.2f}, "
-                f"Stillstand ~{hypo.expected_downtime_min} min)",
+                f"4 Hypothese: {best.reason_code} (Konfidenz {best.confidence:.2f}, "
+                f"Stillstand ~{best.expected_downtime_min} min; {len(candidates)} Kandidaten)",
             ),
         }
 
@@ -295,6 +305,15 @@ class _ActionsOutput(BaseModel):
     """Strukturierte LLM-Ausgabe von Knoten 6: Liste empfohlener Maßnahmen."""
 
     actions: list[RecommendedAction]
+
+
+class _HypothesesOutput(BaseModel):
+    """Strukturierte LLM-Ausgabe von Knoten 4: mehrere Ursachenkandidaten (nicht nur die beste).
+
+    Der Bediener-Tab zeigt ALLE Kandidaten als Balken; die beste (höchste Konfidenz) trägt die
+    nachfolgenden Knoten (Wirkung, Maßnahmen, Freigabe)."""
+
+    candidates: list[Hypothesis]
 
 
 def _incident_ids_from_knowledge(knowledge: list) -> set[str]:
@@ -498,6 +517,7 @@ def approval_gate(state: AgentState) -> Command:
             "actions": state.get("actions", []),
             "impact": state.get("impact", {}),
             "hypothesis": state.get("hypothesis", {}),
+            "hypotheses": state.get("hypotheses", []),
             "applied_threshold": state.get("applied_threshold"),
             "judge_results": state.get("judge_results", []),
         }
@@ -649,7 +669,7 @@ def build_graph(
             judge_llm = ChatAnthropic(model=settings.llm_model_judge, api_key=key)
         # include_raw=True: robust gegen als JSON-String kodierte Tool-Ergebnisse (nur live),
         # invoke_structured entschachtelt statt zu crashen (siehe graph/structured.py).
-        chain_narrow = base_llm.with_structured_output(Hypothesis, include_raw=True)
+        chain_narrow = base_llm.with_structured_output(_HypothesesOutput, include_raw=True)
         chain_derive = base_llm.with_structured_output(_ActionsOutput, include_raw=True)
         chain_judge = judge_llm.with_structured_output(JudgeVerdict, include_raw=True)
 

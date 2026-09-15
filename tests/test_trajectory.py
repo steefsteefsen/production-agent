@@ -18,7 +18,7 @@ from langchain_core.runnables import RunnableLambda
 from langgraph.types import Command
 
 from production_agent.graph.state import Hypothesis
-from production_agent.graph.workflow import _ActionsOutput, build_graph
+from production_agent.graph.workflow import _ActionsOutput, _HypothesesOutput, build_graph
 from production_agent.security.action_policy import ActionLevel, RecommendedAction
 
 # ---------------------------------------------------------------------------
@@ -66,8 +66,9 @@ _FAKE_ACTIONS = _ActionsOutput(
         )
     ]
 )
+_FAKE_HYPOS = _HypothesesOutput(candidates=[_FAKE_HYPO])
 _FAKE_LLM = {
-    "narrow_cause": RunnableLambda(lambda _: _FAKE_HYPO),
+    "narrow_cause": RunnableLambda(lambda _: _FAKE_HYPOS),
     "derive_actions": RunnableLambda(lambda _: _FAKE_ACTIONS),
 }
 
@@ -172,7 +173,7 @@ def test_verbotene_massnahme_erreicht_nie_freigabe():
         ]
     )
     fake_llm = {
-        "narrow_cause": RunnableLambda(lambda _: _FAKE_HYPO),
+        "narrow_cause": RunnableLambda(lambda _: _FAKE_HYPOS),
         "derive_actions": RunnableLambda(lambda _: bad_actions),
     }
     g = build_graph(tools=_fixture_tools(12), llm=fake_llm)

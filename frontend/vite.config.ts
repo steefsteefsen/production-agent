@@ -8,6 +8,10 @@ export default defineConfig({
       "/mes": "http://localhost:8000",
       "/investigations": "http://localhost:8000",
       "/health": "http://localhost:8000",
+      "/mcp": "http://localhost:8000",
+      "/observability": "http://localhost:8000",
+      "/knowledge": "http://localhost:8000",
+      "/api": "http://localhost:8000",
     },
   },
 });

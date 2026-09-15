@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-15T12:41:02",
-  "commit": "6dbe1ea43e37aa4a3b82d934d518f209b83717e0",
+  "generated_at": "2026-09-15T13:56:33",
+  "commit": "e6661df66d3d977511f66ee4cd0f15e4aa529bd2",
   "branch": "main",
   "packages": [
     {
@@ -783,11 +783,17 @@
     "percent": 85,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 412,
-    "coverage_total": 88,
+    "tests": 417,
+    "coverage_total": 82,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-15T12:40:46+02:00",
+      "kind": "commit",
+      "ref": "e6661df",
+      "text": "feat(agent_tab): Freigabe-Seite, Konfidenzbalken, Badges, Belegtext"
+    },
     {
       "at": "2026-09-15T11:25:55+02:00",
       "kind": "commit",
@@ -1318,15 +1324,15 @@
   "structure": [
     {
       "path": "src/production_agent/",
-      "files": 1,
-      "tests": 274,
-      "coverage": 98
+      "files": 2,
+      "tests": 279,
+      "coverage": 83
     },
     {
       "path": "src/production_agent/api/",
       "files": 2,
       "tests": 40,
-      "coverage": 76
+      "coverage": 54
     },
     {
       "path": "src/production_agent/data/",
@@ -1337,14 +1343,14 @@
     {
       "path": "src/production_agent/graph/",
       "files": 8,
-      "tests": 118,
+      "tests": 121,
       "coverage": 96
     },
     {
       "path": "src/production_agent/mcp/",
       "files": 2,
-      "tests": 17,
-      "coverage": 76
+      "tests": 20,
+      "coverage": 74
     },
     {
       "path": "src/production_agent/security/",

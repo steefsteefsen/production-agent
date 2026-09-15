@@ -71,8 +71,59 @@ def _load_chunks() -> list[dict[str, str]]:
     return chunks
 
 
-_CHUNKS = _load_chunks()
+RUNTIME_DOCS = DOC_DIR.parent / "rag_runtime.jsonl"  # zur Laufzeit eingespeiste Belege (gitignored)
+
+
+def _load_runtime_chunks() -> list[dict]:
+    """Zur Laufzeit eingespeiste Dokumente (Bediener-Rückkopplung) aus der JSONL nachladen."""
+    if not RUNTIME_DOCS.exists():
+        return []
+    out: list[dict] = []
+    for line in RUNTIME_DOCS.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line:
+            try:
+                out.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return out
+
+
+_CHUNKS = _load_chunks() + _load_runtime_chunks()
 _BM25 = BM25Okapi([c["text"].lower().split() for c in _CHUNKS]) if _CHUNKS else None
+
+
+def add_document(text: str, source: str = "rueckkopplung") -> dict:
+    """Einen freigegebenen Rückkopplungstext in den RAG-Bestand einspeisen (Phase 2c).
+
+    Hängt den Chunk in-process an, baut den BM25-Index neu (im nächsten Suchlauf sofort auffindbar)
+    UND persistiert ihn in RUNTIME_DOCS, damit er einen Neustart überlebt. Kein Ersatz für den
+    kuratierten Dokumentbestand – die Herkunft (source) bleibt erkennbar."""
+    global _BM25
+    text = (text or "").strip()
+    if not text:
+        raise ValueError("Leerer Belegtext – nichts einzuspeisen")
+    idx = len(_CHUNKS)
+    chunk = {"doc": source, "chunk_id": f"{source}#{idx}", "text": text, "idx": idx}
+    _CHUNKS.append(chunk)
+    _BM25 = BM25Okapi([c["text"].lower().split() for c in _CHUNKS])
+    RUNTIME_DOCS.parent.mkdir(parents=True, exist_ok=True)
+    with RUNTIME_DOCS.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(chunk, ensure_ascii=False) + "\n")
+    return chunk
+
+
+def document_inventory() -> dict:
+    """Übersicht des indizierten Bestands (RAG-Tab): Dokumente je Quelle + Laufzeit-Belege."""
+    from collections import Counter
+
+    by_doc = Counter(c.get("doc", "?") for c in _CHUNKS)
+    runtime = [c for c in _CHUNKS if c.get("doc", "").startswith("rueckkopplung")]
+    return {
+        "total_chunks": len(_CHUNKS),
+        "documents": sorted(by_doc.items()),
+        "runtime_count": len(runtime),
+    }
 
 
 def rrf(rankings: list[list[int]], k: int = 60) -> list[int]:
@@ -145,16 +196,13 @@ def ingest_docs(chunks: list[dict] | None = None) -> None:
     print(f"Ingest: {len(points)} Chunks in '{QDRANT_PATH}' gespeichert.")
 
 
-@mcp.tool()
-def search_maintenance_docs(query: str, top_k: int = 5) -> str:
-    """Sucht in Wartungsanleitungen, Störungsberichten und Fehlercode-Listen.
+def search_hits(query: str, top_k: int = 5) -> list[dict]:
+    """Kern der Dokumentsuche: BM25 + Vektor → RRF, gibt Treffer mit rrf_rank zurück.
 
-    Nutze exakte Fehlercodes (E-####, W-####, I-####) im Query – die BM25-Suche
-    trifft sie exakt; bei erkanntem Code wird BM25 doppelt gewichtet (RRF k=60).
-    """
+    Von search_maintenance_docs (MCP-Tool) UND der API (RAG-Tab) genutzt, damit beide denselben
+    Rang sehen. rrf_rank = 1-basierte Position in der fusionierten Rangliste (nicht nur BM25)."""
     if not _BM25:
-        return sanitize_tool_result('{"error": "keine Dokumente in data/docs"}', source="rag")
-
+        return []
     k = max(1, min(top_k, 10))
     bm25_scores = _BM25.get_scores(query.lower().split())
     bm25_rank = sorted(range(len(_CHUNKS)), key=lambda i: bm25_scores[i], reverse=True)[:20]
@@ -166,8 +214,29 @@ def search_maintenance_docs(query: str, top_k: int = 5) -> str:
         rankings.append(vector_rank)
 
     fused = rrf(rankings)[:k]
-    hits = [{**_CHUNKS[i], "score_bm25": round(float(bm25_scores[i]), 3)} for i in fused]
+    code_hit = bool(_CODE_RE.search(query))
+    return [
+        {
+            **_CHUNKS[i],
+            "score_bm25": round(float(bm25_scores[i]), 3),
+            "rrf_rank": pos,
+            "code_match": code_hit,
+        }
+        for pos, i in enumerate(fused, start=1)
+    ]
 
+
+@mcp.tool()
+def search_maintenance_docs(query: str, top_k: int = 5) -> str:
+    """Sucht in Wartungsanleitungen, Störungsberichten und Fehlercode-Listen.
+
+    Nutze exakte Fehlercodes (E-####, W-####, I-####) im Query – die BM25-Suche
+    trifft sie exakt; bei erkanntem Code wird BM25 doppelt gewichtet (RRF k=60).
+    """
+    if not _BM25:
+        return sanitize_tool_result('{"error": "keine Dokumente in data/docs"}', source="rag")
+
+    hits = search_hits(query, top_k)
     audit.record("tool_call", tool="search_maintenance_docs", query=query, hits=len(hits))
     return sanitize_tool_result(
         json.dumps(hits, ensure_ascii=False),

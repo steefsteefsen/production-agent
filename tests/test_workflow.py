@@ -15,7 +15,7 @@ from langchain_core.runnables import RunnableLambda
 from langgraph.types import Command
 
 from production_agent.graph.state import Hypothesis
-from production_agent.graph.workflow import _ActionsOutput, build_graph
+from production_agent.graph.workflow import _ActionsOutput, _HypothesesOutput, build_graph
 from production_agent.security.action_policy import ActionLevel, RecommendedAction
 
 # ---------------------------------------------------------------------------
@@ -101,8 +101,9 @@ _FAKE_ACTIONS_WITH_FORBIDDEN = _ActionsOutput(
 
 
 def _fake_llm(hypothesis=_FAKE_HYPOTHESIS, actions=_FAKE_ACTIONS_SAFE):
+    hypos = _HypothesesOutput(candidates=[hypothesis])  # Knoten 4 liefert jetzt Kandidatenliste
     return {
-        "narrow_cause": RunnableLambda(lambda _: hypothesis),
+        "narrow_cause": RunnableLambda(lambda _: hypos),
         "derive_actions": RunnableLambda(lambda _: actions),
     }
 
@@ -446,8 +447,8 @@ def test_build_graph_mit_einzelnem_llm():
 
     class _FakeLLM:
         def with_structured_output(self, schema, **_kwargs):
-            if schema.__name__ == "Hypothesis":
-                return RunnableLambda(lambda _: _FAKE_HYPOTHESIS)
+            if schema.__name__ in ("Hypothesis", "_HypothesesOutput"):
+                return RunnableLambda(lambda _: _HypothesesOutput(candidates=[_FAKE_HYPOTHESIS]))
             if schema.__name__ == "JudgeVerdict":
                 from production_agent.graph.judge import JudgeVerdict
 

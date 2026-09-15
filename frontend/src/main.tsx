@@ -1,14 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.tsx";
 import Presentation from "./presentation/Presentation.tsx";
 import ApprovalPage from "./components/ApprovalPage.tsx";
+import Cockpit from "./Cockpit.tsx";
 import "./index.css";
 
-// Eine App, drei Einstiege über den Pfad (Vite-SPA-Fallback liefert für alle index.html):
+// Eine App, mehrere Einstiege über den Pfad (Vite-SPA-Fallback liefert für alle index.html):
 //   /presentation → geführter Interview-Walkthrough (auch per iframe im Ops-Cockpit)
 //   /freigabe     → eigenständige Freigabe-Seite (Konfidenzbalken, Policy-Badges, Belegtext)
-//   sonst         → internes Tab-Cockpit
+//   sonst         → Sechs-Tab-Cockpit (Bediener, Live-Daten, MCP, RAG, Sicherheit, Konfiguration)
 const path = window.location.pathname.replace(/\/+$/, "");
 const route = path.endsWith("/presentation")
   ? "presentation"
@@ -23,7 +23,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     ) : route === "freigabe" ? (
       <ApprovalPage />
     ) : (
-      <App />
+      <Cockpit />
     )}
   </React.StrictMode>
 );

@@ -49,9 +49,11 @@ def coerce_structured(value: Any, model_cls: type[T]) -> T:
     return model_cls.model_validate(data)  # ungültige Struktur → ValidationError (sauberer Fehler)
 
 
-def invoke_structured(chain: Any, messages: Any, model_cls: type[T]) -> T:
-    """Ruft eine strukturierte Chain auf und liefert immer das Zielmodell – oder scheitert klar."""
-    result = chain.invoke(messages)
+def finish_structured(result: Any, model_cls: type[T]) -> T:
+    """Formt ein bereits ausgewertetes Chain-Ergebnis ins Zielmodell (ohne erneutes invoke).
+
+    Ausgelagert aus invoke_structured, damit Aufrufer das Rohergebnis vorab prüfen können (z. B.
+    Knoten 4 toleriert eine einzelne Hypothesis statt der Kandidatenliste)."""
     if isinstance(result, model_cls):
         return result  # Standard-/Mockfall: schon das Zielobjekt
     if isinstance(result, dict) and ("parsed" in result or "raw" in result):
@@ -68,3 +70,8 @@ def invoke_structured(chain: Any, messages: Any, model_cls: type[T]) -> T:
             )
         return coerce_structured(content, model_cls)
     return coerce_structured(result, model_cls)
+
+
+def invoke_structured(chain: Any, messages: Any, model_cls: type[T]) -> T:
+    """Ruft eine strukturierte Chain auf und liefert immer das Zielmodell – oder scheitert klar."""
+    return finish_structured(chain.invoke(messages), model_cls)

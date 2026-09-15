@@ -24,7 +24,8 @@ class AgentState(TypedDict, total=False):
     alarms: list[dict[str, Any]]  # Schritt 2
     alarm_flood: bool  # ISA-18.2 ≥10/10min
     knowledge: list[dict[str, Any]]  # Schritt 3 (RAG + ähnliche Vorfälle)
-    hypothesis: dict[str, Any]  # Schritt 4 (Hypothesis als dict, serialisierbar)
+    hypothesis: dict[str, Any]  # Schritt 4: beste Hypothese (serialisierbar)
+    hypotheses: list[dict[str, Any]]  # Schritt 4: alle Kandidaten, absteigend nach Konfidenz
     impact: dict[str, Any]  # Schritt 5
     actions: list[dict[str, Any]]  # Schritt 6 (nach action_policy)
     applied_threshold: float  # Schritt 6: tatsächlich angewandte Konfidenzschwelle (runtime.yaml)
