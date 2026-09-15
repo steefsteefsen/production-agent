@@ -17,6 +17,7 @@ import os
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -33,6 +34,10 @@ from production_agent.security.action_policy import RecommendedAction, apply_pol
 from production_agent.security.audit import AuditLog
 
 _Tools = dict[str, Callable[..., str]]
+
+# Wartungsdokumente (data/docs), aus denen der Original-Belegtext für die Freigabe-Seite stammt.
+# Relativ zum Repo-Wurzelverzeichnis, damit der Pfad unabhängig vom Arbeitsverzeichnis stimmt.
+_DOC_DIR = Path(__file__).resolve().parents[3] / "data" / "docs"
 
 
 def _get_settings():
@@ -309,6 +314,85 @@ def _rationale_cites_incident(rationale: str, valid_ids: set[str]) -> bool:
     return any(vid and vid in (rationale or "") for vid in valid_ids)
 
 
+def _doc_chunks(knowledge: list) -> list[dict]:
+    """Wartungsdokument-Chunks aus dem RAG-Retrieval (Schritt 3): Einträge mit Originaltext (`text`)
+    und ohne `event_id` (die sind Vorfälle, keine Dokumente)."""
+    return [
+        k
+        for k in (knowledge or [])
+        if isinstance(k, dict) and k.get("text") and k.get("event_id") in (None, "")
+    ]
+
+
+def _prefixes(*parts: str) -> set[str]:
+    """5-Zeichen-Präfixe der Wörter ab 4 Zeichen – toleranter Abgleich ohne Stemming, damit
+    'FOLIE' auf 'Folienriss'/'Folienwickler' trifft (Maßnahme ↔ Dokumentsatz)."""
+    out: set[str] = set()
+    for p in parts:
+        for w in re.findall(r"[a-zäöüß0-9]+", str(p).lower()):
+            if len(w) >= 4:
+                out.add(w[:5])
+    return out
+
+
+def _original_passage(doc_name: str, chunk_text: str) -> str:
+    """Aus einer Code-Überschrift den echten Abschnittstext des Wartungsdokuments holen (Original,
+    kein Umschreiben). Ist der Chunk bereits Fließtext, wird er unverändert zurückgegeben."""
+    text = chunk_text or ""
+    if not text.lstrip().startswith("#"):
+        return text  # bereits ein Fließtext-Satz (evtl. mit [Überschrift]-Präfix)
+    p = _DOC_DIR / doc_name
+    if not doc_name or not p.exists():
+        return text
+    heading = text.splitlines()[0].strip()
+    lines = p.read_text(encoding="utf-8").splitlines()
+    try:
+        start = next(i for i, ln in enumerate(lines) if ln.strip() == heading)
+    except StopIteration:
+        return text
+    body: list[str] = []
+    for ln in lines[start + 1 :]:
+        s = ln.strip()
+        if s.startswith("#"):
+            break  # nächste Überschrift → Abschnitt zu Ende
+        if s:
+            body.append(s)
+        if sum(len(b) for b in body) > 280:
+            break
+    if not body:
+        return text
+    title = heading.lstrip("# ").strip()
+    return f"{title}: {' '.join(body)}"[:420]
+
+
+def attach_belegtext(actions: list[dict], knowledge: list, reason_code: str = "") -> list[dict]:
+    """Reicht den ORIGINAL-Belegtext aus dem Wartungsdokument bis in die Maßnahme durch (nicht nur
+    die Vorfall-ID): je Maßnahme der am besten passende Dokument-Chunk (Präfix-Überlappung mit
+    Titel/Beschreibung/reason_code), aufgelöst zum echten Abschnittstext; ansonsten reihum ein
+    echter Satz. Deterministisch; setzt `beleg_text` (Originalsatz) und `beleg_quelle` (Dokument).
+    """
+    chunks = _doc_chunks(knowledge)
+    if not chunks:
+        return actions
+    used: set[int] = set()
+    for idx, a in enumerate(actions):
+        atoks = _prefixes(a.get("title", ""), a.get("description", ""), reason_code)
+        best_i, best_score = None, 0
+        for i, ch in enumerate(chunks):
+            score = len(atoks & _prefixes(ch.get("text", "")))
+            if i in used:
+                score -= 1  # unbenutzte Chunks bevorzugen → verschiedene Karten, verschiedene Sätze
+            if score > best_score:
+                best_i, best_score = i, score
+        if best_i is None:
+            best_i = idx % len(chunks)  # Fallback: reihum ein echter Satz statt keiner
+        used.add(best_i)
+        ch = chunks[best_i]
+        a["beleg_text"] = _original_passage(ch.get("doc", ""), ch.get("text", ""))
+        a["beleg_quelle"] = ch.get("doc", "")
+    return actions
+
+
 def _make_derive_actions(llm_chain):
     def derive_actions(state: AgentState) -> dict[str, Any]:
         settings = _get_settings()
@@ -353,8 +437,10 @@ def _make_derive_actions(llm_chain):
         else:
             grounded = safe  # keine ähnlichen Vorfälle abrufbar → keine Vorfall-ID erzwingbar
         dropped = len(safe) - len(grounded)
+        reason_code = str((state.get("hypothesis") or {}).get("reason_code", ""))
+        enriched = attach_belegtext([a.model_dump() for a in grounded], knowledge, reason_code)
         return {
-            "actions": [a.model_dump() for a in grounded],
+            "actions": enriched,
             "applied_threshold": float(threshold),
             "trace": _log(
                 state,
@@ -412,6 +498,7 @@ def approval_gate(state: AgentState) -> Command:
             "actions": state.get("actions", []),
             "impact": state.get("impact", {}),
             "hypothesis": state.get("hypothesis", {}),
+            "applied_threshold": state.get("applied_threshold"),
             "judge_results": state.get("judge_results", []),
         }
     )

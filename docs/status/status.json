@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-15T11:26:11",
-  "commit": "3dd8ee76ac3e3e498c6a3c8fb80636ed62d9eff3",
+  "generated_at": "2026-09-15T12:41:02",
+  "commit": "6dbe1ea43e37aa4a3b82d934d518f209b83717e0",
   "branch": "main",
   "packages": [
     {
@@ -783,11 +783,17 @@
     "percent": 85,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 408,
+    "tests": 412,
     "coverage_total": 88,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-15T11:25:55+02:00",
+      "kind": "commit",
+      "ref": "6dbe1ea",
+      "text": "fix(audit): MCP-Protokoll als Demo-Default, Konfidenzschwelle-Drift"
+    },
     {
       "at": "2026-09-15T10:16:05+02:00",
       "kind": "commit",
@@ -1313,7 +1319,7 @@
     {
       "path": "src/production_agent/",
       "files": 1,
-      "tests": 270,
+      "tests": 274,
       "coverage": 98
     },
     {
@@ -1331,7 +1337,7 @@
     {
       "path": "src/production_agent/graph/",
       "files": 8,
-      "tests": 114,
+      "tests": 118,
       "coverage": 96
     },
     {
@@ -1343,7 +1349,7 @@
     {
       "path": "src/production_agent/security/",
       "files": 4,
-      "tests": 72,
+      "tests": 76,
       "coverage": 100
     }
   ]

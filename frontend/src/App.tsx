@@ -18,6 +18,12 @@ export default function App() {
           Production Agent
         </span>
         <span className="text-gray-400 text-xs">Verpackungslinie L1 · Werk Nord</span>
+        <a
+          href="/freigabe"
+          className="ml-auto text-xs text-teal-500 hover:text-teal-400 border border-teal-700/50 rounded px-2 py-1"
+        >
+          Freigabe-Seite →
+        </a>
       </header>
 
       {/* Tab-Leiste */}
