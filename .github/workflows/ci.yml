@@ -80,6 +80,9 @@ jobs:
       (needs.frontend.result == 'success' || needs.frontend.result == 'skipped')
     env:
       LLM_MODE: mock
+      # In-Process-MCP für e2e: schnell, deterministisch, keine stdio-Subprozesse (Demo-Default
+      # bleibt der Protokollpfad; nur dieser Lauf schaltet ihn aus).
+      MCP_VIA_PROTOCOL: "0"
     steps:
       - uses: actions/checkout@v4
 

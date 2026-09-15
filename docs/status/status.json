@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-15T13:56:33",
-  "commit": "e6661df66d3d977511f66ee4cd0f15e4aa529bd2",
+  "generated_at": "2026-09-15T14:15:08",
+  "commit": "f872c37ee8857be8d0f08d35e17e1f31fe273fdc",
   "branch": "main",
   "packages": [
     {
@@ -788,6 +788,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-15T13:56:13+02:00",
+      "kind": "commit",
+      "ref": "f872c37",
+      "text": "feat(ui): 6-Tab-Cockpit: Bediener, Live, MCP, RAG, Sicherheit, Konfig"
+    },
     {
       "at": "2026-09-15T12:40:46+02:00",
       "kind": "commit",
