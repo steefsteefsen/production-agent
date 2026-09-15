@@ -223,7 +223,9 @@ pre.decisions{background:#f8fafb;border:1px solid #dde5e8;border-radius:6px;padd
 </div>
 
 <div id="panel-presentation" class="panel" style="padding:0">
-  <iframe id="pres-frame" src="/presentation" width="100%" height="680"
+  <!-- EINE Quelle: der Demo-Inhalt lebt in der React-App (frontend/), hier nur eingebettet.
+       Kein separat gepflegtes HTML mehr für Scope-/Stack-Tabellen. Vite muss laufen (make ui). -->
+  <iframe id="pres-frame" src="http://localhost:5173/presentation" width="100%" height="760"
     style="border:none;display:block"></iframe>
 </div>
 

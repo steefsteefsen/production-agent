@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-15T00:30:41",
-  "commit": "b34028b03e6133b9452bbbb88703076a23ffaf37",
+  "generated_at": "2026-09-15T10:16:19",
+  "commit": "c2443571d6e9ba35fd0d5eca51d38091c3c6e37d",
   "branch": "main",
   "packages": [
     {
@@ -788,6 +788,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-15T00:30:27+02:00",
+      "kind": "commit",
+      "ref": "c244357",
+      "text": "fix(config): Cockpit-Schwelle wird genutzt (runtime.yaml-Override)"
+    },
     {
       "at": "2026-09-14T17:43:07+02:00",
       "kind": "commit",

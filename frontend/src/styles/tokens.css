@@ -1,0 +1,71 @@
+/*
+ * Design-Tokens – EINE Quelle für alles, was der Interviewer sieht (Präsentationsmodus).
+ * Dunkle Palette wie im bestehenden Agent-Tab, Statusskala grün/amber/rot, Mono + Sans,
+ * einheitliche Karten-/Radius-/Abstandsregeln. Präsentations-Komponenten nutzen ausschließlich
+ * diese Tokens (CSS-Variablen + .pv-*-Klassen), keine Ad-hoc-Inline-Styles.
+ */
+:root {
+  --pv-bg: #12151a;
+  --pv-surface: #1a1f27;
+  --pv-surface-2: #222834;
+  --pv-line: #2b323d;
+  --pv-ink: #e5e9ef;
+  --pv-muted: #9aa5b1;
+
+  --pv-accent: #0d9488;       /* teal */
+  --pv-accent-2: #7a9e7e;     /* salbei */
+  --pv-green: #3fb27f;        /* Status: normal/bestätigt */
+  --pv-amber: #d9a441;        /* Status: Warnung/wartend */
+  --pv-red: #c0455e;          /* Status: Störung/abgelehnt */
+
+  --pv-radius: 12px;
+  --pv-radius-sm: 8px;
+  --pv-gap: 16px;
+  --pv-pad: 20px;
+
+  --pv-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pv-font-mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+}
+
+.pv-root { background: var(--pv-bg); color: var(--pv-ink); font-family: var(--pv-font-sans);
+  min-height: 100vh; display: flex; flex-direction: column; }
+.pv-mono { font-family: var(--pv-font-mono); }
+.pv-muted { color: var(--pv-muted); }
+
+.pv-card { background: var(--pv-surface); border: 1px solid var(--pv-line);
+  border-radius: var(--pv-radius); padding: var(--pv-pad); }
+.pv-card-2 { background: var(--pv-surface-2); border: 1px solid var(--pv-line);
+  border-radius: var(--pv-radius-sm); padding: 14px; }
+
+.pv-kicker { color: var(--pv-accent); font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; font-size: 12px; }
+.pv-h1 { font-size: 30px; margin: 4px 0 8px; }
+.pv-h2 { font-size: 22px; margin: 2px 0 10px; color: var(--pv-ink); }
+.pv-lead { font-size: 18px; color: var(--pv-muted); line-height: 1.5; }
+
+.pv-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px;
+  border-radius: 999px; font-size: 12px; font-weight: 600; }
+.pv-badge.green { background: rgba(63,178,127,.16); color: var(--pv-green); }
+.pv-badge.amber { background: rgba(217,164,65,.16); color: var(--pv-amber); }
+.pv-badge.red { background: rgba(192,69,94,.18); color: var(--pv-red); }
+
+.pv-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.pv-dot.green { background: var(--pv-green); } .pv-dot.amber { background: var(--pv-amber); }
+.pv-dot.red { background: var(--pv-red); animation: pv-pulse 1.4s ease-in-out infinite; }
+@keyframes pv-pulse { 0%,100% { opacity: 1 } 50% { opacity: .4 } }
+
+.pv-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.pv-table th, .pv-table td { border: 1px solid var(--pv-line); padding: 8px 10px;
+  text-align: left; vertical-align: top; }
+.pv-table th { background: var(--pv-surface-2); color: var(--pv-ink); font-weight: 600; }
+.pv-table td:first-child { color: var(--pv-accent-2); font-weight: 600; white-space: nowrap; }
+
+.pv-btn { background: var(--pv-accent); color: #06231f; border: 0; border-radius: var(--pv-radius-sm);
+  padding: 9px 18px; font-weight: 600; font-size: 14px; cursor: pointer; }
+.pv-btn:disabled { opacity: .4; cursor: default; }
+.pv-btn.ghost { background: transparent; color: var(--pv-muted); border: 1px solid var(--pv-line); }
+
+.pv-progress { height: 6px; background: var(--pv-line); border-radius: 3px; overflow: hidden; }
+.pv-progress > span { display: block; height: 100%; background: var(--pv-accent); transition: width .3s; }
+.pv-fade { animation: pv-fade .35s ease; }
+@keyframes pv-fade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
