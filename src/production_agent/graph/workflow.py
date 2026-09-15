@@ -355,10 +355,12 @@ def _make_derive_actions(llm_chain):
         dropped = len(safe) - len(grounded)
         return {
             "actions": [a.model_dump() for a in grounded],
+            "applied_threshold": float(threshold),
             "trace": _log(
                 state,
                 f"6 Maßnahmen abgeleitet, {len(grounded)} mit Vorfall-ID belegt"
-                + (f" ({dropped} ohne Beleg verworfen)" if dropped else ""),
+                + (f" ({dropped} ohne Beleg verworfen)" if dropped else "")
+                + f" (Konfidenzschwelle {float(threshold):.2f} aus runtime.yaml)",
             ),
         }
 
@@ -458,6 +460,7 @@ def build_tools_from_mcp(sim_now: str = "") -> _Tools:
     """
     import asyncio
     import os
+    import sys
     import threading
 
     from fastmcp import Client
@@ -465,10 +468,13 @@ def build_tools_from_mcp(sim_now: str = "") -> _Tools:
     env = {**os.environ}
     if sim_now:
         env["SIM_NOW"] = sim_now
+    # sys.executable statt bare "python": nutzt denselben Interpreter (venv), robust auch dort, wo
+    # kein "python" im PATH liegt (CI, reine python3-Systeme) – sonst FileNotFoundError beim Spawn.
+    py = sys.executable or "python3"
     servers = {
-        "mes": {"command": "python", "args": ["-m", "production_agent.mcp.mes_server"], "env": env},
+        "mes": {"command": py, "args": ["-m", "production_agent.mcp.mes_server"], "env": env},
         "maintenance_docs": {
-            "command": "python",
+            "command": py,
             "args": ["-m", "production_agent.mcp.rag_server"],
             "env": env,
         },

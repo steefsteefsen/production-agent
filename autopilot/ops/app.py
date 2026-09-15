@@ -154,6 +154,9 @@ pre.decisions{background:#f8fafb;border:1px solid #dde5e8;border-radius:6px;padd
   <button class="tab" onclick="showTab('presentation')">Präsentation</button>
 </nav>
 
+<div id="drift-banner" style="display:none;margin:10px 16px;padding:10px 14px;border-radius:8px;
+  background:#5d3a00;color:#ffd59e;border:1px solid #b76e00;font-size:13px"></div>
+
 <div id="panel-ablauf" class="panel active">
   <h2>Ablauf</h2>
   <div id="lanes-container"><p style="color:#999">Lädt…</p></div>
@@ -508,7 +511,7 @@ async function saveCf(field, value) {
       headers:{'Content-Type':'application/json'}, body: JSON.stringify({field, value})});
     const d = await r.json();
     if (!r.ok) toast('Fehler: ' + (d.detail || r.status), true);
-    else { toast('Gespeichert: ' + field + ' = ' + value); loadConstraints(); }
+    else { toast('Gespeichert: ' + field + ' = ' + value); loadConstraints(); checkDrift(); }
   } catch(e) { toast('Fehler: ' + e, true); }
 }
 
@@ -540,7 +543,21 @@ function toast(msg, err) {
   setTimeout(() => el.classList.remove('show'), 3000);
 }
 
+async function checkDrift() {
+  try {
+    const r = await fetch('/api/config/drift');
+    const items = await r.json();
+    const el = document.getElementById('drift-banner');
+    if (!items.length) { el.style.display = 'none'; return; }
+    el.innerHTML = '⚠ Konfigurations-Drift: ' + items.map(d =>
+      d.key + ' = ' + d.override + ' (gespeichert) statt ' + d.default + ' (decisions.yaml)'
+    ).join(' · ') + ' — im Konfiguration-Tab zurücksetzen oder bewusst bestätigen.';
+    el.style.display = 'block';
+  } catch(e) { /* Banner ist optional, kein harter Fehler */ }
+}
+
 startPolling();
+checkDrift();
 </script>
 </body>
 </html>"""
@@ -674,6 +691,46 @@ def _set_nested(d: dict, key: str, value: object) -> None:
     for part in parts[:-1]:
         d = d.setdefault(part, {})
     d[parts[-1]] = value
+
+
+def _drift_entries() -> list[dict[str, Any]]:
+    """Konfigurierbare Werte, deren runtime.yaml-Override vom decisions.yaml-Default abweicht.
+
+    Drift-Warnung (D-2): ein im Cockpit gespeicherter Wert bleibt in runtime.yaml bestehen und kann
+    unbemerkt von der dokumentierten Entscheidungsbasis (decisions.yaml) abdriften – genau die
+    Diskrepanz, die im Audit auffiel (Schwelle 0.65 statt 0.60). Leere Liste = kein Drift.
+    """
+    decisions = yaml.safe_load(DECISIONS_YAML.read_text(encoding="utf-8")) or {}
+    runtime = (
+        yaml.safe_load(RUNTIME_YAML.read_text(encoding="utf-8")) or {}
+        if RUNTIME_YAML.exists()
+        else {}
+    )
+    out: list[dict[str, Any]] = []
+    for dotted in sorted(CONFIGURABLE):
+        top, sub = dotted.split(".", 1)
+        default = (decisions.get(top) or {}).get(sub)
+        override = (runtime.get(top) or {}).get(sub)
+        if override is not None and override != default:
+            out.append({"key": dotted, "override": override, "default": default})
+    return out
+
+
+@app.on_event("startup")
+async def _warn_on_config_drift() -> None:
+    """Beim Cockpit-Start jede Drift sichtbar ins Log schreiben (D-2, dauerhafte Absicherung)."""
+    for d in _drift_entries():
+        print(
+            f"WARNUNG Config-Drift: {d['key']} = {d['override']} (runtime.yaml) weicht vom "
+            f"decisions.yaml-Default {d['default']} ab – im Cockpit zurücksetzen oder bestätigen.",
+            file=sys.stderr,
+        )
+
+
+@app.get("/api/config/drift")
+async def api_config_drift() -> JSONResponse:
+    """Drift-Liste für das Start-Banner des Cockpits (leer = keine Abweichung)."""
+    return JSONResponse(_drift_entries())
 
 
 @app.get("/api/config")

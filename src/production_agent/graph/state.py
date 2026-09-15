@@ -27,6 +27,7 @@ class AgentState(TypedDict, total=False):
     hypothesis: dict[str, Any]  # Schritt 4 (Hypothesis als dict, serialisierbar)
     impact: dict[str, Any]  # Schritt 5
     actions: list[dict[str, Any]]  # Schritt 6 (nach action_policy)
+    applied_threshold: float  # Schritt 6: tatsächlich angewandte Konfidenzschwelle (runtime.yaml)
     judge_results: list[dict[str, Any]]  # Schritt 6b (Beleg-Prüfung je Maßnahme)
     approval: dict[str, Any] | None  # Schritt 7 (Freigabeentscheidung)
     trace: list[str]  # menschenlesbares Protokoll je Knoten

@@ -5,8 +5,13 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def client(replay_env):
+def client(replay_env, monkeypatch):
     import importlib
+
+    # Tests nutzen den schnellen In-Process-Pfad, nicht das echte MCP-Protokoll (keine
+    # stdio-Subprozesse beim Import). Der Demo-Default in server.py bleibt Protokoll; nur diese
+    # ausdrückliche Variable schaltet zurück (siehe server.py-Kommentar, ADR-0005).
+    monkeypatch.setenv("MCP_VIA_PROTOCOL", "0")
 
     from production_agent.api import server
 

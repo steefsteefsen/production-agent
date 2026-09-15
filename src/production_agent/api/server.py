@@ -42,7 +42,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(mes_router)
-graph = build_graph(checkpoint_path=settings.checkpoint_db_path)
+# Demo-Default: die laufende Anwendung nutzt den ECHTEN MCP-Protokollpfad (fastmcp.Client über
+# stdio), nicht den In-Process-Import. `make run-api` belegt so OHNE jede Variable „≥1 MCP-Server"
+# im Beweisbetrieb (Log „Starting MCP server ... stdio"). Nur ein ausdrückliches MCP_VIA_PROTOCOL=0
+# schaltet auf den schnellen, deterministischen In-Process-Pfad zurück (Tests/CI, die keine
+# stdio-Subprozesse starten wollen). Ergebnis identisch, nur der Aufrufpfad unterscheidet sich
+# (siehe build_graph-Docstring, ADR-0005). e2e_replay ist unberührt (nutzt settings-Default).
+_demo_use_mcp = os.getenv("MCP_VIA_PROTOCOL", "1").strip().lower() not in ("0", "false", "no", "")
+graph = build_graph(checkpoint_path=settings.checkpoint_db_path, use_mcp=_demo_use_mcp)
 
 
 class StartRequest(BaseModel):

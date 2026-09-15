@@ -126,6 +126,7 @@ def run(event_id: int | None = None, decision: str = "none") -> dict[str, Any]:
         "gold_reason_code": case.truth.get("reason_code"),
         "action_titles": [a.get("title") for a in actions],
         "interrupt_reached": bool(interrupt),
+        "applied_threshold": result.get("applied_threshold"),
     }
 
     # Basisbedingung (Fall none): Vorfälle, belegte Maßnahme, Freigabeknoten, Ursache stimmt.
@@ -205,6 +206,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{s['n_alarms']} Alarme, Alarmflut={s['alarm_flood']}")
     print(f"{s['n_docs']} Dokumente, {s['n_incidents']} ähnliche Vorfälle")
     print(f"{s['n_grounded']} mit Vorfall-ID belegt")
+    if s.get("applied_threshold") is not None:
+        print(f"Konfidenzschwelle (vom Graphen benutzt): {s['applied_threshold']:.2f}")
     print(
         f"reason_hit: {s['reason_hit']} "
         f"(Hypothese {s['reason_code']} vs Gold {s['gold_reason_code']}, "

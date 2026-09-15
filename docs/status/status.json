@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-15T10:16:19",
-  "commit": "c2443571d6e9ba35fd0d5eca51d38091c3c6e37d",
+  "generated_at": "2026-09-15T11:26:11",
+  "commit": "3dd8ee76ac3e3e498c6a3c8fb80636ed62d9eff3",
   "branch": "main",
   "packages": [
     {
@@ -789,6 +789,12 @@
   },
   "timeline": [
     {
+      "at": "2026-09-15T10:16:05+02:00",
+      "kind": "commit",
+      "ref": "3dd8ee7",
+      "text": "Merge ux-overhaul: geführte React-Präsentation (:5173 + Ops-iframe)"
+    },
+    {
       "at": "2026-09-15T00:30:27+02:00",
       "kind": "commit",
       "ref": "c244357",
@@ -817,6 +823,12 @@
       "kind": "commit",
       "ref": "870d401",
       "text": "fix(docs): Schwelle 0.60 konsistent, MCP-Pfad + README-Zahl korrigiert"
+    },
+    {
+      "at": "2026-09-14T15:48:38+02:00",
+      "kind": "commit",
+      "ref": "c3c59d8",
+      "text": "feat(ux): eine React-Präsentation für :5173 und Ops-iframe"
     },
     {
       "at": "2026-09-14T15:12:06+02:00",
