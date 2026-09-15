@@ -1,5 +1,11 @@
-.PHONY: install lint test security run-mes run-rag run-api ui e2e e2e-mock e2e-live ops
+.PHONY: install install-demo ingest lint test security run-mes run-rag run-api ui e2e e2e-mock e2e-live ops
 install: ; pip install -e ".[dev]" && pre-commit install && pre-commit install --hook-type commit-msg && python autopilot/guardian.py --init || true
+# Demo-Installation: embeddings sind hier PFLICHT (Vektor-Suche muss verfügbar sein). CPU-Torch statt
+# CUDA (kleines Modell intfloat/multilingual-e5-small, CPU genügt; schlank für CI). Danach `make
+# ingest` einmalig ausführen, um Modell zu cachen und den Qdrant-Index zu bauen (kein Live-Download
+# im Interview).
+install-demo: ; pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -e ".[dev,e2e,embeddings]" && $(MAKE) ingest
+ingest: ; python -m production_agent.mcp.rag_server --ingest
 guardian: ; python autopilot/guardian.py
 lint: ; ruff check . && ruff format --check .
 test: ; mkdir -p .guardian && pytest --cov=production_agent --cov-report=term-missing:skip-covered --cov-report=json:.guardian/coverage.json --cov-fail-under=80

@@ -173,22 +173,31 @@ def rrf(rankings: list[list[int]], k: int = 60) -> list[int]:
 
 
 def _vector_search(query: str, top_k: int = 20) -> list[int]:
-    """Vektorsuche in Qdrant; gibt Chunk-Indizes zurück (leer wenn nicht verfügbar oder Fehler)."""
+    """Vektorsuche in Qdrant; gibt Chunk-Indizes zurück (leer wenn nicht verfügbar oder Fehler).
+
+    Nutzt `query_points` (qdrant-client ≥ 1.12; das alte `search()` wurde entfernt – der frühere
+    Aufruf scheiterte still und ließ die Vektor-Suche fälschlich als „nicht verfügbar" erscheinen).
+    Der lokale Dateimodus erlaubt nur einen Client zugleich, daher wird er nach jedem Aufruf
+    geschlossen."""
     if not _EMBED_AVAILABLE:
         return []
     try:
         from qdrant_client import QdrantClient
 
         client = QdrantClient(path=QDRANT_PATH)
-        vec = _get_model().encode([query], normalize_embeddings=True)[0].tolist()
-        results = client.search(
-            collection_name=_COLLECTION,
-            query_vector=vec,
-            limit=top_k,
-        )
-        return [r.id for r in results]
     except Exception:
         return []
+    try:
+        vec = _get_model().encode([query], normalize_embeddings=True)[0].tolist()
+        res = client.query_points(collection_name=_COLLECTION, query=vec, limit=top_k)
+        return [p.id for p in res.points]
+    except Exception:
+        return []
+    finally:
+        try:
+            client.close()
+        except Exception:  # noqa: BLE001, S110  # nosec B110 – Close best effort
+            pass
 
 
 def ingest_docs(chunks: list[dict] | None = None) -> None:
@@ -230,6 +239,7 @@ def ingest_docs(chunks: list[dict] | None = None) -> None:
         for i in range(len(target))
     ]
     client.upsert(collection_name=_COLLECTION, points=points)
+    client.close()  # lokalen Dateimodus-Lock freigeben, damit _vector_search danach öffnen kann
     print(f"Ingest: {len(points)} Chunks in '{QDRANT_PATH}' gespeichert.")
 
 

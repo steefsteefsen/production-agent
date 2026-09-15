@@ -34,6 +34,10 @@
 
 /* ===== OPERATOR TAB ===== */
 .ck-root .op-header{margin-bottom:20px;}
+.ck-root .op-header-row{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+.ck-root .op-eventsel{display:flex; align-items:center; gap:8px;}
+.ck-root .op-eventsel label{font-family:var(--mono); font-size:10px; color:var(--dimmer); letter-spacing:.05em;}
+.ck-root .op-eventsel select{background:var(--panel-2); color:var(--text); border:1px solid var(--line-strong); border-radius:6px; padding:6px 10px; font-family:var(--mono); font-size:12px;}
 .ck-root .op-title{font-size:22px; font-weight:600; margin-bottom:6px;}
 .ck-root .op-sub{color:var(--dim); font-size:14px;}
 .ck-root .op-status{display:flex; align-items:center; gap:14px; background:#2a1618; border:1px solid var(--red); border-radius:10px; padding:18px 22px; margin-bottom:24px;}
@@ -242,7 +246,9 @@
 .ck-root .result-row{display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid var(--line);}
 .ck-root .result-row:last-child{border-bottom:none;}
 .ck-root .result-rank{font-family:var(--mono); font-size:14px; font-weight:700; color:var(--green); width:24px;}
-.ck-root .result-name{flex:1; font-size:12.5px; color:var(--text); word-break:break-all;}
+.ck-root .result-name{flex:1; font-size:12.5px; color:var(--text); word-break:break-word; display:flex; flex-direction:column; gap:2px;}
+.ck-root .result-name .rn-doc{font-family:var(--mono); font-size:11px; color:var(--text);}
+.ck-root .result-name .rn-snip{font-size:11px; color:var(--dim); font-style:italic;}
 .ck-root .result-src{font-family:var(--mono); font-size:9.5px; color:var(--dimmer); display:flex; gap:4px; flex-shrink:0;}
 .ck-root .src-chip{padding:1px 6px; border-radius:3px; border:1px solid var(--line);}
 .ck-root .src-chip.bm25{color:var(--amber); border-color:#4a3a20;}

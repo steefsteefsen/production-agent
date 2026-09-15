@@ -96,6 +96,19 @@ jobs:
       - name: Playwright-Browser installieren
         run: playwright install chromium --with-deps
 
+      # Finding E: die Vektor-Suche MUSS für die Demo verfügbar sein. CPU-Torch (kein CUDA) hält den
+      # Job schlank; der HF-Cache spart den 470-MB-Modell-Download bei Folgeläufen.
+      - name: HuggingFace-Modell-Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-e5-small-v1
+
+      - name: Embeddings (CPU-Torch) installieren — Vektor-Suche verpflichtend
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[embeddings]"
+
       - name: Frontend vorhanden?
         id: check
         run: |
@@ -117,6 +130,11 @@ jobs:
 
       - name: Simulator (Testdaten erzeugen)
         run: python -m production_agent.data.simulator
+
+      - name: Vektor-Index bauen (Modell cachen) + Regressionstest der Vektor-Suche (Finding E)
+        run: |
+          python -m production_agent.mcp.rag_server --ingest
+          pytest -q -m embeddings tests/test_vector_search_demo.py
 
       - name: E2E-Replay gegen echte Werkzeuge (mock-LLM)
         run: python scripts/e2e_replay.py

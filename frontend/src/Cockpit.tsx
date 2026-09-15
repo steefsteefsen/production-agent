@@ -78,8 +78,26 @@ function NoData({ text }: { text: string }) {
   );
 }
 
+// Bekannte Demo-Fälle (Finding B). Jeder Fall = eigener Thread-Zustand.
+const EVENTS = [
+  { id: 360, label: "360 · STO-FOLIE" },
+  { id: 336, label: "336 · STO-ANTRIEB" },
+];
+type OpPhase = "running" | "interrupt" | "done" | "error";
+interface OpRun {
+  thread_id: string | null;
+  phase: OpPhase;
+  approved: boolean | null;
+  payload: Payload | null;
+  ingested: string | null;
+}
+// Modul-Store: überlebt Tab-Wechsel (Unmount/Remount), je Ereignis ein unabhängiger Zustand.
+// Der Checkpointer im Backend bleibt Quelle der Wahrheit (GET /investigations/{thread}/state).
+const opRuns: Record<number, OpRun> = {};
+
 function OperatorTab() {
-  const [phase, setPhase] = useState<"running" | "interrupt" | "done" | "error">("running");
+  const [eventId, setEventId] = useState<number>(EVENTS[0].id);
+  const [phase, setPhase] = useState<OpPhase>("running");
   const [meta, setMeta] = useState<{ thread_id: string; event_id: number | null } | null>(null);
   const [payload, setPayload] = useState<Payload | null>(null);
   const [raw, setRaw] = useState("");
@@ -87,16 +105,20 @@ function OperatorTab() {
   const [suggested, setSuggested] = useState("");
   const [ingested, setIngested] = useState<string | null>(null);
   const [approved, setApproved] = useState<boolean | null>(null);
+  const [restored, setRestored] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const esRef = useRef<EventSource | null>(null);
   const phaseRef = useRef(phase);
-  const setP = (p: typeof phase) => {
+  const setP = (p: OpPhase) => {
     phaseRef.current = p;
     setPhase(p);
   };
+  const persist = (patch: Partial<OpRun>) => {
+    opRuns[eventId] = { ...(opRuns[eventId] ?? ({} as OpRun)), ...patch };
+  };
 
-  const start = () => {
+  const start = (evId: number) => {
     esRef.current?.close();
     setMeta(null);
     setPayload(null);
@@ -105,14 +127,21 @@ function OperatorTab() {
     setSuggested("");
     setIngested(null);
     setApproved(null);
+    setRestored(false);
     setErr("");
     setP("running");
-    const es = new EventSource("/investigations/stream?line_id=L1&event_id=360");
+    const es = new EventSource(`/investigations/stream?line_id=L1&event_id=${evId}`);
     esRef.current = es;
-    es.addEventListener("start", (e) => setMeta(JSON.parse((e as MessageEvent).data)));
+    es.addEventListener("start", (e) => {
+      const m = JSON.parse((e as MessageEvent).data);
+      setMeta(m);
+      persist({ thread_id: m.thread_id, phase: "running", approved: null, ingested: null });
+    });
     es.addEventListener("interrupt", (e) => {
-      setPayload(JSON.parse((e as MessageEvent).data).payload ?? {});
+      const pl = JSON.parse((e as MessageEvent).data).payload ?? {};
+      setPayload(pl);
       setP("interrupt");
+      persist({ phase: "interrupt", payload: pl });
       es.close();
     });
     es.onerror = () => {
@@ -123,11 +152,47 @@ function OperatorTab() {
       }
     };
   };
+
+  // Finding A: bei (Re-)Mount und Ereigniswechsel den Ist-Zustand des Threads abfragen, NICHT
+  // blind neu starten. Nur wenn kein Zustand existiert, eine neue Untersuchung anstoßen.
   useEffect(() => {
-    start();
-    return () => esRef.current?.close();
+    let cancelled = false;
+    const restore = async () => {
+      const known = opRuns[eventId];
+      if (known?.thread_id) {
+        try {
+          const s = await getJSON<{
+            status: string;
+            payload?: Payload;
+            approved?: boolean;
+          }>(`/investigations/${known.thread_id}/state`);
+          if (cancelled) return;
+          if (s.status === "interrupt" || s.status === "done") {
+            setMeta({ thread_id: known.thread_id, event_id: eventId });
+            setPayload(s.payload ?? known.payload ?? null);
+            setIngested(known.ingested ?? null);
+            if (s.status === "done") {
+              setApproved(s.approved ?? known.approved ?? null);
+              setP("done");
+            } else {
+              setP("interrupt");
+            }
+            setRestored(true);
+            return;
+          }
+        } catch {
+          /* Zustand nicht abrufbar → neu starten */
+        }
+      }
+      start(eventId);
+    };
+    restore();
+    return () => {
+      cancelled = true;
+      esRef.current?.close();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [eventId]);
 
   const suggest = async () => {
     setBusy(true);
@@ -151,6 +216,7 @@ function OperatorTab() {
     try {
       await postJSON("/knowledge/documents", { text: suggested });
       setIngested(suggested);
+      persist({ ingested: suggested });
     } catch (e) {
       setErr(`Einspeisen fehlgeschlagen: ${e}`);
     } finally {
@@ -170,6 +236,7 @@ function OperatorTab() {
       });
       setApproved(ok);
       setP("done");
+      persist({ phase: "done", approved: ok });
     } catch (e) {
       setErr(`Freigabe fehlgeschlagen: ${e}`);
     } finally {
@@ -187,20 +254,60 @@ function OperatorTab() {
   const judge = payload?.judge_results ?? [];
   const nApproval = actions.filter((a) => a.level === "approval_required").length;
 
+  const header = (
+    <div className="op-header op-header-row">
+      <div>
+        <div className="op-title">Untersuchung — Ereignis #{eventId}</div>
+        <div className="op-sub">
+          Replay-Uhr aktiv · Agent empfiehlt, er führt nicht aus
+          {restored && <span data-testid="op-restored"> · Zustand wiederhergestellt</span>}
+        </div>
+      </div>
+      <div className="op-eventsel">
+        <label>Ereignis</label>
+        <select
+          data-testid="event-select"
+          value={eventId}
+          onChange={(e) => setEventId(Number(e.target.value))}
+        >
+          {EVENTS.map((ev) => (
+            <option key={ev.id} value={ev.id}>
+              {ev.label}
+            </option>
+          ))}
+        </select>
+        <button
+          className="op-btn-sm"
+          data-testid="op-restart"
+          disabled={phase === "running"}
+          onClick={() => start(eventId)}
+        >
+          Neu untersuchen
+        </button>
+      </div>
+    </div>
+  );
+
   if (phase === "running")
     return (
-      <div data-testid="op-running" className="muted">
-        Untersuchung läuft – die Freigabe erscheint, sobald der Agent am Freigabeknoten hält…
+      <div data-testid="operator-tab">
+        {header}
+        <div data-testid="op-running" className="muted">
+          Untersuchung läuft – die Freigabe erscheint, sobald der Agent am Freigabeknoten hält…
+        </div>
       </div>
     );
-  if (phase === "error") return <div className="cfg-drift">{err}</div>;
+  if (phase === "error")
+    return (
+      <div data-testid="operator-tab">
+        {header}
+        <div className="cfg-drift">{err}</div>
+      </div>
+    );
 
   return (
     <div data-testid="operator-tab">
-      <div className="op-header">
-        <div className="op-title">Untersuchung — Ereignis #{meta?.event_id ?? "–"}</div>
-        <div className="op-sub">Replay-Uhr aktiv · Agent empfiehlt, er führt nicht aus</div>
-      </div>
+      {header}
 
       {phase === "done" ? (
         <div
@@ -658,10 +765,21 @@ function McpTab() {
 // ===================================================================== RAG
 interface Hit {
   doc: string;
+  chunk_id: string;
   text: string;
   rrf_rank: number;
   bm25_rank?: number | null;
   vec_rank?: number | null;
+}
+/** Kurzform einer Chunk-Kennung (Finding C): "MA-04#37" → "Chunk 37". */
+function chunkLabel(h: Hit): string {
+  const n = (h.chunk_id || "").split("#")[1];
+  return n ? `Chunk ${n}` : h.chunk_id || "Chunk";
+}
+/** Erste ~80 Zeichen des Chunk-Textes, damit zwei Chunks desselben Dokuments unterscheidbar sind. */
+function snippet(h: Hit): string {
+  const t = (h.text || "").replace(/\s+/g, " ").trim();
+  return t.length > 80 ? t.slice(0, 80) + "…" : t;
 }
 // Ampel: on = per grep real aktiv genutzt (nur ISA-18.2); ctx = in decisions.yaml/ADRs referenziert;
 // off = bewusst ausgeschlossen (Begründung aus action_policy). KEIN HACCP – nirgends referenziert.
@@ -786,7 +904,7 @@ function RagTab() {
             <div className="lane-h">BM25 · STICHWORT</div>
             {bm25Lane.map((h, i) => (
               <div className="lane-item" key={i}>
-                {h.doc}
+                {h.doc} · {chunkLabel(h)}
               </div>
             ))}
           </div>
@@ -802,7 +920,7 @@ function RagTab() {
                 .slice(0, 4)
                 .map((h, i) => (
                   <div className="lane-item" key={i}>
-                    {h.doc}
+                    {h.doc} · {chunkLabel(h)}
                   </div>
                 ))
             ) : (
@@ -813,11 +931,16 @@ function RagTab() {
           </div>
         </div>
         <div className="fusion-result">
-          <div className="fusion-result-h">FUSIONIERTE RANGFOLGE (RRF)</div>
+          <div className="fusion-result-h">FUSIONIERTE RANGFOLGE (RRF) — je Eintrag ein Chunk</div>
           {hits.slice(0, 4).map((h, i) => (
             <div className="result-row" data-testid="rrf-rank" key={i}>
               <div className="result-rank">{h.rrf_rank}</div>
-              <div className="result-name">{h.doc}</div>
+              <div className="result-name" data-testid="rrf-name">
+                <span className="rn-doc">
+                  {h.doc} · {chunkLabel(h)}
+                </span>
+                <span className="rn-snip">„{snippet(h)}"</span>
+              </div>
               <div className="result-src">
                 {h.bm25_rank != null && <span className="src-chip bm25">BM25 #{h.bm25_rank}</span>}
                 {h.vec_rank != null && <span className="src-chip vec">Vek #{h.vec_rank}</span>}

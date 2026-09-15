@@ -75,5 +75,8 @@ exclude_dirs = ["tests", ".venv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q -m 'not e2e'"
-markers = ["e2e: End-to-End-Tests am laufenden System (Standard ausgeschlossen)"]
+addopts = "-q -m 'not e2e and not embeddings'"
+markers = [
+    "e2e: End-to-End-Tests am laufenden System (Standard ausgeschlossen)",
+    "embeddings: Demo-Bereitschaft der Vektor-Suche (braucht sentence-transformers; Standard ausgeschlossen)",
+]

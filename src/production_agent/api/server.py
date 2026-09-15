@@ -268,6 +268,35 @@ def approve(req: ApprovalRequest) -> dict:
     return response
 
 
+@app.get("/investigations/{thread_id}/state")
+def investigation_state(thread_id: str) -> dict:
+    """Ist-Zustand eines Untersuchungs-Threads aus dem Checkpointer (Finding A): erlaubt der UI, den
+    Zustand nach Tab-Wechsel wiederherzustellen statt neu zu starten. status: 'interrupt' (wartet am
+    Freigabeknoten, Payload wie im SSE-interrupt), 'done' (Freigabe erfasst) oder 'unknown'."""
+    cfg = {"configurable": {"thread_id": thread_id}}
+    snapshot = graph.get_state(cfg)
+    values = snapshot.values if isinstance(snapshot.values, dict) else {}
+    if not values:
+        return {"status": "unknown", "thread_id": thread_id}
+    payload = {
+        "actions": values.get("actions", []),
+        "impact": values.get("impact", {}),
+        "hypothesis": values.get("hypothesis", {}),
+        "hypotheses": values.get("hypotheses", []),
+        "applied_threshold": values.get("applied_threshold"),
+        "judge_results": values.get("judge_results", []),
+    }
+    if snapshot.next:  # wartet noch am Freigabeknoten
+        return {"status": "interrupt", "thread_id": thread_id, "payload": payload}
+    approval = values.get("approval") or {}
+    return {
+        "status": "done",
+        "thread_id": thread_id,
+        "payload": payload,
+        "approved": bool(approval.get("approved")),
+    }
+
+
 @app.get("/investigations/gold/{event_id}")
 def gold_truth(event_id: int) -> dict:
     """Gold-Wahrheit eines Replay-Falls – NUR für die Eval nach dem Lauf (reason_hit-Vergleich).
