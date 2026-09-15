@@ -252,12 +252,17 @@ def search_hits(query: str, top_k: int = 5) -> list[dict]:
 
     fused = rrf(rankings)[:k]
     code_hit = bool(_CODE_RE.search(query))
+    # Herkunft je Treffer: 1-basierter Rang in der BM25- bzw. Vektor-Liste (None, wenn nicht dort).
+    bm25_pos = {idx: r for r, idx in enumerate(bm25_rank, start=1)}
+    vec_pos = {idx: r for r, idx in enumerate(vector_rank, start=1)}
     return [
         {
             **_CHUNKS[i],
             "score_bm25": round(float(bm25_scores[i]), 3),
             "rrf_rank": pos,
             "code_match": code_hit,
+            "bm25_rank": bm25_pos.get(i),
+            "vec_rank": vec_pos.get(i),
         }
         for pos, i in enumerate(fused, start=1)
     ]

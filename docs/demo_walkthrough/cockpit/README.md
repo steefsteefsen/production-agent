@@ -12,7 +12,8 @@ Erzeugt mit `python scripts/ui_check/cockpit_check.py`. Konsolenfehler: **0** (0
 - **06_rag.png** — Tab Wissen/RAG.
 - **07_security.png** — Tab Sicherheit.
 - **08_config.png** — Tab Konfiguration.
-- **05b_mcp_aufgeklappt.png** — MCP: KPI-Kachel aufgeklappt (Rohaufrufe).
+- **05b_mcp_timeline.png** — MCP-Timeline: alle Schritte aufgeklappt.
+- **06b_rag_landkarte.png** — RAG: Landkarte, Fusion, Normen-Ampel.
 
 ## Auffälligkeiten
 

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-15T15:49:40",
-  "commit": "efad8478b5cd971f002bb7e995a74a2359e758a7",
+  "generated_at": "2026-09-15T16:52:43",
+  "commit": "21f822ecb1e2135f9397ebd867650908c7805585",
   "branch": "main",
   "packages": [
     {
@@ -793,6 +793,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-15T15:49:26+02:00",
+      "kind": "commit",
+      "ref": "21f822e",
+      "text": "fix(ui): Freigabe sichtbar, MCP dreigeteilt, KPI-Drilldown + Status"
+    },
     {
       "at": "2026-09-15T14:14:47+02:00",
       "kind": "commit",

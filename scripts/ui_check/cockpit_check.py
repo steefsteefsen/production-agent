@@ -119,23 +119,31 @@ def main() -> int:
         page.wait_for_timeout(400)
         if page.get_by_test_id("server-card").count() < 3:
             problems.append("MCP: weniger als 3 Server-Karten (mes/knowledge/business_rules).")
-        # KPI-Kachel als Default, Rohdaten per Klick aufklappen (Drill-down)
-        page.get_by_test_id("kpi-mcp").click()
+        # Teil B: vertikale Timeline; alle Schritte aufklappen und einen Screenshot machen
+        steps = page.get_by_test_id("mcp-step")
+        if steps.count() < 10:
+            problems.append(f"MCP: Timeline hat nur {steps.count()} Schritte (erwartet ≥10).")
+        for i in range(steps.count()):
+            steps.nth(i).click()
+            page.wait_for_timeout(60)
         page.wait_for_timeout(300)
-        if page.get_by_test_id("mcp-call").count() == 0:
-            problems.append("MCP: keine Live-Aufrufe nach Aufklappen sichtbar.")
-        page.screenshot(path=str(OUT / "05b_mcp_aufgeklappt.png"), full_page=True)
-        shots.append(("05b_mcp_aufgeklappt.png", "MCP: KPI-Kachel aufgeklappt (Rohaufrufe)."))
+        page.screenshot(path=str(OUT / "05b_mcp_timeline.png"), full_page=True)
+        shots.append(("05b_mcp_timeline.png", "MCP-Timeline: alle Schritte aufgeklappt."))
         page.get_by_test_id("tab-rag").click()
         page.wait_for_timeout(600)
+        # Teil C: Landkarte (4 Gruppen), Fusions-Visualisierung, Normen-Ampel
+        if page.get_by_test_id("doc-group").count() < 4:
+            problems.append("RAG: Dokumentenlandkarte hat nicht 4 Gruppen.")
+        if page.get_by_test_id("fusion-card").count() == 0:
+            problems.append("RAG: keine Fusions-Visualisierung.")
+        if page.get_by_test_id("rrf-rank").count() == 0:
+            problems.append("RAG: keine rrf_rank-Fusionsrangfolge.")
         if page.get_by_test_id("rag-runtime").count() == 0:
             problems.append(
                 "RAG: eingespeister Rückkopplungstext nicht im Bestand (kein Voll-Kreis)."
             )
-        page.get_by_test_id("kpi-rag").click()
-        page.wait_for_timeout(300)
-        if page.get_by_test_id("rrf-rank").count() == 0:
-            problems.append("RAG: keine rrf_rank-Anzeige nach Aufklappen.")
+        page.screenshot(path=str(OUT / "06b_rag_landkarte.png"), full_page=True)
+        shots.append(("06b_rag_landkarte.png", "RAG: Landkarte, Fusion, Normen-Ampel."))
         page.get_by_test_id("tab-security").click()
         page.wait_for_timeout(400)
         page.get_by_test_id("kpi-security").click()

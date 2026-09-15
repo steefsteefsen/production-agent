@@ -523,26 +523,55 @@ interface ToolCall {
   params: Record<string, unknown>;
   raw: Record<string, unknown>;
 }
+// Feste Graph-Knotenreihenfolge; Werkzeugschritte werden mit echten Aufrufen (/observability)
+// angereichert. kind → Server/Farbe: mes(grün), knowledge(blau), rules=business_rules(amber),
+// llm(lila, kein MCP), gold(Abschluss). Texte spiegeln die STRUKTURELLE LINEARITÄT wider (keine
+// Graph-Verzweigung — grep-bestätigt: kein add_conditional_edges).
+type StepKind = "mes" | "knowledge" | "rules" | "llm" | "gold";
+interface StepDef {
+  step: string;
+  title: string;
+  kind: StepKind;
+  server?: string;
+  tool?: string;
+  desc: string;
+}
+const TIMELINE: StepDef[] = [
+  { step: "0", title: "Alarme normalisieren (Bronze→Silber)", kind: "mes", server: "mes", tool: "get_active_alarms", desc: "Rohalarme werden bereinigt und PackML-Zuständen zugeordnet (alarms_silver) — passiert in der Pipeline vor der Untersuchung, nicht als Agentenschritt." },
+  { step: "1", title: "Status & Plan abrufen", kind: "mes", server: "mes", tool: "get_line_status", desc: "Liest aktuellen PackML-Zustand und laufenden Auftrag — reine Simulation, kein Modell beteiligt." },
+  { step: "2", title: "Alarme prüfen, Flut erkennen", kind: "mes", server: "mes", tool: "get_active_alarms", desc: "Alarmfenster der letzten 30 Minuten, Schwellenwert nach ISA-18.2." },
+  { step: "3a", title: "Wartungsdokumente durchsuchen", kind: "knowledge", server: "knowledge", tool: "search_documents", desc: "BM25 + Vektor, RRF-fusioniert — Textsuche über den Dokumentenbestand." },
+  { step: "3b", title: "Ähnliche Vorfälle finden", kind: "knowledge", server: "knowledge", tool: "search_incidents", desc: "Case-Based Reasoning — strukturierte Suche nach Alarmcode/PackML-Zustand." },
+  { step: "4", title: "Ursachenhypothese bilden", kind: "llm", desc: "Sonnet 5 — kein Werkzeugaufruf, reine Modellinferenz über den gesammelten Kontext." },
+  { step: "5", title: "Wirkung schätzen", kind: "rules", server: "business_rules", tool: "estimate_impact", desc: "Deterministische Geschäftsregel — Nennleistung × Dauer, Kostensatz aus Stammdaten, kein Modell." },
+  { step: "6", title: "Maßnahmen ableiten", kind: "llm", desc: "Sonnet 5, Beleg-Pflicht je Maßnahme. Die Konfidenzschwelle klassifiziert danach — Entscheidungslogik INNERHALB dieses Knotens, KEINE Graph-Verzweigung (grep: kein add_conditional_edges, der Graph ist strukturell linear)." },
+  { step: "7", title: "Beleg-Prüfung", kind: "llm", desc: "Haiku 4.5, eigener Kontext ohne Knoten-4/6-Historie — unabhängige Gegenprüfung. Das Ergebnis wird angezeigt, verzweigt NICHT (kein Auto-Verwerfen)." },
+  { step: "8", title: "Freigabe-Gate", kind: "llm", desc: "Der Graph hält an (interrupt) — der Mensch entscheidet außerhalb des Graphen. Freigeben/Ablehnen ist keine kodierte Verzweigung, sondern Checkpointer-Resume mit unterschiedlichem Eingabewert; der Graph bleibt linear." },
+  { step: "G", title: "Echtes Gold — nur im Agentenzustand", kind: "gold", desc: "KEINE neue Zeile in downtime_events_gold (diese Tabelle existierte schon vor dem Lauf als Alarm-Aggregation). Die echte Gold-Veredelung — Ursache MIT Maßnahme fusioniert — entsteht hier im Zustand des Agenten und wird bei Freigabe als Rückkopplung in den Wissensbestand (Quelle rueckkopplung) geschrieben, NICHT in downtime_events_gold." },
+];
+
 function McpTab() {
   const [servers, setServers] = useState<ServerDef[]>([]);
   const [calls, setCalls] = useState<ToolCall[]>([]);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   useEffect(() => {
     getJSON<{ servers: ServerDef[] }>("/mcp/servers").then((d) => setServers(d.servers)).catch(() => {});
     getJSON<{ tools: ToolCall[] }>("/observability").then((d) => setCalls(d.tools)).catch(() => {});
   }, []);
+  const callFor = (s: StepDef) =>
+    s.tool ? calls.find((c) => c.server === s.server && c.tool === s.tool) : undefined;
   return (
     <div data-testid="mcp-tab">
       <div className="log-header">
-        <div className="log-title">MCP — Werkzeuge &amp; Aufrufe</div>
-        <div className="log-note">transport: stdio · live</div>
+        <div className="log-title">MCP — Ablauf dieses Laufs</div>
+        <div className="log-note">vertikale Timeline · welcher Schritt greift auf welchen Server zu</div>
       </div>
       <div className="dummy-box">
         <span className="ic">💡</span>
         <div>
           <b>Was ist MCP?</b> Ein offenes Protokoll, über das der Agent mit klar abgegrenzten
-          Werkzeugen spricht — statt direkt auf Datenbanken zuzugreifen. Der Agent kann nur fragen,
-          nie selbst etwas verändern.
+          Werkzeugen spricht — statt direkt auf Datenbanken zuzugreifen. Jeder Schritt zeigt, welcher
+          Server angesprochen wurde. Klicken für Details.
         </div>
       </div>
       <div className="section-h">SERVER IN DIESEM SYSTEM</div>
@@ -560,34 +589,67 @@ function McpTab() {
           </div>
         ))}
       </div>
-      <div className="section-h">LIVE-AUFRUFE IN DIESEM LAUF</div>
-      <div className="kpi" data-testid="kpi-mcp" onClick={() => setOpen((o) => !o)}>
-        <div>
-          <div className="kpi-main">{calls.length} Werkzeugaufrufe · alle erfolgreich</div>
-          <div className="kpi-sub">
-            {[...new Set(calls.map((c) => c.server))].join(", ") || "kein Lauf"} · Antworten gekapselt
-          </div>
-        </div>
-        <span className="kpi-toggle">{open ? "▲ Details verbergen" : "▼ Rohdaten anzeigen"}</span>
+      <div className="tl-legend">
+        <span><span className="sw" style={{ background: "var(--green)" }} />mes — Live-Simulation</span>
+        <span><span className="sw" style={{ background: "var(--blue)" }} />knowledge — RAG + Fallsuche</span>
+        <span><span className="sw" style={{ background: "var(--amber)" }} />business_rules — deterministisch</span>
+        <span><span className="sw" style={{ background: "var(--purple)" }} />Sprachmodell — kein MCP</span>
       </div>
-      {open &&
-        calls.map((c, i) => (
-          <div className="log-entry" data-testid="mcp-call" key={i}>
-            <div className="log-line1">
-              <span className="log-tag tool">tool_call</span>
-              <span className="log-server">
-                {c.server}.{c.tool}
-              </span>
-              <span className="log-time">{c.ts}</span>
+      <div className="timeline" data-testid="mcp-timeline">
+        {TIMELINE.map((s) => {
+          const c = callFor(s);
+          const isOpen = !!open[s.step];
+          const nomcp = s.kind === "llm";
+          const dot = s.kind === "rules" ? "rules" : s.kind;
+          return (
+            <div className="tnode" key={s.step}>
+              <div className={`tnode-dot ${dot}`}>{s.step}</div>
+              <div
+                className={`tnode-card ${isOpen ? "open" : ""}`}
+                data-testid="mcp-step"
+                onClick={() => setOpen((o) => ({ ...o, [s.step]: !o[s.step] }))}
+              >
+                <div className="tnode-head">
+                  <div className="tnode-step">Schritt {s.step}</div>
+                  <div className="tnode-title">{s.title}</div>
+                  <div className={`tnode-server ${nomcp ? "llm" : dot}`}>
+                    {nomcp ? "kein MCP" : s.server}
+                  </div>
+                  <span className="tnode-chevron">{isOpen ? "▾" : "▸"}</span>
+                </div>
+                {isOpen && (
+                  <div className="tnode-body-inner">
+                    <div className="tnode-desc">{s.desc}</div>
+                    {c ? (
+                      <>
+                        <div className="tnode-kv">
+                          <span className="k">call:</span> {c.server}.{c.tool}{" "}
+                          <span className="k">· {c.ts}</span>
+                        </div>
+                        <div className="tnode-kv">
+                          <span className="k">params:</span> {JSON.stringify(c.params)}
+                        </div>
+                        <div className="tnode-raw">{JSON.stringify(c.raw)}</div>
+                      </>
+                    ) : nomcp ? (
+                      <div className="tnode-nomcp">Reine Modellinferenz — kein Werkzeugaufruf.</div>
+                    ) : s.kind === "gold" ? (
+                      <div className="tnode-nomcp">
+                        Zustand am Laufende; bei Freigabe → Einspeisung in den Wissensbestand
+                        (Quelle rueckkopplung).
+                      </div>
+                    ) : (
+                      <div className="tnode-nomcp">Kein Aufruf in diesem Lauf erfasst.</div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="log-body">
-              <span className="k">params:</span> {JSON.stringify(c.params)}
-            </div>
-            <div className="log-raw">{JSON.stringify(c.raw)}</div>
-          </div>
-        ))}
-      {open && !calls.length && (
-        <div className="muted">Noch keine Aufrufe — im Bediener-Tab einen Lauf starten.</div>
+          );
+        })}
+      </div>
+      {!calls.length && (
+        <div className="muted">Noch kein Lauf — im Bediener-Tab eine Untersuchung starten.</div>
       )}
     </div>
   );
@@ -598,51 +660,72 @@ interface Hit {
   doc: string;
   text: string;
   rrf_rank: number;
+  bm25_rank?: number | null;
+  vec_rank?: number | null;
 }
+// Ampel: on = per grep real aktiv genutzt (nur ISA-18.2); ctx = in decisions.yaml/ADRs referenziert;
+// off = bewusst ausgeschlossen (Begründung aus action_policy). KEIN HACCP – nirgends referenziert.
 const NORMS = [
   {
-    badge: "used",
+    state: "on",
     label: "aktiv genutzt",
     title: "ISA-18.2 — Alarm Management",
     desc: "Definiert die Alarmflut-Schwelle (≥10 Alarme/10 Min), die die Alarmfluterkennung tatsächlich anwendet.",
   },
   {
-    badge: "context",
+    state: "ctx",
     label: "Kontext",
     title: "EEMUA 191 — Alarm Systems",
     desc: "Ergänzender Referenzrahmen zur Alarmbewirtschaftung, gemeinsam mit ISA-18.2 in decisions.yaml genannt.",
   },
   {
-    badge: "context",
+    state: "ctx",
     label: "Kontext",
     title: "ISO 22400-2 / VDMA 66412 — Kennzahlen & Ereignisdefinition",
     desc: "Grundlage der Störungs-/Ereignisdefinition und Stillstandszeit (ADR-0001).",
   },
   {
-    badge: "context",
+    state: "ctx",
     label: "Kontext",
     title: "IEC 62443 — Industrielle Cybersicherheit",
     desc: "Referenzrahmen für OT-Sicherheit — sql_guard/injection_guard folgen dem Grundgedanken, ohne Zertifizierung.",
   },
   {
-    badge: "context",
-    label: "Kontext",
+    state: "off",
+    label: "bewusst ausgeschlossen",
     title: "ISO 13849 / IEC 61508 — Funktionale Sicherheit",
     desc: "Bewusst außerhalb: der Agent ist kein sicherheitsgerichteter Teil (action_policy schließt Sicherheitseingriffe aus).",
   },
 ];
+const DOC_GROUPS: { key: string; label: string; live?: boolean; match: (d: string) => boolean }[] = [
+  { key: "ma", label: "MASCHINEN-HANDBÜCHER", match: (d) => d.startsWith("MA-") },
+  { key: "sb", label: "STÖRUNGSBERICHTE", match: (d) => d.startsWith("SB-") },
+  {
+    key: "ref",
+    label: "REFERENZ",
+    match: (d) => /^(BA-|FC-|SDB-|INJ-)/.test(d),
+  },
+  { key: "live", label: "RÜCKKOPPLUNG · LIVE", live: true, match: (d) => d.startsWith("rueckkopplung") },
+];
+
 function RagTab() {
   const [inv, setInv] = useState<{ documents: [string, number][]; total_chunks: number; runtime_count: number } | null>(null);
-  const [res, setRes] = useState<{ hits: Hit[]; code_match: boolean } | null>(null);
-  const [open, setOpen] = useState(false);
+  const [res, setRes] = useState<{ hits: Hit[]; code_match: boolean; vector_available: boolean } | null>(null);
   useEffect(() => {
     getJSON<typeof inv>("/knowledge/documents").then(setInv).catch(() => {});
-    getJSON<{ hits: Hit[]; code_match: boolean }>(
+    getJSON<{ hits: Hit[]; code_match: boolean; vector_available: boolean }>(
       "/knowledge/search?q=" + encodeURIComponent("Folienbahn läuft schräg Siegelnaht"),
     )
       .then(setRes)
       .catch(() => {});
   }, []);
+  const docs = inv?.documents ?? [];
+  const maxCount = Math.max(1, ...docs.map(([, n]) => n));
+  const hits = res?.hits ?? [];
+  const bm25Lane = [...hits]
+    .filter((h) => h.bm25_rank != null)
+    .sort((a, b) => (a.bm25_rank ?? 99) - (b.bm25_rank ?? 99))
+    .slice(0, 4);
   return (
     <div data-testid="rag-tab">
       <div className="log-header">
@@ -657,65 +740,106 @@ function RagTab() {
           werden fusioniert (RRF), damit weder Zufall noch reine Wortgleichheit allein entscheidet.
         </div>
       </div>
-      <div className="section-h">DOKUMENTENBESTAND ({inv?.total_chunks ?? "…"} Chunks)</div>
-      <div className="doc-list">
-        {(inv?.documents ?? []).map(([doc, n]) => (
-          <div className="doc-item" data-testid="doc-item" key={doc}>
-            <span className="ic">{doc.startsWith("rueckkopplung") ? "Rückkopplung" : "Dokument"}</span>
-            <span className="n">{doc}</span>
-            <span className="c">{n} Chunk(s)</span>
-          </div>
-        ))}
+
+      <div className="section-h">DOKUMENTENBESTAND — {inv?.total_chunks ?? "…"} CHUNKS</div>
+      <div className="doc-groups">
+        {DOC_GROUPS.map((g) => {
+          const items = docs.filter(([d]) => g.match(d));
+          return (
+            <div className={`doc-group ${g.live ? "live" : ""}`} data-testid="doc-group" key={g.key}>
+              <div className="doc-group-h">{g.label}</div>
+              {items.map(([d, n]) => (
+                <div className="doc-map-item" data-testid="doc-item" key={d}>
+                  <div className="doc-map-name">{d}</div>
+                  <div className="doc-bar-track">
+                    <div className="doc-bar-fill" style={{ width: `${Math.round((n / maxCount) * 100)}%` }} />
+                  </div>
+                  <div className="doc-map-count">
+                    {n} Chunks{g.live ? " — zur Laufzeit vom Bediener eingespeist" : ""}
+                  </div>
+                </div>
+              ))}
+              {!items.length && (
+                <div className="doc-map-count" data-testid={g.live ? "rag-runtime-empty" : undefined}>
+                  {g.live ? "noch keine Einspeisung" : "—"}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       {inv && inv.runtime_count > 0 && (
         <div className="muted" data-testid="rag-runtime">
-          Davon {inv.runtime_count} zur Laufzeit über die Bediener-Rückkopplung eingespeist.
+          {inv.runtime_count} Chunk(s) zur Laufzeit über die Bediener-Rückkopplung eingespeist (Quelle
+          rueckkopplung, nicht downtime_events_gold).
         </div>
       )}
+
+      <div className="section-h">SUCHLAUF — WIE BM25 UND VEKTOR ZUR FUSIONIERTEN RANGFOLGE WERDEN</div>
+      <div className="fusion-card" data-testid="fusion-card">
+        <div className="fusion-query">"Folienbahn läuft schräg, Siegelnaht unvollständig"</div>
+        <div className="fusion-meta">
+          Exakter Fehlercode erkannt: {res?.code_match ? "ja → BM25 doppelt gewichtet" : "nein → gleiche Gewichtung BM25 / Vektor"}
+        </div>
+        <div className="fusion-lanes">
+          <div className="lane bm25">
+            <div className="lane-h">BM25 · STICHWORT</div>
+            {bm25Lane.map((h, i) => (
+              <div className="lane-item" key={i}>
+                {h.doc}
+              </div>
+            ))}
+          </div>
+          <div className="fuse-arrows">
+            →<span className="rrf-badge">RRF</span>→
+          </div>
+          <div className="lane vec">
+            <div className="lane-h">VEKTOR · BEDEUTUNG</div>
+            {res?.vector_available ? (
+              hits
+                .filter((h) => h.vec_rank != null)
+                .sort((a, b) => (a.vec_rank ?? 99) - (b.vec_rank ?? 99))
+                .slice(0, 4)
+                .map((h, i) => (
+                  <div className="lane-item" key={i}>
+                    {h.doc}
+                  </div>
+                ))
+            ) : (
+              <div className="lane-item na" data-testid="vec-na">
+                nicht verfügbar — kein Vektor-Index in dieser Umgebung; RRF fusioniert nur BM25
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="fusion-result">
+          <div className="fusion-result-h">FUSIONIERTE RANGFOLGE (RRF)</div>
+          {hits.slice(0, 4).map((h, i) => (
+            <div className="result-row" data-testid="rrf-rank" key={i}>
+              <div className="result-rank">{h.rrf_rank}</div>
+              <div className="result-name">{h.doc}</div>
+              <div className="result-src">
+                {h.bm25_rank != null && <span className="src-chip bm25">BM25 #{h.bm25_rank}</span>}
+                {h.vec_rank != null && <span className="src-chip vec">Vek #{h.vec_rank}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="section-h">NORMEN &amp; VORGABEN, DIE DAS VORGEHEN BEEINFLUSSEN</div>
       <div className="norm-list">
         {NORMS.map((n) => (
-          <div className="norm-item" data-testid="norm-item" key={n.title}>
-            <span className={`badge ${n.badge}`}>{n.label}</span>
+          <div className={`norm-item ${n.state === "off" ? "excluded" : ""}`} data-testid="norm-item" key={n.title}>
+            <span className={`norm-dot ${n.state}`} />
             <div className="t">
               <b>{n.title}</b>
               <span>{n.desc}</span>
             </div>
+            <span className={`norm-status ${n.state}`}>{n.label}</span>
           </div>
         ))}
       </div>
-      <div className="section-h">SUCHLAUF (MIT RRF-RANG)</div>
-      <div className="kpi" data-testid="kpi-rag" onClick={() => setOpen((o) => !o)}>
-        <div>
-          <div className="kpi-main">
-            1 Suche · Top-Treffer rrf_rank {res?.hits?.[0]?.rrf_rank ?? "–"}
-          </div>
-          <div className="kpi-sub">
-            {inv?.total_chunks ?? "…"} Chunks im Bestand ·{" "}
-            {res?.code_match ? "Fehlercode erkannt (BM25×2)" : "kein Code (BM25≈Vektor)"}
-          </div>
-        </div>
-        <span className="kpi-toggle">{open ? "▲ Details verbergen" : "▼ Rohdaten anzeigen"}</span>
-      </div>
-      {open && (
-        <div className="log-entry">
-          <div className="log-line1">
-            <span className="log-tag query">query</span>
-            <span className="log-server">"Folienbahn läuft schräg, Siegelnaht unvollständig"</span>
-          </div>
-          <div className="log-body">
-            Exakter Fehlercode erkannt: <span className="k">{res?.code_match ? "ja" : "nein"}</span>{" "}
-            → {res?.code_match ? "BM25 doppelt gewichtet" : "gleiche Gewichtung BM25/Vektor"}
-          </div>
-          <div className="rag-rank">
-            {(res?.hits ?? []).slice(0, 4).map((h, i) => (
-              <span className={`rag-rank-item ${i === 0 ? "top" : ""}`} data-testid="rrf-rank" key={i}>
-                {h.doc} · rrf_rank {h.rrf_rank}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

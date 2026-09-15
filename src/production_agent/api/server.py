@@ -357,11 +357,19 @@ def knowledge_ingest(req: DocRequest) -> dict:
 
 @app.get("/knowledge/search")
 def knowledge_search(q: str, top_k: int = 5) -> dict:
-    """Suchlauf mit rrf_rank (RAG-Tab): zeigt Fusionsrang statt nur BM25."""
-    from production_agent.mcp.rag_server import search_hits
+    """Suchlauf mit rrf_rank + Herkunft je Treffer (RAG-Tab Fusions-Visualisierung).
 
-    hits = search_hits(q, top_k)
-    return {"query": q, "code_match": bool(hits and hits[0].get("code_match")), "hits": hits}
+    vector_available spiegelt ehrlich wider, ob in dieser Umgebung ein Vektor-Index aktiv ist –
+    ohne Embeddings fusioniert RRF nur die BM25-Rangliste (keine erfundene Vektor-Spur)."""
+    from production_agent.mcp import rag_server
+
+    hits = rag_server.search_hits(q, top_k)
+    return {
+        "query": q,
+        "code_match": bool(hits and hits[0].get("code_match")),
+        "vector_available": bool(rag_server._EMBED_AVAILABLE),
+        "hits": hits,
+    }
 
 
 # --- Rückkopplung: Rohtext → strukturierter Doku-Eintrag (Haiku 4.5) ---
