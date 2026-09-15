@@ -93,13 +93,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(mes_router)
-# Demo-Default: die laufende Anwendung nutzt den ECHTEN MCP-Protokollpfad (fastmcp.Client über
-# stdio), nicht den In-Process-Import. `make run-api` belegt so OHNE jede Variable „≥1 MCP-Server"
-# im Beweisbetrieb (Log „Starting MCP server ... stdio"). Nur ein ausdrückliches MCP_VIA_PROTOCOL=0
-# schaltet auf den schnellen, deterministischen In-Process-Pfad zurück (Tests/CI, die keine
-# stdio-Subprozesse starten wollen). Ergebnis identisch, nur der Aufrufpfad unterscheidet sich
-# (siehe build_graph-Docstring, ADR-0005). e2e_replay ist unberührt (nutzt settings-Default).
-_demo_use_mcp = os.getenv("MCP_VIA_PROTOCOL", "1").strip().lower() not in ("0", "false", "no", "")
+# Demo-Default: IN-PROCESS. Grund (ADR-0005, live reproduziert): die MCP-Subprozesse werden beim
+# Import EINMALIG gespawnt; ihr os.environ friert dabei ein. Die Replay-Uhr SIM_NOW ist aber erst
+# je Request bekannt und wird im Parent-Prozess gesetzt – ein bereits laufender stdio-Subprozess
+# sieht diese Änderung nie und fragt zur ECHTEN Zeit ab (0 Vorfälle, STO-UNBEKANNT). In-Process
+# liest SIM_NOW im selben Prozess je Aufruf frisch → korrekte Replay-Zeit. Der echte MCP-Protokoll-
+# pfad bleibt OPT-IN (MCP_VIA_PROTOCOL=1) und funktioniert, wenn SIM_NOW VOR dem Bau feststeht
+# (Einzelfall, z. B. e2e_replay). e2e_replay ist unberührt (nutzt settings-Default).
+_demo_use_mcp = os.getenv("MCP_VIA_PROTOCOL", "0").strip().lower() in ("1", "true", "yes")
 graph = build_graph(checkpoint_path=settings.checkpoint_db_path, use_mcp=_demo_use_mcp)
 
 
@@ -450,8 +451,8 @@ def api_config_get() -> dict:
         "konfidenzschwelle": {"value": thr, "default": konf, "min": 0.0, "max": 1.0, "step": 0.05},
         "vier_augen_eur": {"value": vier, "min": 0, "max": 10000, "step": 500},
         "alarmflut": {"value": flut, "min": 1, "max": 30, "step": 1},
-        "mcp_via_protocol": os.getenv("MCP_VIA_PROTOCOL", "1").strip().lower()
-        not in ("0", "false", "no", ""),
+        "mcp_via_protocol": os.getenv("MCP_VIA_PROTOCOL", "0").strip().lower()
+        in ("1", "true", "yes"),
         "langfuse": settings.langfuse_enabled,
         "drift": abs(float(thr) - float(konf)) > 1e-9,
         "runtime_path": str(RUNTIME_YAML),

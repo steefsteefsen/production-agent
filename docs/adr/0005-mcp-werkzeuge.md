@@ -29,13 +29,22 @@ Der zuvor genutzte `MultiServerMCPClient` (langchain-mcp-adapters 0.3.1) ist mit
 inkompatibel (`ImportError: RequestContext` aus `mcp.shared.context`; `mcp` ist an `fastmcp 4.x`
 gekoppelt) – er wurde durch den schlanken `fastmcp.Client` ersetzt.
 
-**Standard (Default) ist bewusst weiter In-Process** (`_default_tools`, Schalter
-`settings.mcp_via_protocol=False`): schneller und deterministisch für Tests/CI, und die Replay-Uhr
-`SIM_NOW` wird pro Untersuchung im Prozess gesetzt. Der Protokollpfad wird per `MCP_VIA_PROTOCOL=1`
-aktiviert (dann baut der Graph pro Lauf einen Client mit der passenden `SIM_NOW`). **Offener Punkt:**
-den Protokollpfad für die dauerhaft laufende API (einmalig gebauter Graph) mit korrekter
-`SIM_NOW`-Propagation pro Request zu verdrahten (Server baut den Graphen je Untersuchung neu) –
-geschätzt ein halber Tag nach dem Interview; die Kernmechanik läuft und ist belegt.
+**Demo-Default ist IN-PROCESS** (`_default_tools`; `api/server.py` liest `MCP_VIA_PROTOCOL`, Default
+`0`). Grund, am 2026-09-16 im Browser live reproduziert (Audit N-1): Die dauerhaft laufende API baut
+den Graphen EINMALIG beim Import. Im Protokollpfad werden dabei die stdio-Subprozesse gespawnt und
+ihr `os.environ` friert ein. Die Replay-Uhr `SIM_NOW` ist aber erst je Request bekannt und wird nur
+im Parent-Prozess gesetzt – ein laufender Subprozess sieht das nie und fragt zur ECHTEN Zeit ab.
+Folge im echten Demo-Pfad (Ereignis 360): `0 ähnliche Vorfälle`, Ursache `STO-UNBEKANNT`, beide
+Maßnahmen vom Judge abgelehnt. In-Process liest `SIM_NOW` im selben Prozess je Aufruf frisch →
+korrekte Replay-Zeit (5 Vorfälle, `STO-FOLIE`, Judge bestätigt).
+
+**Der Protokollpfad bleibt OPT-IN** (`MCP_VIA_PROTOCOL=1`) und funktioniert, wenn `SIM_NOW` VOR dem
+Bau des Graphen feststeht (Einzelfall, z. B. `LLM_MODE=mock MCP_VIA_PROTOCOL=1 python
+scripts/e2e_replay.py`: `SIM_NOW` wird beim Prozessstart gesetzt, der Subprozess erbt es). Für die
+interaktive Demo mit wechselnden Ereignissen ist das nicht anwendbar. **Robuste Lösung (Backlog,
+nach dem Interview):** `SIM_NOW` je Werkzeugaufruf als Argument durch den Graphen reichen (statt über
+die Prozess-Umgebung); das entkoppelt die Replay-Uhr vom Subprozess-Spawn (~halber Tag). Bis dahin
+ist In-Process der korrekte, belegte Demo-Default.
 
 ## Quellen (mit Datum)
 - MCP-Spezifikation 2026-07-28 – blog.modelcontextprotocol.io, 28.07.2026

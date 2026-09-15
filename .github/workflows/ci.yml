@@ -79,10 +79,10 @@ jobs:
       needs.test.result == 'success' &&
       (needs.frontend.result == 'success' || needs.frontend.result == 'skipped')
     env:
+      # Bewusst KEIN MCP_VIA_PROTOCOL: der e2e-Playwright-Lauf muss den ECHTEN Demo-Default treffen
+      # (make run-api ohne Flags = In-Process). Der Test würde bei falscher SIM_NOW-Propagation
+      # rot (STO-UNBEKANNT statt STO-FOLIE) – er bewacht damit genau den reproduzierten Bug.
       LLM_MODE: mock
-      # In-Process-MCP für e2e: schnell, deterministisch, keine stdio-Subprozesse (Demo-Default
-      # bleibt der Protokollpfad; nur dieser Lauf schaltet ihn aus).
-      MCP_VIA_PROTOCOL: "0"
     steps:
       - uses: actions/checkout@v4
 

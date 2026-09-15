@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-15T16:52:43",
-  "commit": "21f822ecb1e2135f9397ebd867650908c7805585",
+  "generated_at": "2026-09-15T17:29:26",
+  "commit": "3d812a13baed1f55b08124fa5cb764e53a1753ad",
   "branch": "main",
   "packages": [
     {
@@ -793,6 +793,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-15T16:52:29+02:00",
+      "kind": "commit",
+      "ref": "3d812a1",
+      "text": "feat(ui): MCP-Timeline + RAG-Landkarte, Graph-Linearität präzise"
+    },
     {
       "at": "2026-09-15T15:49:26+02:00",
       "kind": "commit",
