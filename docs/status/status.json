@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-16T12:52:31",
-  "commit": "f218e988c798fcf4e12e3166e02224d7a467eb7d",
+  "generated_at": "2026-09-16T14:05:15",
+  "commit": "71430b0445bf11dbed791fafab1883de613d2afb",
   "branch": "main",
   "packages": [
     {
@@ -794,6 +794,12 @@
   },
   "timeline": [
     {
+      "at": "2026-09-16T12:51:54+02:00",
+      "kind": "commit",
+      "ref": "71430b0",
+      "text": "fix(live_daten): Stationen zeigen SIM_NOW-Zustand, gruppierter Strom"
+    },
+    {
       "at": "2026-09-16T12:28:45+02:00",
       "kind": "commit",
       "ref": "f218e98",
@@ -1379,7 +1385,7 @@
       "path": "src/production_agent/api/",
       "files": 2,
       "tests": 42,
-      "coverage": 53
+      "coverage": 55
     },
     {
       "path": "src/production_agent/data/",

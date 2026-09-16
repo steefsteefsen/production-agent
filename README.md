@@ -2,31 +2,61 @@
 
 Untersuchung einer stehenden Produktionslinie: simulierte MES-Daten → Alarmanalyse → historisches Wissen → Wirkungsschätzung → sichere Maßnahmenempfehlung mit menschlicher Freigabe.
 
-Stack: LangGraph · FastMCP (2 Server) · Anthropic Claude · FastAPI/SSE · Vite/React · Langfuse · SQLite (Bronze→Silber→Gold)
+Stack: LangGraph · FastMCP (drei MCP-Server: mes/knowledge/business_rules) · Anthropic Claude · FastAPI/SSE · Vite/React · Langfuse · SQLite (Bronze→Silber→Gold)
 
 Projektstatus (automatisch erzeugt): [docs/status/index.html](docs/status/index.html)
 
-## Schnellstart
+## Setup von Null
 ```bash
+git clone <repo-url> production-agent && cd production-agent
 python -m venv .venv && source .venv/bin/activate
-make install                            # deps + pre-commit
-cp .env.example .env                    # API-Key eintragen
-python -m production_agent.data.simulator   # 348 Störungsereignisse (Gold; Kurzstillstände <5min zählen nicht, ADR-0001) → data/gold/mes.sqlite
-make test                               # Testsuite (<!-- auto:tests -->423<!-- /auto:tests --> Tests), läuft ohne API-Key
-python autopilot/run.py --dry-run       # Prompts der Arbeitspakete ansehen, dann ohne --dry-run laufen lassen
+pip install -e '.[dev,embeddings]'                  # embeddings ist für den Demo-Pfad Pflicht (Vektor-Suche)
+cp .env.example .env                                # ANTHROPIC_API_KEY eintragen (nur für LLM_MODE=live nötig)
+python -m production_agent.data.simulator           # Störungshistorie → data/gold/mes.sqlite (Gold, ADR-0001)
+python -m production_agent.mcp.rag_server --ingest  # Wartungsdokumente in den BM25-/Vektor-Index laden
+cd frontend && npm install && cd ..                 # Frontend-Abhängigkeiten
 ```
-
+`make install-demo` fasst die Python-Schritte zusammen (CPU-Torch + embeddings + ingest).
 Konfiguration steht in `settings.env` (committet), Geheimnisse in `.env` (gitignored). `.env` enthält nur Schlüssel, die auf KEY/SECRET/TOKEN/PASSWORD enden.
 
-## Demo-App starten (5 Befehle)
+## Demo starten — Reihenfolge & Timing
 ```bash
-make install                                       # 1. Abhängigkeiten + pre-commit
-python -m production_agent.data.simulator          # 2. Störungshistorie simulieren → Gold-SQLite
-python -m production_agent.mcp.rag_server --ingest # 3. Wartungsdokumente in den RAG-Index laden
-make run-api                                        # 4. FastAPI + SSE (uvicorn, Port 8000)
-make ui                                             # 5. React-Cockpit (Vite, Port 5173)
+make run-api                    # 1. FastAPI + SSE auf Port 8000
+cd frontend && npm run dev      # 2. React-Cockpit (Vite) auf Port 5173
+make ops                        # 3. optional: internes Ops-Cockpit auf Port 8010
 ```
-Der Modus (mock/live) kommt aus `LLM_MODE`/`.env` und wird im Cockpit nur angezeigt. Ohne API-Key läuft der Mock-Pfad; der kostenpflichtige Live-Lauf ist manuell.
+> **Wichtig zum ersten Start:** Der ERSTE `make run-api` lädt beim Import von `sentence-transformers`
+> das Embedding-Modell und braucht dadurch rund anderthalb bis zwei Minuten. **Nicht abbrechen** —
+> warten, bis in der Konsole `Application startup complete` erscheint. Folgestarts sind schnell
+> (Modell gecacht).
+
+**Umgebungsbesonderheit `--reload`:** In manchen Umgebungen re-exect der uvicorn-Reloader mit dem
+falschen (User-Site-)`uvicorn` und bricht mit `ModuleNotFound: production_agent` ab. Workaround: ohne
+`--reload` starten, z. B. `python -m uvicorn production_agent.api.server:app --host 127.0.0.1 --port 8000`.
+Der Produktivpfad ist identisch.
+
+Der Modus (mock/live) kommt aus `LLM_MODE` (`settings.env`/`.env`) und wird im Cockpit nur angezeigt.
+Ohne API-Key läuft der Mock-Pfad; der kostenpflichtige Live-Lauf ist manuell.
+
+## URLs im Browser
+| URL | Inhalt |
+|---|---|
+| http://localhost:5173 | Cockpit / Bediener-Tab (Hauptdemo) |
+| http://localhost:5173/presentation | Geführter Interview-Walkthrough |
+| http://localhost:5173/freigabe | Eigenständige Freigabe-Seite |
+| http://localhost:5173/pitch.html | Business-Pitch (statische Seite) |
+| http://localhost:8010 | Ops-Cockpit (intern, nur 127.0.0.1) |
+
+## Architektur auf einen Blick
+- **Drei MCP-Server** (fachlich geschnitten, `src/production_agent/mcp/`): `mes` (Live-Linienstatus,
+  Alarme, Produktionsplan), `knowledge` (Dokumentsuche, ähnliche Vorfälle, Alarmverlauf),
+  `business_rules` (regelbasierte Wirkungsschätzung).
+- **Linearer Graph:** `graph/workflow.py` verdrahtet die Knoten streng linear — **kein
+  `add_conditional_edges`**; Entscheidungen fallen INNERHALB der Knoten, nicht als Graph-Verzweigung.
+  Der Freigabeknoten ist immer ein `interrupt()`. Begründung in [docs/adr/](docs/adr/).
+- **LLM_MODE=mock|live:** `mock` ist deterministisch (kein API-Key, für Tests/Demo), `live` nutzt
+  Anthropic Claude. Umschaltung über `LLM_MODE`.
+- Der Agent **empfiehlt, er führt nicht aus:** jede Maßnahme läuft durch `security/action_policy.py`.
 
 ## Architektur
 ```mermaid
@@ -58,6 +88,20 @@ Vier Tabs: **Ablauf** (WP-Kacheln in Zustandsfarbe, Live-Log, Journal), **Stand*
 Nur 127.0.0.1; keine Shell-Freitexteingaben; jede Aktion in `config/ops_audit.jsonl` protokolliert.
 Dokumentation: [docs/ops.md](docs/ops.md).
 
+## Tests
+```bash
+make test                    # gesamte Testsuite (<!-- auto:tests -->423<!-- /auto:tests --> Tests) mit Coverage-Gate, läuft ohne API-Key
+pytest -q -m e2e tests/e2e   # Regressionssuite gegen den ECHTEN Demo-Pfad (BASE_URL gesetzt, Server läuft)
+pytest -q -m embeddings tests/test_vector_search_demo.py   # erzwingt die Vektor-Suche (Demo-Pflicht)
+```
+Die e2e-Regressionssuite (`tests/e2e/test_known_bugs.py`) prüft je einen bestätigten Bug gegen den
+echten Default-Pfad (kein `MCP_VIA_PROTOCOL=0`-Umgehen); sie ist im CI-e2e-Job eingebunden.
+
+## Bekannte Altlasten (bewusst nicht entfernt)
+- `frontend/src/App.tsx` ist **unbenutzt**: der Einstieg `frontend/src/main.tsx` importiert nur noch
+  `Cockpit.tsx`, `presentation/Presentation.tsx` und `components/ApprovalPage.tsx`. Die Datei bleibt
+  bewusst liegen (kein Löschen in der Interview-Vorbereitung); sie hat keine Wirkung auf die App.
+
 ## Die Entscheidungsbasis (ADR-0002)
 Ein Simulator erzeugt 90 Tage Historie inklusive Auflösung und schreibt sie durch Bronze → Silber → Gold. „Jetzt" ist eine Replay-Uhr
 5 Minuten nach Beginn eines Gold-Ereignisses: alles davor ist Historie mit bekannter Lösung, das Ereignis selbst ist offen, seine
@@ -74,9 +118,9 @@ fällt gratis ab. Alle Stellschrauben stehen in `decisions.yaml`.
 | `security/injection_guard.py` | Werkzeugergebnisse als untrusted Daten kapseln, Injection-Muster markieren, kürzen |
 | `security/action_policy.py` | Maßnahmen klassifizieren (inform / approval_required / forbidden), Konfidenzschwelle |
 | `security/audit.py` | JSONL-Audit jedes Tool-Aufrufs und jeder Freigabe |
-| `graph/workflow.py` | 7 Knoten, Verzweigung bei Alarmflut, `interrupt()` am Freigabeknoten, Checkpointer |
+| `graph/workflow.py` | linearer Ablauf (kein `add_conditional_edges`), Entscheidung in den Knoten, `interrupt()` am Freigabeknoten, Checkpointer |
 | `mcp/mes_server.py` | fachliche Werkzeuge (Anzahl <!-- auto:tools_mes -->3<!-- /auto:tools_mes -->), alle über den Guard |
-| `mcp/rag_server.py` | BM25-Suche + RRF-Fusion (Vektorseite folgt in WP2) |
+| `mcp/rag_server.py` | BM25 + Vektor-Suche (sentence-transformers) mit RRF-Fusion |
 | `data/simulator.py`, `data/replay.py` | deterministischer MES-Simulator (Seed 42), Replay-Uhr, Replay-Fälle, Scoring |
 | `autopilot/status.py` | erzeugt docs/status/ und füllt die auto-Marker in der Doku (Fakten statt Handarbeit) |
 | `autopilot/guardian.py` | pre-commit: Sicherheit, Konsistenz, Doku-Aktualität – blockiert den Commit (Regeln siehe docs/guardian.md) |
