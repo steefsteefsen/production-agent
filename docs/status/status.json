@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-16T12:29:22",
-  "commit": "3c44517c8ac0f7bb7b67f9c26e9b186d8cd0c2e5",
+  "generated_at": "2026-09-16T12:52:31",
+  "commit": "f218e988c798fcf4e12e3166e02224d7a467eb7d",
   "branch": "main",
   "packages": [
     {
@@ -788,11 +788,17 @@
     "percent": 85,
     "hours_agent": 4.38,
     "cost_usd": 11.39,
-    "tests": 421,
+    "tests": 423,
     "coverage_total": 84,
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-16T12:28:45+02:00",
+      "kind": "commit",
+      "ref": "f218e98",
+      "text": "fix(mock_llm): Rückkopplungstext je reason_code statt fixem Beispiel"
+    },
     {
       "at": "2026-09-15T23:23:11+02:00",
       "kind": "commit",
@@ -1366,19 +1372,19 @@
     {
       "path": "src/production_agent/",
       "files": 2,
-      "tests": 282,
+      "tests": 284,
       "coverage": 98
     },
     {
       "path": "src/production_agent/api/",
       "files": 2,
-      "tests": 40,
+      "tests": 42,
       "coverage": 53
     },
     {
       "path": "src/production_agent/data/",
       "files": 4,
-      "tests": 106,
+      "tests": 108,
       "coverage": 83
     },
     {

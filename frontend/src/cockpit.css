@@ -144,6 +144,31 @@
 .ck-root .doc-item .ic{font-family:var(--mono); font-size:11px; color:var(--dimmer); width:90px; flex-shrink:0;}
 .ck-root .doc-item .n{color:var(--text); flex:1;}
 .ck-root .doc-item .c{font-family:var(--mono); font-size:10.5px; color:var(--dim); background:var(--panel-2); padding:2px 8px; border-radius:4px;}
+/* Live-Daten: granulare Stationskarten, Auftrags-Fortschritt, gruppierter Störungsstrom */
+.ck-root .ls-since{font-family:var(--mono); font-size:9.5px; color:var(--dimmer); margin-top:4px;}
+.ck-root .ls-alarm{margin-top:8px; width:100%; font-family:var(--mono); font-size:9.5px; padding:4px 6px; border-radius:4px; cursor:pointer; background:#2a1618; color:var(--red); border:1px solid #4a2828;}
+.ck-root .ls-alarm.cat-qual{background:#2a2416; color:var(--amber); border-color:#4a4128;}
+.ck-root .ls-alarm.cat-mat{background:#161f2a; color:var(--blue); border-color:#28384a;}
+.ck-root .ls-alarm.cat-other{background:var(--panel-2); color:var(--dim); border-color:var(--line);}
+.ck-root .order-row{padding:11px 16px; border-bottom:1px solid var(--line);}
+.ck-root .order-row:last-child{border-bottom:none;}
+.ck-root .order-head{display:flex; align-items:center; gap:12px; font-size:12.5px; margin-bottom:7px;}
+.ck-root .order-head .ic{font-family:var(--mono); font-size:11px; color:var(--dimmer); width:90px; flex-shrink:0;}
+.ck-root .order-head .n{color:var(--text); flex:1;}
+.ck-root .order-head .c{font-family:var(--mono); font-size:10.5px; color:var(--dim); background:var(--panel-2); padding:2px 8px; border-radius:4px;}
+.ck-root .order-bar{height:6px; background:var(--panel-3); border-radius:3px; overflow:hidden;}
+.ck-root .order-fill{height:100%; background:var(--green); border-radius:3px;}
+.ck-root .log-tag.cat-sto{background:#2a1618; color:var(--red); border:1px solid #4a2828;}
+.ck-root .log-tag.cat-qual{background:#2a2416; color:var(--amber); border:1px solid #4a4128;}
+.ck-root .log-tag.cat-mat{background:#161f2a; color:var(--blue); border:1px solid #28384a;}
+.ck-root .log-tag.cat-other{background:var(--panel-2); color:var(--dim); border:1px solid var(--line);}
+.ck-root .log-entry.cat-sto{border-left:3px solid var(--red);}
+.ck-root .log-entry.cat-qual{border-left:3px solid var(--amber);}
+.ck-root .log-entry.cat-mat{border-left:3px solid var(--blue);}
+.ck-root .log-entry.cat-other{border-left:3px solid var(--dimmer);}
+.ck-root .log-toggle{width:100%; background:none; border:none; text-align:left; cursor:pointer; color:inherit; font-family:var(--mono);}
+.ck-root .log-caret{margin-left:auto; color:var(--dimmer);}
+.ck-root .log-detail{margin-top:8px; padding-top:8px; border-top:1px solid var(--line); color:var(--dim); font-size:11px; line-height:1.6;}
 .ck-root .norm-list{display:flex; flex-direction:column; gap:8px;}
 .ck-root .norm-item{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 16px; display:flex; gap:12px; align-items:flex-start;}
 .ck-root .norm-item .badge{font-family:var(--mono); font-size:9.5px; padding:2px 7px; border-radius:3px; flex-shrink:0; margin-top:2px;}

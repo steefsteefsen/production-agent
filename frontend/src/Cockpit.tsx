@@ -94,6 +94,9 @@ interface OpRun {
 // Modul-Store: überlebt Tab-Wechsel (Unmount/Remount), je Ereignis ein unabhängiger Zustand.
 // Der Checkpointer im Backend bleibt Quelle der Wahrheit (GET /investigations/{thread}/state).
 const opRuns: Record<number, OpRun> = {};
+// Tab-übergreifend gewähltes Demo-Ereignis: die Live-Daten folgen derselben Replay-Zeit wie die
+// Untersuchung (Tabs mounten bei Wechsel neu, daher genügt eine Modulvariable als Quelle).
+let currentEventId = EVENTS[0].id;
 
 function OperatorTab() {
   const [eventId, setEventId] = useState<number>(EVENTS[0].id);
@@ -156,6 +159,7 @@ function OperatorTab() {
   // Finding A: bei (Re-)Mount und Ereigniswechsel den Ist-Zustand des Threads abfragen, NICHT
   // blind neu starten. Nur wenn kein Zustand existiert, eine neue Untersuchung anstoßen.
   useEffect(() => {
+    currentEventId = eventId; // Live-Daten-Tab folgt der gewählten Untersuchung
     let cancelled = false;
     const restore = async () => {
       const known = opRuns[eventId];
@@ -524,10 +528,18 @@ function OperatorTab() {
 }
 
 // ===================================================================== LIVE-DATEN
+interface StationAlarm {
+  event_id: number;
+  first_alarm_code: string;
+  reason_code: string;
+  alarm_count: number;
+}
 interface Equip {
   equipment_id: string;
   name: string;
   packml_state?: string | null;
+  ts?: string | null; // Zeitpunkt, seit dem der Zustand gilt (<= SIM_NOW)
+  alarm?: StationAlarm | null; // bei gestörter Station: verknüpftes aktives Ereignis
 }
 interface Order {
   order_id: string;
@@ -535,39 +547,91 @@ interface Order {
   planned_qty: number;
   produced_qty: number;
 }
+interface LineResp {
+  equipment: Equip[];
+  orders: Order[];
+  sim_now?: string | null;
+  active_event?: StationAlarm | null;
+}
 function stateClass(s?: string | null): string {
   if (!s) return "idle";
   if (["Held", "Aborted", "Stopped", "Suspended"].includes(s)) return "fault";
   if (s === "Execute") return "ok";
   return "idle";
 }
+// Farbkategorie nach Störungscode (Störung/Qualität/Material/sonst) für den Störungsstrom.
+function reasonCat(rc?: string | null): string {
+  if (!rc) return "other";
+  if (rc.startsWith("STO")) return "sto";
+  if (rc.startsWith("QUAL")) return "qual";
+  if (rc.startsWith("MAT")) return "mat";
+  return "other";
+}
+// Dauer zwischen zwei "YYYY-MM-DD HH:MM:SS"-Zeitpunkten als "H h M min" / "M min".
+function durSince(fromTs?: string | null, now?: string | null): string {
+  if (!fromTs || !now) return "";
+  const a = Date.parse(fromTs.replace(" ", "T"));
+  const b = Date.parse(now.replace(" ", "T"));
+  if (Number.isNaN(a) || Number.isNaN(b) || b < a) return "";
+  const min = Math.round((b - a) / 60000);
+  if (min < 60) return `${min} min`;
+  return `${Math.floor(min / 60)} h ${min % 60} min`;
+}
 interface Event {
+  event_id?: number;
   first_alarm_code?: string;
   reason_code?: string;
   start_ts?: string;
+  end_ts?: string;
+  duration_min?: number;
   alarm_count?: number;
 }
 function LiveTab() {
-  const [line, setLine] = useState<{ equipment: Equip[]; orders: Order[] } | null>(null);
+  const [eventId, setEventId] = useState<number>(currentEventId);
+  const [line, setLine] = useState<LineResp | null>(null);
   const [alarms, setAlarms] = useState<Event[]>([]);
+  const [expanded, setExpanded] = useState<number | null>(null);
   const [err, setErr] = useState("");
   useEffect(() => {
-    getJSON<{ equipment: Equip[]; orders: Order[] }>("/mes/line/L1").then(setLine).catch((e) => setErr(String(e)));
+    currentEventId = eventId; // Auswahl tab-übergreifend halten
+    getJSON<LineResp>(`/mes/line/L1?event_id=${eventId}`)
+      .then(setLine)
+      .catch((e) => setErr(String(e)));
     getJSON<Event[]>("/mes/events?line_id=L1&limit=10")
       .then((r) => setAlarms((Array.isArray(r) ? r : []).slice(0, 10)))
       .catch(() => setAlarms([]));
-  }, []);
+  }, [eventId]);
+  const simNow = line?.sim_now ?? null;
   return (
     <div data-testid="live-tab">
-      <div className="log-header">
-        <div className="log-title">Live-Daten — Linie L1</div>
-        <div className="log-note">direkt aus dem simulierten MES, ungefiltert</div>
+      <div className="log-header op-header-row">
+        <div>
+          <div className="log-title">Live-Daten — Linie L1</div>
+          <div className="log-note">
+            Replay-Zeit {simNow ?? "—"} · Stationen und Störungsstrom zeigen denselben Zeitpunkt
+          </div>
+        </div>
+        <div className="op-eventsel">
+          <label>Ereignis</label>
+          <select
+            data-testid="live-event-select"
+            value={eventId}
+            onChange={(e) => setEventId(Number(e.target.value))}
+          >
+            {EVENTS.map((ev) => (
+              <option key={ev.id} value={ev.id}>
+                {ev.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       <div className="dummy-box">
         <span className="ic">💡</span>
         <div>
-          <b>Was ist das?</b> Die Rohdaten aus der Anlagensteuerung — bevor der Agent sie
-          interpretiert. Kein Vorschlag, keine Bewertung, nur der aktuelle Zustand.
+          <b>Was ist das?</b> Die Rohdaten aus der Anlagensteuerung zur Replay-Zeit der gewählten
+          Untersuchung — bevor der Agent sie interpretiert. Eine aktive Störung erscheint hier als
+          gestörte Station (Held/Stopped), nicht als „Execute".
         </div>
       </div>
       {err && <div className="cfg-drift">{err}</div>}
@@ -576,38 +640,73 @@ function LiveTab() {
         {(line?.equipment ?? []).map((e) => {
           const c = stateClass(e.packml_state);
           return (
-            <div className={`live-station ${c === "fault" ? "fault" : ""}`} data-testid="live-station" key={e.equipment_id}>
+            <div
+              className={`live-station ${c === "fault" ? "fault" : ""}`}
+              data-testid="live-station"
+              key={e.equipment_id}
+            >
               <div className="ls-name">{e.name}</div>
               <div className={`ls-state ${c}`}>{e.packml_state ?? "—"}</div>
+              <div className="ls-since">seit {durSince(e.ts, simNow) || "—"}</div>
+              {e.alarm && (
+                <button
+                  className={`ls-alarm cat-${reasonCat(e.alarm.reason_code)}`}
+                  data-testid="ls-alarm"
+                  title="Zum Störungsereignis"
+                  onClick={() => setExpanded(e.alarm ? e.alarm.event_id : null)}
+                >
+                  ⚠ {e.alarm.first_alarm_code} · E-{e.alarm.event_id} · {e.alarm.alarm_count} Alarme
+                </button>
+              )}
             </div>
           );
         })}
       </div>
       <div className="section-h">AKTIVE AUFTRÄGE</div>
       <div className="doc-list">
-        {(line?.orders ?? []).map((o) => (
-          <div className="doc-item" key={o.order_id}>
-            <span className="ic">{o.order_id}</span>
-            <span className="n">{o.product}</span>
-            <span className="c">
-              {o.produced_qty} / {o.planned_qty} St
-            </span>
-          </div>
-        ))}
+        {(line?.orders ?? []).map((o) => {
+          const pct = o.planned_qty ? Math.min(100, Math.round((o.produced_qty / o.planned_qty) * 100)) : 0;
+          return (
+            <div className="order-row" data-testid="order-row" key={o.order_id}>
+              <div className="order-head">
+                <span className="ic">{o.order_id}</span>
+                <span className="n">{o.product}</span>
+                <span className="c">
+                  {o.produced_qty} / {o.planned_qty} St · {pct}%
+                </span>
+              </div>
+              <div className="order-bar">
+                <div className="order-fill" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          );
+        })}
         {!line?.orders?.length && <div className="doc-item">Keine offenen Aufträge.</div>}
       </div>
       <div className="section-h">STÖRUNGSSTROM (LETZTE 10 EREIGNISSE)</div>
-      {alarms.map((a, i) => (
-        <div className="log-entry" data-testid="alarm-entry" key={i}>
-          <div className="log-line1">
-            <span className="log-tag block">{a.first_alarm_code ?? "—"}</span>
-            <span className="log-server">
-              {a.reason_code} · {a.alarm_count ?? 0} Alarme
-            </span>
-            <span className="log-time">{a.start_ts}</span>
+      {alarms.map((a, i) => {
+        const cat = reasonCat(a.reason_code);
+        const open = expanded === a.event_id;
+        return (
+          <div className={`log-entry cat-${cat} ${open ? "open" : ""}`} data-testid="alarm-entry" key={a.event_id ?? i}>
+            <button className="log-line1 log-toggle" onClick={() => setExpanded(open ? null : (a.event_id ?? null))}>
+              <span className={`log-tag cat-${cat}`}>E-{a.event_id}</span>
+              <span className="log-server">
+                {a.first_alarm_code} · {a.reason_code} · {a.alarm_count ?? 0} Alarme
+              </span>
+              <span className="log-time">{a.start_ts}</span>
+              <span className="log-caret">{open ? "▾" : "▸"}</span>
+            </button>
+            {open && (
+              <div className="log-detail" data-testid="alarm-detail">
+                Beginn {a.start_ts} → Ende {a.end_ts ?? "—"} · Dauer{" "}
+                {a.duration_min != null ? `${a.duration_min} min` : "—"} · Erstalarm{" "}
+                {a.first_alarm_code} · Ursachenklasse {a.reason_code}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
       {!alarms.length && <div className="muted">Kein Störungsstrom abrufbar.</div>}
     </div>
   );

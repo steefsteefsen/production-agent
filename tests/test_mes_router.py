@@ -78,6 +78,47 @@ def test_mes_line_unbekannt_gibt_404(mes_client) -> None:
     assert r.status_code == 404
 
 
+# Regression (Live-Test): /mes/line MUSS den PackML-Zustand ZUR Replay-Zeit liefern (<= SIM_NOW),
+# nicht den global jüngsten. Bei aktiver Störung ist die betroffene Station gestört, nicht "Execute".
+_FAULT = {"Held", "Aborted", "Stopped", "Suspended"}
+
+
+def _latest_event(mes_db: str) -> dict:
+    import sqlite3
+
+    conn = sqlite3.connect(f"file:{mes_db}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT event_id, reason_code FROM downtime_events_gold "
+            "WHERE line_id='L1' AND end_ts IS NOT NULL ORDER BY start_ts DESC LIMIT 1"
+        ).fetchone()
+    finally:
+        conn.close()
+    return dict(row)
+
+
+def test_mes_line_zeigt_stoerung_zur_replay_zeit(mes_client, mes_db) -> None:
+    ev = _latest_event(mes_db)
+    data = mes_client.get(f"/mes/line/L1?event_id={ev['event_id']}").json()
+    assert data["sim_now"], "Replay-Uhr fehlt in der Antwort"
+    assert data["active_event"] and data["active_event"]["event_id"] == ev["event_id"]
+    faulted = [e for e in data["equipment"] if e.get("packml_state") in _FAULT]
+    assert faulted, "keine gestörte Station zur Replay-Zeit – Endpunkt filtert nicht nach SIM_NOW"
+    # nicht alle Stationen 'Execute' (genau der Live-Test-Bug)
+    assert not all(e.get("packml_state") == "Execute" for e in data["equipment"])
+    # gestörte Station trägt die Verknüpfung zum aktiven Ereignis
+    assert faulted[0].get("alarm", {}).get("event_id") == ev["event_id"]
+
+
+def test_mes_line_default_nutzt_juengste_replay_zeit(mes_client, mes_db) -> None:
+    ev = _latest_event(mes_db)
+    data = mes_client.get("/mes/line/L1").json()  # ohne event_id → jüngstes Ereignis
+    assert data["sim_now"]
+    assert data["active_event"] and data["active_event"]["event_id"] == ev["event_id"]
+    assert any(e.get("packml_state") in _FAULT for e in data["equipment"])
+
+
 # ---------------------------------------------------------------------------
 # /mes/events
 # ---------------------------------------------------------------------------

@@ -18,9 +18,13 @@ from fastapi.responses import StreamingResponse
 
 from production_agent.config import get_settings
 from production_agent.data.pipeline_view import get_lineage
+from production_agent.data.replay import case_for_event_id, latest_replay_ts
 from production_agent.data.simulator import CATALOG, generate, load_decisions
 from production_agent.security.audit import AuditLog
 from production_agent.security.sql_guard import open_readonly, run_readonly
+
+# PackML-Zustände, die eine gestörte Station kennzeichnen (Gegenstück zu "Execute")
+_FAULT_STATES = {"Held", "Aborted", "Stopped", "Suspended"}
 
 router = APIRouter(prefix="/mes", tags=["MES"])
 
@@ -110,8 +114,15 @@ def mes_lineage(event_id: int) -> dict[str, Any]:
 
 
 @router.get("/line/{line_id}")
-def mes_line(line_id: str) -> dict[str, Any]:
-    """Aktueller Linienstatus: Betriebsmittel, PackML-Zustände, aktive Aufträge."""
+def mes_line(line_id: str, event_id: int | None = Query(default=None)) -> dict[str, Any]:
+    """Linienstatus ZUR REPLAY-ZEIT des gewählten Ereignisses (Konsistenz mit Störungsstrom).
+
+    Die PackML-Zustände werden auf `s.ts <= SIM_NOW` gefiltert – genau wie das MES-Werkzeug
+    get_line_status. Ohne diesen Filter lieferte der Endpunkt den GLOBAL jüngsten Zustand (alle
+    Stationen nach dem Wiederanlauf wieder „Execute"), im Widerspruch zur laufenden Störung
+    (Fehler aus Live-Test). Ohne `event_id` gilt die Uhr des jüngsten Ereignisses (Demo-Default).
+    Eine zur Replay-Zeit gestörte Station trägt zusätzlich die Verknüpfung zum aktiven Ereignis.
+    """
     settings = get_settings()
     conn = open_readonly(settings.mes_db_path)
     try:
@@ -124,19 +135,43 @@ def mes_line(line_id: str) -> dict[str, Any]:
         )
         if not line_rows:
             raise HTTPException(status_code=404, detail=f"Linie {line_id} nicht gefunden")
-        equip_rows = run_readonly(
-            conn,
-            "SELECT e.equipment_id, e.name, e.position, s.packml_state, s.ts "
-            "FROM equipment e "
-            "LEFT JOIN equipment_state s "
-            "  ON e.equipment_id = s.equipment_id "
-            "  AND s.ts = ("
-            "    SELECT MAX(ts) FROM equipment_state WHERE equipment_id = e.equipment_id"
-            "  ) "
-            "WHERE e.line_id = ? ORDER BY e.position",
-            (line_id,),
-            max_rows=20,
-        )
+        # Replay-Uhr bestimmen: konkretes Ereignis, sonst jüngstes (Demo-Default).
+        sim_now: str | None = None
+        if event_id is not None:
+            case = case_for_event_id(conn, event_id)
+            sim_now = case.now if case else None
+        if sim_now is None:
+            sim_now = latest_replay_ts(conn)
+        # PackML-Zustand ZUR Replay-Zeit (<= sim_now); ohne Replay-Uhr der bisherige Global-Stand.
+        if sim_now is not None:
+            equip_rows = run_readonly(
+                conn,
+                "SELECT e.equipment_id, e.name, e.position, s.packml_state, s.ts "
+                "FROM equipment e "
+                "LEFT JOIN equipment_state s "
+                "  ON e.equipment_id = s.equipment_id "
+                "  AND s.ts = ("
+                "    SELECT MAX(ts) FROM equipment_state "
+                "    WHERE equipment_id = e.equipment_id AND ts <= ?"
+                "  ) "
+                "WHERE e.line_id = ? ORDER BY e.position",
+                (sim_now, line_id),
+                max_rows=20,
+            )
+        else:
+            equip_rows = run_readonly(
+                conn,
+                "SELECT e.equipment_id, e.name, e.position, s.packml_state, s.ts "
+                "FROM equipment e "
+                "LEFT JOIN equipment_state s "
+                "  ON e.equipment_id = s.equipment_id "
+                "  AND s.ts = ("
+                "    SELECT MAX(ts) FROM equipment_state WHERE equipment_id = e.equipment_id"
+                "  ) "
+                "WHERE e.line_id = ? ORDER BY e.position",
+                (line_id,),
+                max_rows=20,
+            )
         order_rows = run_readonly(
             conn,
             "SELECT order_id, product, planned_qty, produced_qty, due_ts, priority "
@@ -144,7 +179,38 @@ def mes_line(line_id: str) -> dict[str, Any]:
             (line_id,),
             max_rows=10,
         )
+        # Zur Replay-Zeit aktives Störungsereignis (start <= now <= end) – für die Held-Verknüpfung.
+        active = None
+        if sim_now is not None:
+            active_rows = run_readonly(
+                conn,
+                "SELECT event_id, reason_code, first_alarm_code, alarm_count, start_ts, end_ts "
+                "FROM downtime_events_gold "
+                "WHERE line_id = ? AND start_ts <= ? AND (end_ts IS NULL OR end_ts >= ?) "
+                "ORDER BY start_ts DESC",
+                (line_id, sim_now, sim_now),
+                max_rows=5,
+            )
+            active = active_rows[0] if active_rows else None
     finally:
         conn.close()
-    _audit().record("mes_line_abgerufen", line_id=line_id)
-    return {"line": line_rows[0], "equipment": equip_rows, "orders": order_rows}
+    # Gestörte Station(en) mit dem aktiven Ereignis verknüpfen (Alarm-ID sichtbar/klickbar).
+    equipment = []
+    for row in equip_rows:
+        d = dict(row)
+        if active is not None and d.get("packml_state") in _FAULT_STATES:
+            d["alarm"] = {
+                "event_id": active["event_id"],
+                "first_alarm_code": active["first_alarm_code"],
+                "reason_code": active["reason_code"],
+                "alarm_count": active["alarm_count"],
+            }
+        equipment.append(d)
+    _audit().record("mes_line_abgerufen", line_id=line_id, sim_now=sim_now)
+    return {
+        "line": line_rows[0],
+        "equipment": equipment,
+        "orders": order_rows,
+        "sim_now": sim_now,
+        "active_event": active,
+    }
