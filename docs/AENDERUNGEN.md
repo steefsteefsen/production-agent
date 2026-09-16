@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-16 · docs(referenz): Architektur, konsolidierter Verlauf, Doku-Karte
+**Was:** Architektur-Referenz und Navigation ergänzt, ohne Bestehendes zu duplizieren: neu `docs/ARCHITEKTUR.md` (Code-Landkarte, ein Abschnitt je Paket mit Pfad und ADR-Verweis, Graph linear), neu `docs/CHANGELOG_KONSOLIDIERT.md` (Kurzüberblick der jüngsten Fixes: Hash · Was · Fund, verweist auf Commits/ADRs), README-Abschnitt „Dokumentationskarte" (Tabelle Dokument→Zweck). Der ausführliche Sitzungsbericht bleibt als lokales Arbeitsdokument in `docs/freeze_2026-09-16.md` und wird hier nur referenziert, nicht wiederholt.
+**Warum (Problem oder Anlass):** Vor dem Interview soll die Doku eine klare Landkarte haben (eine Quelle je Thema, alles andere verweist) statt verstreuter, teils überlappender Einzeldateien.
+**Alternativen (verworfen, weil ...):** Den Sitzungsbericht in AENDERUNGEN.md kopieren — verworfen, `docs/freeze_2026-09-16.md` enthält getippte Kennzahlen/Screenshots (D8/S9) und bleibt daher lokal; hier genügt der Verweis. Bestehende ADRs/testplan/audits umschreiben — verworfen, nur verweisen statt anfassen.
+**Auswirkung (Verträge, ADR, Tests):** nur Doku — neu `docs/ARCHITEKTUR.md`, `docs/CHANGELOG_KONSOLIDIERT.md`; `README.md` (Doku-Karte); dieser Eintrag. `docs/index.md` wird von status.py automatisch nachgezogen (D11). Kein Code, keine Verträge, keine Tests berührt.
+**Bezug (WP, ADR):** Interview-Vorbereitung Phase 2; verweist auf ADR-0002–0011
+
 ## 2026-09-16 · docs(readme): Setup-Anleitung + bekannte Altlasten dokumentiert
 **Was:** README neu strukturiert für die Interview-Vorbereitung: „Setup von Null" (git clone → venv → `pip install -e '.[dev,embeddings]'` mit embeddings als Demo-Pflicht → `.env` mit ANTHROPIC_API_KEY → Simulator/Ingest → `npm install`), „Demo starten — Reihenfolge & Timing" (erster `make run-api` dauert durch den sentence-transformers-Import spürbar, nicht abbrechen; `--reload`-Workaround dokumentiert), URL-Tabelle (Cockpit/presentation/freigabe/pitch.html/Ops), Abschnitt „Architektur auf einen Blick" (drei MCP-Server, linearer Graph ohne `add_conditional_edges` mit ADR-Verweis, LLM_MODE=mock|live), „Tests" und „Bekannte Altlasten (bewusst nicht entfernt)" mit `frontend/src/App.tsx` (unbenutzt). Veraltete Angaben korrigiert (drei statt zwei MCP-Server, linearer Graph statt „Verzweigung", Vektor-Suche implementiert). auto-Marker unverändert.
 **Warum (Problem oder Anlass):** Letzte Vorbereitung vor dem Interview; das Setup muss von Null reproduzierbar sein und der langsame erste Start darf nicht als Fehler missverstanden werden.

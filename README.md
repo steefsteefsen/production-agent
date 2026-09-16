@@ -172,5 +172,21 @@ Regeln: S1–S9, K1–K10, D1–D9.
 - **D9**: README.md hat Abschnitt "## Stand" mit nicht-leerem auto:stand-Marker
 <!-- /auto:guardian_rules -->
 
+## Dokumentationskarte
+Welches Dokument wofür (Details in [docs/index.md](docs/index.md), auto-generiert):
+
+| Dokument | Wofür |
+|---|---|
+| [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) | Code-Landkarte: ein Abschnitt je Paket, mit Pfad und ADR-Verweis |
+| [docs/architecture.md](docs/architecture.md) | Zielbild und Verträge (Diagramm) |
+| [docs/adr/](docs/adr/) | Entscheidungsprotokolle (Graph, RAG, Konfidenz, Judge, …) |
+| [docs/CHANGELOG_KONSOLIDIERT.md](docs/CHANGELOG_KONSOLIDIERT.md) | Kurzüberblick der jüngsten Fixes (Hash · Was · Fund) |
+| [docs/AENDERUNGEN.md](docs/AENDERUNGEN.md) | vollständiger Änderungsverlauf (Was/Warum/Alternativen) |
+| [docs/demo_script.md](docs/demo_script.md) | Interview-Fahrplan (Live-Demo, Entscheidungen, Q&A) |
+| [docs/contracts/](docs/contracts/) | API-/Werkzeug-Verträge |
+| [docs/guardian.md](docs/guardian.md), [docs/ops.md](docs/ops.md) | Wächter-Regeln und Ops-Cockpit |
+| [docs/test_strategy.md](docs/test_strategy.md), [docs/testplan_e2e.md](docs/testplan_e2e.md) | Teststrategie und e2e-Plan |
+| [docs/data_layer.md](docs/data_layer.md) | Datenschicht Bronze→Silber→Gold |
+
 ## Lizenz
 MIT, © 2026 Stefan Hüllinghorst – siehe LICENSE.

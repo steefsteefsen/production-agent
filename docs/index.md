@@ -30,8 +30,10 @@ Automatisch erzeugt von autopilot/status.py – nicht von Hand pflegen.
 - [AENDERUNGEN.md](AENDERUNGEN.md) – Änderungen (Was / Warum / Alternativen): Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 
 ## Weiteres
+- [ARCHITEKTUR.md](ARCHITEKTUR.md) – Architektur-Referenz — ein Abschnitt je Paket: Diese Seite ist die **Landkarte des Codes**: je Paket kurz, was es tut, wo es liegt und welche ADR
 - [BACKLOG.md](BACKLOG.md) – Backlog – Phase 2 (Block 9): Fachliche Erweiterungen nach Abschluss der Kernarbeitspakete WP0–WP7.
 - [CHANGELOG.md](CHANGELOG.md) – Changelog: Aus den Commits abgeleiteter Überblick über die gelieferten Arbeitspakete. Feinkörnige Begründungen
+- [CHANGELOG_KONSOLIDIERT.md](CHANGELOG_KONSOLIDIERT.md) – Konsolidierter Änderungsverlauf (Interview-Vorbereitung): Chronologische Kurzübersicht der Arbeit vom 15.–16.09.2026, neueste zuerst. Je Zeile ein Satz **Was**
 - [architecture.md](architecture.md) – Architektur – Zielbild und Verträge: ```mermaid
 - [contracts/api.md](contracts/api.md) – API-Vertrag: Production Agent – SSE-Stream und Freigabe: Alle Pfade unterhalb von `http://localhost:8000`.
 - [data_layer.md](data_layer.md) – Datenschicht Bronze→Silber→Gold: Technische Referenz für `src/production_agent/data/` (Simulator, Replay, Schema).

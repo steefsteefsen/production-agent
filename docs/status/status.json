@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-16T14:05:15",
-  "commit": "71430b0445bf11dbed791fafab1883de613d2afb",
+  "generated_at": "2026-09-16T14:18:53",
+  "commit": "80207bb3e607dd8bb9255fa3900bc8abe84eade3",
   "branch": "main",
   "packages": [
     {
@@ -793,6 +793,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-16T14:04:08+02:00",
+      "kind": "commit",
+      "ref": "80207bb",
+      "text": "docs(readme): Setup-Anleitung + bekannte Altlasten dokumentiert"
+    },
     {
       "at": "2026-09-16T12:51:54+02:00",
       "kind": "commit",
