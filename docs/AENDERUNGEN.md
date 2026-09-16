@@ -3,6 +3,13 @@
 Chronologisch, neueste zuerst. Zahlen und Regelbereiche stehen bewusst nicht hier, sondern in den auto-Markern
 von README/Doku (sonst veralten sie).
 
+## 2026-09-16 · feat(pitch): eigenständige Präsentation als statische /pitch.html
+**Was:** Die übergebene Pitch-Präsentation liegt als eigenständige statische Datei `frontend/public/pitch.html`. Vite liefert sie automatisch unter `/pitch.html` aus — ohne Routing-Code. Nichts Bestehendes angefasst (main.tsx/Cockpit/App/Presentation unverändert).
+**Warum (Problem oder Anlass):** Die Business-Präsentation soll ohne Umbau am React-Einstieg erreichbar sein, isoliert und ohne Risiko für die laufende Demo.
+**Alternativen (verworfen, weil ...):** Als React-Route/Komponente einbinden — verworfen, das berührte main.tsx und die bestehenden Routen; eine statische Datei unter `public/` ist risikofrei und genügt. Die Datei nach `docs/` legen — verworfen, dann würde sie nicht unter `:5173` ausgeliefert.
+**Auswirkung (Verträge, ADR, Tests):** nur neue Datei `frontend/public/pitch.html` (+ dieser Eintrag); kein Code an bestehenden Dateien, keine Verträge/Tests berührt. Verifiziert: `curl :5173/pitch.html` → 200; bestehende Routen (`/`, `/presentation`, `/freigabe`) per Playwright unverändert, 0 Console-Errors.
+**Bezug (WP, ADR):** Interview-Vorbereitung Phase 3
+
 ## 2026-09-16 · docs(referenz): Architektur, konsolidierter Verlauf, Doku-Karte
 **Was:** Architektur-Referenz und Navigation ergänzt, ohne Bestehendes zu duplizieren: neu `docs/ARCHITEKTUR.md` (Code-Landkarte, ein Abschnitt je Paket mit Pfad und ADR-Verweis, Graph linear), neu `docs/CHANGELOG_KONSOLIDIERT.md` (Kurzüberblick der jüngsten Fixes: Hash · Was · Fund, verweist auf Commits/ADRs), README-Abschnitt „Dokumentationskarte" (Tabelle Dokument→Zweck). Der ausführliche Sitzungsbericht bleibt als lokales Arbeitsdokument in `docs/freeze_2026-09-16.md` und wird hier nur referenziert, nicht wiederholt.
 **Warum (Problem oder Anlass):** Vor dem Interview soll die Doku eine klare Landkarte haben (eine Quelle je Thema, alles andere verweist) statt verstreuter, teils überlappender Einzeldateien.

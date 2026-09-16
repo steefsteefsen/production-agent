@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-16T14:18:53",
-  "commit": "80207bb3e607dd8bb9255fa3900bc8abe84eade3",
+  "generated_at": "2026-09-16T14:30:28",
+  "commit": "0398ae042227392db55e14797a98ee9ed0cd6e12",
   "branch": "main",
   "packages": [
     {
@@ -793,6 +793,12 @@
     "coverage_security": 100
   },
   "timeline": [
+    {
+      "at": "2026-09-16T14:17:53+02:00",
+      "kind": "commit",
+      "ref": "0398ae0",
+      "text": "docs(referenz): Architektur, konsolidierter Verlauf, Doku-Karte"
+    },
     {
       "at": "2026-09-16T14:04:08+02:00",
       "kind": "commit",

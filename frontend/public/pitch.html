@@ -1,0 +1,385 @@
+ <!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Production Agent – Pitch &amp; geführte Vorführung</title>
+<!--
+  Eigenständiges Deck (entkoppelt von der Anwendung, keine externen Abhängigkeiten).
+  Navigation: Pfeiltasten ← → , Leertaste, Klick auf die Punkte, Wischen.
+  Kern: die 8 SCHRITT-FOLIEN führen Schritt für Schritt durch einen echten Durchlauf
+  (Eingang → was wird gemacht → Ergebnis). Werte aus dem realen Fall „Folienriss", Ereignis 360.
+  LIVE-INTEGRATION: Folie „Live im Cockpit" ist der Einklinkpunkt – Button-Link (data-demo-url)
+  auf den Agent-Tab setzen (Default http://localhost:5173) oder dort ein <iframe> einsetzen.
+-->
+<style>
+  :root{
+    --teal:#0b4f6c;--teal2:#005a64;--teal3:#006252;--wine:#5d0a1f;--sage:#679881;
+    --ink:#12313c;--muted:#5b7079;--bg:#f4f7f8;--card:#ffffff;--line:#dde5e8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--teal);color:var(--ink)}
+  .deck{height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .slide{display:none;width:min(1040px,95vw);height:min(700px,90vh);background:var(--bg);
+    border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:36px 44px;overflow:auto}
+  .slide.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .kicker{color:var(--teal2);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:13px;margin:0 0 6px}
+  h1{font-size:34px;margin:0 0 8px;color:var(--teal)}
+  h2{font-size:26px;margin:0 0 14px;color:var(--teal)}
+  h3{font-size:16px;margin:0 0 6px;color:var(--teal2)}
+  p,li{font-size:16px;line-height:1.5;color:var(--ink)}
+  .lead{font-size:19px;color:var(--muted)}
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card b{color:var(--teal2)}
+  .pill{display:inline-block;background:var(--teal);color:#fff;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
+  .pill.sage{background:var(--sage)}
+  table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;border-radius:8px;overflow:hidden}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--teal);color:#fff}
+  td:first-child{font-weight:600;color:var(--teal2);white-space:nowrap}
+  .steps{display:grid;grid-template-columns:1fr 1fr;gap:8px;counter-reset:s}
+  .step{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;position:relative;padding-left:44px}
+  .step:before{counter-increment:s;content:counter(s);position:absolute;left:10px;top:10px;width:24px;height:24px;
+    background:var(--teal2);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}
+  .step.gate:before{content:"✓";background:var(--sage)}
+  /* Schritt-Folien: Eingang → Gemacht → Ergebnis */
+  .flow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:14px}
+  .col{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;position:relative}
+  .col .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 9px;border-radius:999px;margin-bottom:8px}
+  .tag.in{background:#e3eef1;color:var(--teal2)}
+  .tag.do{background:#e6f0eb;color:#2f6f57}
+  .tag.out{background:#f6e6ea;color:var(--wine)}
+  .col.out{border-color:#e7c9d1;background:#fff}
+  .col ul{margin:0;padding-left:18px}.col li{font-size:15px;margin:4px 0}
+  .big{font-size:20px;font-weight:700;color:var(--teal)}
+  .why{margin-top:12px;font-size:14px;color:var(--muted)}
+  .why b{color:var(--teal2)}
+  .demo{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px}
+  .play{width:84px;height:84px;border-radius:50%;background:var(--teal2);color:#fff;display:grid;place-items:center;font-size:32px}
+  .btn{display:inline-block;background:var(--teal2);color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600}
+  .note{font-size:13px;color:var(--muted)}
+  .anchor{margin-top:12px;font-style:italic;color:var(--wine);font-weight:600}
+  .roi{background:var(--teal);color:#fff;border-radius:10px;padding:14px 16px}.roi b{color:#bfe3d8}
+  ul{margin:6px 0 0;padding-left:20px}li{margin:3px 0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  /* Fortschrittsbalken der Vorführung */
+  #stepbar{position:fixed;top:0;left:0;right:0;display:none;gap:4px;padding:10px 16px;background:var(--teal2)}
+  #stepbar .seg{flex:1;height:6px;border-radius:3px;background:#3b7f88}
+  #stepbar .seg.done{background:#9fd2c6}#stepbar .seg.cur{background:#fff}
+  .caseline{display:inline-block;background:#00485a;color:#cfe0e4;border-radius:6px;padding:3px 10px;font-size:12px}
+  .foot{position:fixed;bottom:14px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:8px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#89b0bb;border:0;cursor:pointer;padding:0}.dot.active{background:#fff}
+  .side{position:fixed;bottom:12px;right:18px;color:#cfe0e4;font-size:12px}
+  .kbd{background:#00485a;color:#cfe0e4;border-radius:4px;padding:1px 6px;font-size:12px}
+</style>
+</head>
+<body>
+<div id="stepbar"></div>
+<div class="deck" id="deck">
+
+  <!-- Titel + Problem -->
+  <section class="slide active">
+    <p class="kicker">Production Agent · GenAI für die Instandhaltung</p>
+    <h1>Wenn die Linie steht, zählt jede Minute.</h1>
+    <p class="lead">Ein KI-Assistent, der bei ungeplanten Störungen in Sekunden die Fakten sammelt,
+      die Ursache eingrenzt, belegte Maßnahmen empfiehlt – und die Entscheidung beim Menschen lässt.</p>
+    <div class="grid g3" style="margin-top:18px">
+      <div class="card"><h3>Das Problem</h3><p>Stillstand kostet – schnell <b>~200 €/Minute</b>. Die teure Zeit ist die <b>Diagnose</b>, nicht die Reparatur.</p></div>
+      <div class="card"><h3>Der Engpass</h3><p>Erfahrungswissen hängt an einzelnen Köpfen und Schichten. Alarmfluten verdecken die Ursache.</p></div>
+      <div class="card"><h3>Der Anspruch</h3><p>Schneller diagnostizieren, ohne Kontrolle abzugeben: der Agent <b>empfiehlt</b>, er <b>führt nicht aus</b>.</p></div>
+    </div>
+    <p class="anchor">Gleich sehen Sie es Schritt für Schritt – an einer echten Störung.</p>
+  </section>
+
+  <!-- Warum jetzt / GenAI -->
+  <section class="slide">
+    <p class="kicker">Warum jetzt</p>
+    <h2>Was GenAI hier neu möglich macht</h2>
+    <div class="two">
+      <div>
+        <div class="card"><h3>Sprache trifft Anlagendaten</h3><p>Sprachmodelle verbinden unstrukturierte Wartungsdoku und Störungsberichte mit strukturierten MES-Daten – ohne pro Fall zu programmieren.</p></div>
+        <div class="card" style="margin-top:10px"><h3>Erklärbar statt Blackbox</h3><p>Jede Aussage nennt ihre Evidenz (Alarmcode, Vorfall-ID, Regel).</p></div>
+      </div>
+      <div>
+        <div class="card"><h3>Kein Modelltraining nötig</h3><p>Wert aus Ihren Daten + Regeln, nicht aus einem teuren Trainingsprojekt. Time-to-Value in Wochen.</p></div>
+        <div class="card" style="margin-top:10px"><h3>Mensch bleibt in der Schleife</h3><p>Der Agent hält am Freigabepunkt an – das macht GenAI in der Fertigung erst einsetzbar.</p></div>
+      </div>
+    </div>
+    <p class="anchor">Kein „Autopilot" – der schnellste, belegpflichtige Assistent.</p>
+  </section>
+
+  <!-- Übersicht 7+1 -->
+  <section class="slide">
+    <p class="kicker">Die Lösung</p>
+    <h2>Ein geführter Ablauf – 7 Schritte, dann der Mensch</h2>
+    <div class="steps">
+      <div class="step"><b>Linienstatus &amp; Plan</b></div>
+      <div class="step"><b>Alarme analysieren</b></div>
+      <div class="step"><b>Wissen abrufen</b></div>
+      <div class="step"><b>Ursache eingrenzen</b></div>
+      <div class="step"><b>Wirkung schätzen</b></div>
+      <div class="step"><b>Maßnahmen ableiten</b></div>
+      <div class="step"><b>Beleg-Prüfung (2. Modell)</b></div>
+      <div class="step gate"><b>Freigabe durch den Menschen</b></div>
+    </div>
+    <p class="anchor">Jetzt jeder Schritt einzeln: was kommt an · was wird gemacht · was ist das Ergebnis.</p>
+  </section>
+
+  <!-- Vorführung Intro -->
+  <section class="slide">
+    <p class="kicker">Geführte Vorführung</p>
+    <h1>Ein echter Fall: Folienriss</h1>
+    <p class="lead">Ereignis 360 an der Verpackungslinie – wir gehen jeden der acht Schritte durch.
+      Pro Schritt sehen Sie <b>Eingang → Was wird gemacht → Ergebnis</b>.</p>
+    <p style="margin-top:18px"><span class="caseline">Fall: Folienriss · Ereignis 360 · Linie L1 · Modus: mock (deterministisch)</span></p>
+    <p class="anchor">Weiter mit <span class="kbd">→</span> – der Balken oben zeigt, wo im Ablauf wir sind.</p>
+  </section>
+
+  <!-- SCHRITT 1 -->
+  <section class="slide" data-step="1">
+    <p class="kicker">Vorführung · Schritt 1 von 8</p>
+    <h2>1 · Linienstatus &amp; Plan erfassen</h2>
+    <div class="flow">
+      <div class="col in"><span class="tag in">Eingang</span><ul><li>Ereignis 360 (Folienriss)</li><li>Linie L1</li><li>Replay-Uhr kurz nach Störungsbeginn</li></ul></div>
+      <div class="col do"><span class="tag do">Was wird gemacht</span><ul><li>liest Linienstatus &amp; Produktionsplan</li><li>über MES-Werkzeuge, nur lesend</li><li>kein freies SQL – jeder Zugriff über den Guard</li></ul></div>
+      <div class="col out"><span class="tag out">Ergebnis</span><p class="big">Linienstatus erfasst · 2 Aufträge im Plan</p></div>
+    </div>
+    <p class="why"><b>Warum so:</b> Zuerst der Faktenstand – ohne belastbares Linienbild keine seriöse Ursachensuche.</p>
+  </section>
+
+  <!-- SCHRITT 2 -->
+  <section class="slide" data-step="2">
+    <p class="kicker">Vorführung · Schritt 2 von 8</p>
+    <h2>2 · Alarme analysieren</h2>
+    <div class="flow">
+      <div class="col in"><span class="tag in">Eingang</span><ul><li>Linienstatus</li><li>30-Minuten-Alarmfenster</li></ul></div>
+      <div class="col do"><span class="tag do">Was wird gemacht</span><ul><li>aggregiert die Alarme</li><li>erkennt Alarmflut nach ISA-18.2 (≥10 in 10 min)</li><li>trennt Grund- von Folgealarmen</li></ul></div>
+      <div class="col out"><span class="tag out">Ergebnis</span><p class="big">16 Alarme · Alarmflut erkannt</p></div>
+    </div>
+    <p class="why"><b>Warum so:</b> Bewusst regelbasiert (deterministisch, prüfbar) – der Techniker jagt eine Ursache statt 16 Symptome.</p>
+  </section>
+
+  <!-- SCHRITT 3 -->
+  <section class="slide" data-step="3">
+    <p class="kicker">Vorführung · Schritt 3 von 8</p>
+    <h2>3 · Wissen abrufen</h2>
+    <div class="flow">
+      <div class="col in"><span class="tag in">Eingang</span><ul><li>Top-Alarmcodes</li><li>PackML-Zustand</li></ul></div>
+      <div class="col do"><span class="tag do">Was wird gemacht</span><ul><li>sucht Wartungsdokumente (RAG)</li><li>findet ähnliche frühere Störungen (Fallbasis)</li></ul></div>
+      <div class="col out"><span class="tag out">Ergebnis</span><p class="big">5 ähnliche Vorfälle · 5 Dokumente</p></div>
+    </div>
+    <p class="why"><b>Warum so:</b> Erst Belege, dann Urteil – Erfahrung sofort verfügbar, schichtunabhängig. Werkzeug statt LLM-Gedächtnis, damit nichts erfunden wird.</p>
+  </section>
+
+  <!-- SCHRITT 4 -->
+  <section class="slide" data-step="4">
+    <p class="kicker">Vorführung · Schritt 4 von 8</p>
+    <h2>4 · Ursache eingrenzen</h2>
+    <div class="flow">
+      <div class="col in"><span class="tag in">Eingang</span><ul><li>Alarme &amp; Alarmflut</li><li>gefundenes Wissen (Vorfälle + Doku)</li></ul></div>
+      <div class="col do"><span class="tag do">Was wird gemacht</span><ul><li>Sprachmodell grenzt die Ursache ein</li><li>nennt Konfidenz, Belege aus den Vorfällen</li><li>Konfidenz wird nie erhöht</li></ul></div>
+      <div class="col out"><span class="tag out">Ergebnis</span><p class="big">Hypothese STO-FOLIE · Konfidenz 0,80</p></div>
+    </div>
+    <p class="why"><b>Warum so:</b> Hier braucht es Sprachverständnis → LLM-Knoten. <b>Der Haupthebel:</b> belegte Hypothese statt Bauchgefühl = kürzere MTTR.</p>
+  </section>
+
+  <!-- SCHRITT 5 -->
+  <section class="slide" data-step="5">
+    <p class="kicker">Vorführung · Schritt 5 von 8</p>
+    <h2>5 · Wirkung schätzen</h2>
+    <div class="flow">
+      <div class="col in"><span class="tag in">Eingang</span><ul><li>Hypothese</li><li>erwartete Stillstandszeit</li></ul></div>
+      <div class="col do"><span class="tag do">Was wird gemacht</span><ul><li>regelbasierte Wirkungsschätzung (MES-Werkzeug)</li><li>Stillstandskosten €/min · gefährdete Aufträge</li></ul></div>
+      <div class="col out"><span class="tag out">Ergebnis</span><p class="big">~3.320 € geschätzte Wirkung · 1 gefährdeter Auftrag</p></div>
+    </div>
+    <p class="why"><b>Warum so:</b> Priorisierung nach € – die teuerste Störung zuerst. Bewusst regelbasiert, kein ML-Training.</p>
+  </section>
+
+  <!-- SCHRITT 6 -->
+  <section class="slide" data-step="6">
+    <p class="kicker">Vorführung · Schritt 6 von 8</p>
+    <h2>6 · Maßnahmen ableiten</h2>
+    <div class="flow">
+      <div class="col in"><span class="tag in">Eingang</span><ul><li>Hypothese + Wirkung</li><li>ähnliche Vorfälle (Belegquelle)</li></ul></div>
+      <div class="col do"><span class="tag do">Was wird gemacht</span><ul><li>Sprachmodell leitet konkrete Maßnahmen ab</li><li>Nachbedingung: jede belegt eine Vorfall-ID</li><li>Policy: Schwelle 0,60 · Vier-Augen ab 5000 €</li></ul></div>
+      <div class="col out"><span class="tag out">Ergebnis</span><p class="big">2 Maßnahmen · jede mit Vorfall-ID belegt</p></div>
+    </div>
+    <p class="why"><b>Warum so:</b> Konkrete, belegte Schritte statt Freitext – höhere First-Time-Fix-Quote, weniger Wiederholstörungen.</p>
+  </section>
+
+  <!-- SCHRITT 7 -->
+  <section class="slide" data-step="7">
+    <p class="kicker">Vorführung · Schritt 7 von 8</p>
+    <h2>7 · Beleg-Prüfung – ein zweites, unabhängiges Modell</h2>
+    <div class="flow">
+      <div class="col in"><span class="tag in">Eingang</span><ul><li>die Maßnahmen</li><li>nur der zitierte Beleg im Original</li><li><b>ohne</b> die Begründung des Vorschlags</li></ul></div>
+      <div class="col do"><span class="tag do">Was wird gemacht</span><ul><li>ein zweites Modell prüft je Maßnahme unabhängig</li><li>stützt der Beleg die Maßnahme wirklich?</li></ul></div>
+      <div class="col out"><span class="tag out">Ergebnis</span><p class="big">2 von 2 bestätigt</p><p class="note">Fehlt ein Beleg, erscheint sichtbar „nicht bestätigt" – kein automatisches Verwerfen.</p></div>
+    </div>
+    <p class="why"><b>Warum so:</b> Die Selbst-Belegung stammt vom selben Modell – die zweite, kontextgetrennte Prüfung fängt schwache Belege ab. Vertrauen &amp; Haftungssicherheit.</p>
+  </section>
+
+  <!-- SCHRITT 8 -->
+  <section class="slide" data-step="8">
+    <p class="kicker">Vorführung · Schritt 8 von 8</p>
+    <h2>✓ Freigabe durch den Menschen</h2>
+    <div class="flow">
+      <div class="col in"><span class="tag in">Eingang</span><ul><li>Maßnahmen + Wirkung</li><li>Ergebnisse der Beleg-Prüfung</li></ul></div>
+      <div class="col do"><span class="tag do">Was wird gemacht</span><ul><li>der Graph hält an (interrupt)</li><li>der Mensch gibt frei oder lehnt ab</li><li>alles rollenbasiert auditiert</li></ul></div>
+      <div class="col out"><span class="tag out">Ergebnis</span><p class="big">Freigegeben → Abschluss</p><p class="note">Abgleich gegen die verborgene Wahrheit: Ursache bestätigt (STO-FOLIE ✓).</p></div>
+    </div>
+    <p class="why"><b>Warum so:</b> Empfehlen ≠ Ausführen – Akzeptanz, Compliance, kein Autonomie-Risiko.</p>
+  </section>
+
+  <!-- Live im Cockpit (Integrationspunkt) -->
+  <section class="slide">
+    <p class="kicker">Live</p>
+    <div class="demo">
+      <div class="play">▶</div>
+      <h2 style="margin:0">Dasselbe – live im Cockpit</h2>
+      <p class="lead" style="max-width:640px">Jetzt der echte Agent-Tab: derselbe Ablauf in Echtzeit, mit laufbegleitendem Erzähltext
+        und der unabhängigen Beleg-Prüfung – inklusive eines Falls, in dem der Judge eine Maßnahme ablehnt.</p>
+      <!--
+        INTEGRATIONSPUNKT:
+        (a) Button-Link unten (data-demo-url) auf den Agent-Tab setzen (Default http://localhost:5173).
+        (b) Eingebettet: diese .demo durch
+            <iframe src="http://localhost:5173" style="width:100%;height:100%;border:0;border-radius:10px"></iframe>
+            ersetzen (Cockpit muss laufen: make run-api + make ui).
+      -->
+      <a class="btn" id="demoBtn" data-demo-url="http://localhost:5173" href="#">Live-Demo öffnen ↗</a>
+      <p class="note">Fällt die Live-Demo aus: die Screenshots des dokumentierten Durchlaufs liegen bereit.</p>
+    </div>
+  </section>
+
+  <!-- Was spart welcher Schritt -->
+  <section class="slide">
+    <p class="kicker">Nutzen</p>
+    <h2>Was spart welcher Schritt?</h2>
+    <table>
+      <thead><tr><th>Schritt</th><th>Hebel – was er spart</th></tr></thead>
+      <tbody>
+        <tr><td>1 Status</td><td>Faktenbild in Sekunden statt Minuten Zusammensuchen.</td></tr>
+        <tr><td>2 Alarme</td><td>Eine Ursache statt 16 Symptome – weniger Fehldiagnosen.</td></tr>
+        <tr><td>3 Wissen</td><td>Erfahrung sofort da – schichtunabhängig, Wissenserhalt.</td></tr>
+        <tr><td>4 Ursache</td><td><b>Haupthebel:</b> kürzere MTTR durch belegte Hypothese.</td></tr>
+        <tr><td>5 Wirkung</td><td>Priorisierung nach € – teuerste Störung zuerst.</td></tr>
+        <tr><td>6 Maßnahmen</td><td>Höhere First-Time-Fix-Quote, weniger Wiederholstörungen.</td></tr>
+        <tr><td>7 Beleg-Prüfung</td><td>Kein Halluzinationsrisiko in die Umsetzung.</td></tr>
+        <tr><td>✓ Freigabe</td><td>Akzeptanz, Compliance, kein Autonomie-Risiko.</td></tr>
+      </tbody>
+    </table>
+    <div class="roi" style="margin-top:12px">
+      <b>Beispielrechnung (illustrativ):</b> ~200 €/min · Diagnose je Störung ~10 min kürzer → <b>~2.000 €/Störung</b>. Bei 4 Störungen/Tag ≈ <b>~8.000 €/Tag</b> an einer Linie – plus weniger Wiederholstörungen.
+      <div class="note" style="color:#bfe3d8;margin-top:6px">Illustrativ, nicht gemessen. Der Pilot liefert die echten Zahlen (MTTR vorher/nachher).</div>
+    </div>
+  </section>
+
+  <!-- Ausbaustufen -->
+  <section class="slide">
+    <p class="kicker">Ausbau</p>
+    <h2>Welche Schritte vertieft man – und wie</h2>
+    <div class="grid g2">
+      <div class="card"><span class="pill">Schritt 3 · Wissen</span><p>Von Stichwortsuche zu echter Hybrid-Suche (Vektor + Re-Ranking). <span class="note">~2–3 Tage</span></p></div>
+      <div class="card"><span class="pill">Schritt 4 · Ursache</span><p>Fallbasiertes Schließen &amp; Verzweigung, Anomalie-Erkennung am echten MES.</p></div>
+      <div class="card"><span class="pill">Schritt 5 · Wirkung</span><p>Feinere Kostenmodelle je Produkt/Auftrag.</p></div>
+      <div class="card"><span class="pill">Schritt 6 · Maßnahmen</span><p>Anbindung an Instandhaltungs-/Arbeitsauftragssystem.</p></div>
+      <div class="card"><span class="pill sage">Integration</span><p>OPC UA / ISA-95, SSO &amp; Rollen, Deployment im Werksnetz.</p></div>
+      <div class="card"><span class="pill sage">Messbarkeit</span><p>Eval über 20+ Gold-Fälle, Observability live.</p></div>
+    </div>
+    <p class="anchor">Modular: jede Vertiefung ist ein eigenes, abrechenbares Paket.</p>
+  </section>
+
+  <!-- Sicherheit & Recht -->
+  <section class="slide">
+    <p class="kicker">Sicherheit &amp; Recht · DACH</p>
+    <h2>Von Anfang an einsetzbar gedacht</h2>
+    <div class="two">
+      <div>
+        <div class="card"><h3>Empfehlen ≠ Ausführen</h3><p>Eingriffe in Sicherheitsfunktionen (Not-Halt, Verriegelung) sind technisch <b>verboten</b> – und getestet.</p></div>
+        <div class="card" style="margin-top:10px"><h3>EU AI Act</h3><p>Empfehlungssystem mit menschlicher Aufsicht (Art. 14), <b>kein Sicherheitsbauteil</b>, Transparenz über Evidenz (Art. 13).</p></div>
+        <div class="card" style="margin-top:10px"><h3>OT-Security</h3><p>Agent außerhalb der Steuerungszone, nur lesend (IEC 62443).</p></div>
+      </div>
+      <div>
+        <div class="card"><h3>Datenschutz &amp; Mitbestimmung</h3><p>Rolle statt Person (pseudonymisiert), Auswertung je Linie – DSGVO-Zweckbindung, BetrVG §87.</p></div>
+        <div class="card" style="margin-top:10px"><h3>Lückenloses Audit</h3><p>Jeder Werkzeugaufruf und jede Freigabe protokolliert.</p></div>
+        <div class="card" style="margin-top:10px"><h3>Ehrliche nächste Schritte</h3><p>Echte Rollendurchsetzung (SSO), Aufbewahrungsfristen, ggf. CH-DSG/NIS2 &amp; Lebensmittel-Rückverfolgbarkeit.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="slide">
+    <p class="kicker">Nächster Schritt</p>
+    <h1>Ein Pilot an einer Linie.</h1>
+    <p class="lead">Klein, messbar, risikoarm – der schnellste Weg von „interessant" zu „belegter Nutzen".</p>
+    <div class="grid g3" style="margin-top:16px">
+      <div class="card"><h3>1 · Baseline</h3><p>Aktuelle MTTR &amp; typische Störungen aufnehmen.</p></div>
+      <div class="card"><h3>2 · Gold-Fälle</h3><p>10–20 reale Störungen mit bekannter Lösung als Prüfmaßstab.</p></div>
+      <div class="card"><h3>3 · Pilot</h3><p>Agent an der Linie, Nutzen vorher/nachher messen – wenige Wochen.</p></div>
+    </div>
+    <p class="anchor" style="margin-top:18px">Sie geben die Kontrolle nie ab. Sie gewinnen Zeit, Nachvollziehbarkeit und Wissenserhalt.</p>
+  </section>
+
+</div>
+
+<div class="foot" id="dots"></div>
+<div class="side">Navigation: <span class="kbd">←</span> <span class="kbd">→</span> · Leertaste</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dots = document.getElementById('dots');
+  const stepbar = document.getElementById('stepbar');
+  const TOTAL_STEPS = 8;
+  let i = 0;
+  // Punkte
+  slides.forEach((_, k) => {
+    const b = document.createElement('button');
+    b.className = 'dot' + (k === 0 ? ' active' : '');
+    b.onclick = () => go(k);
+    dots.appendChild(b);
+  });
+  // Fortschrittsbalken-Segmente
+  for (let s = 1; s <= TOTAL_STEPS; s++) {
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    stepbar.appendChild(seg);
+  }
+  function go(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    dots.querySelectorAll('.dot').forEach((d, k) => d.classList.toggle('active', k === i));
+    const step = slides[i].dataset.step ? parseInt(slides[i].dataset.step, 10) : 0;
+    if (step > 0) {
+      stepbar.style.display = 'flex';
+      stepbar.querySelectorAll('.seg').forEach((seg, k) => {
+        seg.classList.toggle('cur', k + 1 === step);
+        seg.classList.toggle('done', k + 1 < step);
+      });
+    } else {
+      stepbar.style.display = 'none';
+    }
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(i + 1); }
+    if (e.key === 'ArrowLeft') go(i - 1);
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End') go(slides.length - 1);
+  });
+  let x0 = null;
+  addEventListener('touchstart', e => x0 = e.touches[0].clientX, {passive:true});
+  addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) go(i + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+  const btn = document.getElementById('demoBtn');
+  btn.href = btn.dataset.demoUrl || '#'; btn.target = '_blank';
+</script>
+</body>
+</html>
