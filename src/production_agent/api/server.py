@@ -426,14 +426,11 @@ def feedback_suggest(req: FeedbackRequest) -> dict:
 
 
 def _mock_completion(raw: str, reason_code: str) -> str:
-    """Deterministischer Vorschlag ohne API (Tests/Demo)."""
-    rc = f" ({reason_code})" if reason_code else ""
-    return (
-        f"Ereignis{rc}: {raw}. "
-        "Ursache: vor Ort bestätigt. "
-        "Maßnahme: nach dokumentiertem Vorgehen behoben, Station geprüft. "
-        "Wiederanlauf: kontrolliert über Execute-Schritt, keine Auffälligkeiten."
-    )
+    """Deterministischer Vorschlag ohne API (Tests/Demo) – Beispieltext je reason_code, damit die
+    Vorschau zum tatsächlichen Fall passt. Logik im Mock-Modul (mock_feedback_completion)."""
+    from production_agent.graph.mock_llm import mock_feedback_completion
+
+    return mock_feedback_completion(raw, reason_code)
 
 
 _FEWSHOT = (

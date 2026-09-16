@@ -159,3 +159,39 @@ def mock_chains() -> dict:
         "derive_actions": RunnableLambda(_mock_derive_actions),
         "judge": RunnableLambda(_mock_judge),
     }
+
+
+# --- Rückkopplungs-Vervollständigung (LLM_MODE=mock, Ersatz für den echten Haiku-Aufruf) --------
+# Beispiel-Rohtext je Ursachenklasse. Nur der Mock-Fallback, wenn der Bediener nichts Eigenes
+# eingibt: vorher stand für ALLE Fälle der STO-FOLIE-Text ("Rolle neu eingespannt, nachjustiert"),
+# sodass er fälschlich auch bei STO-ANTRIEB (Lagerdefekt) o. ä. erschien.
+_FEEDBACK_BEISPIEL: dict[str, str] = {
+    "STO-FOLIE": "Rolle neu eingespannt, Andruckrolle nachjustiert",
+    "STO-ANTRIEB": "Antriebslager getauscht, Riemenspannung geprüft",
+    "STO-SENSOR": "Sensor gereinigt und neu justiert",
+    "QUAL-NIO": "Prüfparameter nachgeschärft, NIO-Charge aussortiert",
+    "STO-ELEK": "elektrischen Anschluss geprüft, defekte Sicherung ersetzt",
+    "MAT-STAU": "Materialstau an der Zuführung beseitigt",
+}
+# der generische Frontend-Default, der bisher für jeden Fall unverändert durchgereicht wurde
+_FEEDBACK_DEFAULT_ROHTEXT = "rolle neu eingespannt, nachjustiert"
+
+
+def mock_feedback_completion(raw: str, reason_code: str) -> str:
+    """Deterministische Rückkopplungs-Vervollständigung ohne API (Tests/Demo), Ersatz für den
+    echten Haiku-Aufruf im Mock-Modus.
+
+    Der Beispiel-Rohtext wird aus dem tatsächlichen reason_code abgeleitet, wenn der Bediener nichts
+    Eigenes eingegeben hat (oder nur den generischen UI-Default) – sonst erschiene der STO-FOLIE-
+    Text auch bei anderen Ursachen. Echte Bedienereingaben werden unverändert übernommen.
+    """
+    text = (raw or "").strip()
+    if not text or text.rstrip(" .").lower() == _FEEDBACK_DEFAULT_ROHTEXT:
+        text = _FEEDBACK_BEISPIEL.get(reason_code, "Ursache vor Ort geprüft und behoben")
+    rc = f" ({reason_code})" if reason_code else ""
+    return (
+        f"Ereignis{rc}: {text}. "
+        "Ursache: vor Ort bestätigt. "
+        "Maßnahme: nach dokumentiertem Vorgehen behoben, Station geprüft. "
+        "Wiederanlauf: kontrolliert über Execute-Schritt, keine Auffälligkeiten."
+    )

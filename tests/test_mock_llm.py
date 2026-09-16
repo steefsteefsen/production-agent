@@ -10,7 +10,7 @@ import json
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from production_agent.graph.mock_llm import mock_chains
+from production_agent.graph.mock_llm import mock_chains, mock_feedback_completion
 
 
 def _msgs(ctx: dict):
@@ -50,3 +50,25 @@ def test_mock_derive_actions_ohne_vorfaelle_belegt_nicht_falsification():
     out = mock_chains()["derive_actions"].invoke(_msgs(ctx))
     assert out.actions  # es werden Maßnahmen erzeugt …
     assert all(a.rationale == "keine Vorfall-ID verfügbar" for a in out.actions)  # … aber unbelegt
+
+
+# --- Rückkopplungs-Vervollständigung: Beispieltext muss zum reason_code passen -------------------
+def test_mock_feedback_completion_leitet_beispiel_aus_reason_code_ab():
+    """Regression: bei leerer Eingabe (bzw. generischem UI-Default) darf NICHT der STO-FOLIE-Text für
+    andere Ursachen erscheinen – der Beispieltext wird aus dem reason_code abgeleitet."""
+    default = "Rolle neu eingespannt, nachjustiert"  # generischer Frontend-Default
+    antrieb = mock_feedback_completion(default, "STO-ANTRIEB")
+    assert "STO-ANTRIEB" in antrieb
+    assert "Antriebslager" in antrieb  # fallgerechter Beispieltext
+    assert "Rolle neu eingespannt" not in antrieb  # NICHT der STO-FOLIE-Text
+
+    folie = mock_feedback_completion(default, "STO-FOLIE")
+    assert "STO-FOLIE" in folie and "Rolle neu eingespannt" in folie
+    assert antrieb != folie  # unterschiedliche Fälle → unterschiedlicher Text
+
+
+def test_mock_feedback_completion_uebernimmt_echte_eingabe_unveraendert():
+    """Echte Bedienereingabe bleibt erhalten (nur der generische Default wird ersetzt)."""
+    eigen = mock_feedback_completion("Lager getauscht, Fett erneuert", "STO-ANTRIEB")
+    assert "Lager getauscht, Fett erneuert" in eigen
+    assert "Antriebslager getauscht" not in eigen  # nicht durch Beispiel überschrieben
